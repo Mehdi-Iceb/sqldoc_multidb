@@ -2,7 +2,7 @@
 	<AuthenticatedLayout>
 	  <template #header>
 		<h2 class="text-xl font-semibold leading-tight text-gray-800">
-		  Tableau de bord - Documentation de base de données
+		  Dashboard - Database Documentation
 		</h2>
 	  </template>
   
@@ -33,7 +33,7 @@
 			<!-- Informations de la base de données -->
 			<div class="bg-white overflow-hidden shadow-sm rounded-lg">
 			  <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-				<h3 class="text-lg font-medium text-gray-900">Information base de données</h3>
+				<h3 class="text-lg font-medium text-gray-900">Data Base Informations</h3>
 			  </div>
 			  <div class="px-6 py-4">
 				<p class="text-lg font-semibold text-gray-800">{{ dashboardData.database_name }}</p>
@@ -59,13 +59,13 @@
 			<!-- Taux de documentation -->
 			<div class="bg-white overflow-hidden shadow-sm rounded-lg">
 			  <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-				<h3 class="text-lg font-medium text-gray-900">État de la documentation</h3>
+				<h3 class="text-lg font-medium text-gray-900">Documentation State</h3>
 			  </div>
 			  <div class="px-6 py-4">
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 				  <!-- Documentation des tables -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Tables documentées</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented Tables</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -84,7 +84,7 @@
   
 				  <!-- Documentation des colonnes -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Colonnes documentées</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented Column</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -103,7 +103,7 @@
   
 				  <!-- Documentation des vues -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Vues documentées</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented View</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -122,7 +122,7 @@
   
 				  <!-- Documentation des procédures stockées -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Procédures stockées documentées</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented Stocked Procedures</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -141,7 +141,7 @@
   
 				  <!-- Documentation des fonctions -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Fonctions documentées</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented Functions</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -160,7 +160,7 @@
   
 				  <!-- Documentation des triggers -->
 				  <div>
-					<h4 class="text-sm font-medium text-gray-600 mb-2">Triggers documentés</h4>
+					<h4 class="text-sm font-medium text-gray-600 mb-2">Documented Triggers</h4>
 					<div class="flex items-center">
 					  <div class="flex-1 mr-4">
 						<div class="h-2 bg-gray-200 rounded-full">
@@ -183,7 +183,7 @@
 			<!-- Tables les plus référencées -->
 			<div class="bg-white overflow-hidden shadow-sm rounded-lg">
 			  <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-				<h3 class="text-lg font-medium text-gray-900">Tables les plus référencées</h3>
+				<h3 class="text-lg font-medium text-gray-900">Most referenced Tables</h3>
 			  </div>
 			  <div class="overflow-x-auto">
 				<table class="min-w-full divide-y divide-gray-200">
@@ -193,10 +193,10 @@
 						Table
 					  </th>
 					  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-						Nombre de références
+						Number of references
 					  </th>
 					  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-						État de documentation
+						Documentation State
 					  </th>
 					</tr>
 				  </thead>
@@ -221,7 +221,7 @@
 					</tr>
 					<tr v-if="!dashboardData.most_referenced_tables.length">
 					  <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
-						Aucune table référencée trouvée
+						No references table found
 					  </td>
 					</tr>
 				  </tbody>
