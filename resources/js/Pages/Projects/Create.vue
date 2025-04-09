@@ -6,6 +6,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Textarea from '@/Components/Textarea.vue'; // Ajoutez ce composant si vous l'avez
 
 defineProps({
     dbTypes: Object
@@ -13,7 +14,9 @@ defineProps({
 
 const form = useForm({
     name: '',
-    db_type: ''
+    db_type: '',
+    description: '', // Nouveau champ
+    release: ''      // Nouveau champ
 });
 
 const submit = () => {
@@ -46,6 +49,32 @@ const submit = () => {
                                 autofocus
                             />
                             <InputError class="mt-2" :message="form.errors.name" />
+                        </div>
+
+                        <!-- Nouveau champ description -->
+                        <div class="mb-6">
+                            <InputLabel for="description" value="Description" />
+                            <textarea
+                                id="description"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                v-model="form.description"
+                                rows="3"
+                                placeholder="Description du projet (optionnel)"
+                            ></textarea>
+                            <InputError class="mt-2" :message="form.errors.description" />
+                        </div>
+
+                        <!-- Nouveau champ release -->
+                        <div class="mb-6">
+                            <InputLabel for="release" value="Version" />
+                            <TextInput
+                                id="release"
+                                type="text"
+                                class="mt-1 block w-full"
+                                v-model="form.release"
+                                placeholder="Ex: 1.0.0 (optionnel)"
+                            />
+                            <InputError class="mt-2" :message="form.errors.release" />
                         </div>
 
                         <div class="mb-6">
