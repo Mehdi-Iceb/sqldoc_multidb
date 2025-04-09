@@ -105,7 +105,7 @@
             </Link>
           </li>
           <li v-if="filteredTables.length === 0" class="py-1 text-gray-400 italic text-sm">
-            Aucune table trouvée
+            No Tables found
           </li>
         </ul>
       </div>
@@ -116,7 +116,7 @@
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path :d="isOpen.views ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
-          Vues ({{ filteredViews.length }})
+          Views ({{ filteredViews.length }})
         </button>
         <ul v-if="isOpen.views" class="pl-4 mt-2">
           <li v-for="view in filteredViews" :key="view.id" class="py-1 hover:text-white cursor-pointer text-sm">
@@ -133,7 +133,7 @@
             </Link>
           </li>
           <li v-if="filteredViews.length === 0" class="py-1 text-gray-400 italic text-sm">
-            Aucune vue trouvée
+            No Views found
           </li>
         </ul>
       </div>
@@ -144,7 +144,7 @@
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path :d="isOpen.functions ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
-          Fonctions ({{ filteredFunctions.length }})
+          Functions ({{ filteredFunctions.length }})
         </button>
         <ul v-if="isOpen.functions" class="pl-4 mt-2">
           <li v-for="func in filteredFunctions" :key="func.id" class="py-1 hover:text-white cursor-pointer text-sm">
@@ -159,7 +159,7 @@
             </Link>
           </li>
           <li v-if="filteredFunctions.length === 0" class="py-1 text-gray-400 italic text-sm">
-            Aucune fonction trouvée
+            No functions found
           </li>
         </ul>
       </div>
@@ -170,7 +170,7 @@
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path :d="isOpen.procedures ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
-          Procédures ({{ filteredProcedures.length }})
+          Procedures ({{ filteredProcedures.length }})
         </button>
         <ul v-if="isOpen.procedures" class="pl-4 mt-2">
           <li v-for="proc in filteredProcedures" :key="proc.id" class="py-1 hover:text-white cursor-pointer text-sm">
@@ -186,7 +186,7 @@
             </Link>
           </li>
           <li v-if="filteredProcedures.length === 0" class="py-1 text-gray-400 italic text-sm">
-            Aucune procédure trouvée
+            No procedures found
           </li>
         </ul>
       </div>
@@ -212,7 +212,7 @@
             </Link>
           </li>
           <li v-if="filteredTriggers.length === 0" class="py-1 text-gray-400 italic text-sm">
-            Aucun trigger trouvé
+            No triggers found
           </li>
         </ul>
       </div>
