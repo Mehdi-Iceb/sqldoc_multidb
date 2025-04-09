@@ -47,13 +47,13 @@
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 			  <!-- Objets de base -->
 			  <StatCard title="Tables" :count="dashboardData.tables_count" color="blue" icon="table" />
-			  <StatCard title="Vues" :count="dashboardData.views_count" color="green" icon="view" />
-			  <StatCard title="Procédures stockées" :count="dashboardData.procedures_count" color="purple" icon="procedure" />
-			  <StatCard title="Fonctions" :count="dashboardData.functions_count" color="indigo" icon="function" />
+			  <StatCard title="Views" :count="dashboardData.views_count" color="green" icon="view" />
+			  <StatCard title="Stocked procedures" :count="dashboardData.procedures_count" color="purple" icon="procedure" />
+			  <StatCard title="Functions" :count="dashboardData.functions_count" color="indigo" icon="function" />
 			  <StatCard title="Triggers" :count="dashboardData.triggers_count" color="red" icon="trigger" />
-			  <StatCard title="Colonnes au total" :count="dashboardData.columns_count" color="yellow" icon="column" />
-			  <StatCard title="Clés primaires" :count="dashboardData.primary_keys_count" color="amber" icon="key" />
-			  <StatCard title="Clés étrangères" :count="dashboardData.foreign_keys_count" color="orange" icon="link" />
+			  <StatCard title="Total Columns" :count="dashboardData.columns_count" color="yellow" icon="column" />
+			  <StatCard title="Primary Keys" :count="dashboardData.primary_keys_count" color="amber" icon="key" />
+			  <StatCard title="Foreign Keys" :count="dashboardData.foreign_keys_count" color="orange" icon="link" />
 			</div>
   
 			<!-- Taux de documentation -->
