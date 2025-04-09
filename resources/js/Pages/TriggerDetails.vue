@@ -63,7 +63,7 @@
             <!-- Informations générales -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Informations générales</h3>
+                <h3 class="text-lg font-medium text-gray-900">General Informations</h3>
               </div>
               <div class="p-6 grid grid-cols-2 gap-6">
                 <div>
@@ -71,7 +71,7 @@
                   <p class="mt-1 font-medium">{{ triggerDetails.table_name }}</p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">Schéma</p>
+                  <p class="text-sm text-gray-600">Schema</p>
                   <p class="mt-1 font-medium">{{ triggerDetails.schema }}</p>
                 </div>
                 <div>
@@ -83,7 +83,7 @@
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">Événement</p>
+                  <p class="text-sm text-gray-600">Event</p>
                   <p class="mt-1">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       {{ triggerDetails.trigger_event }}
@@ -91,7 +91,7 @@
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">État</p>
+                  <p class="text-sm text-gray-600">State</p>
                   <p class="mt-1">
                     <span :class="[
                       'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
@@ -104,7 +104,7 @@
                   </p>
                 </div>
                 <div v-if="triggerDetails.create_date">
-                  <p class="text-sm text-gray-600">Date de création</p>
+                  <p class="text-sm text-gray-600">Creation date</p>
                   <p class="mt-1 font-medium">{{ formatDate(triggerDetails.create_date) }}</p>
                 </div>
               </div>
@@ -113,7 +113,7 @@
             <!-- Définition SQL -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Définition SQL</h3>
+                <h3 class="text-lg font-medium text-gray-900"> SQL Definition</h3>
               </div>
               <div class="p-6">
                 <pre class="whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded-lg text-gray-600">{{ triggerDetails.definition }}</pre>

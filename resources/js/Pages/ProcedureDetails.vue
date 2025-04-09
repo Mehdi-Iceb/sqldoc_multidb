@@ -3,7 +3,7 @@
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-xl font-semibold text-gray-800">
-            <span class="text-gray-500 font-normal">Procédure stockée :</span> 
+            <span class="text-gray-500 font-normal">Stocked procedures :</span> 
             {{ procedureName }}
           </h2>
         </div>
@@ -67,19 +67,19 @@
               </div>
               <div class="p-6 grid grid-cols-2 gap-6">
                 <div>
-                  <p class="text-sm text-gray-600">Schéma</p>
+                  <p class="text-sm text-gray-600">Schema</p>
                   <p class="mt-1 text-sm font-medium text-gray-900">
                     {{ procedureDetails.schema || 'Non spécifié' }}
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">Date de création</p>
+                  <p class="text-sm text-gray-600">Creation date</p>
                   <p class="mt-1 text-sm font-medium text-gray-900">
                     {{ formatDate(procedureDetails.create_date) }}
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">Dernière modification</p>
+                  <p class="text-sm text-gray-600">Last modification</p>
                   <p class="mt-1 text-sm font-medium text-gray-900">
                     {{ formatDate(procedureDetails.modify_date) }}
                   </p>
@@ -90,14 +90,14 @@
             <!-- Paramètres -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Paramètres</h3>
+                <h3 class="text-lg font-medium text-gray-900">Parameters</h3>
               </div>
               <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr class="bg-gray-50">
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nom
+                        Name
                       </th>
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
@@ -106,7 +106,7 @@
                         Output
                       </th>
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Valeur par défaut
+                        Range value
                       </th>
                     </tr>
                   </thead>
@@ -132,7 +132,7 @@
                     </tr>
                     <tr v-if="!procedureDetails.parameters || procedureDetails.parameters.length === 0">
                       <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                        Aucun paramètre trouvé
+                        No parameters found
                       </td>
                     </tr>
                   </tbody>
@@ -143,7 +143,7 @@
             <!-- Définition SQL -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Définition SQL</h3>
+                <h3 class="text-lg font-medium text-gray-900"> SQL Definition</h3>
               </div>
               <div class="p-6">
                 <pre class="whitespace-pre-wrap text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded-lg">{{ procedureDetails.definition }}</pre>

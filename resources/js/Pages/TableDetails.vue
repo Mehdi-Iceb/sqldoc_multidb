@@ -42,7 +42,7 @@
             <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <div class="flex justify-between items-center">
-                  <h3 class="text-lg font-medium text-gray-900">Description de la table</h3>
+                  <h3 class="text-lg font-medium text-gray-900">Table description</h3>
                   <button 
                     @click="saveTableStructure" 
                     class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -69,7 +69,7 @@
                   <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
                   </svg>
-                  <h3 class="text-lg font-medium text-gray-900">Structure de la table</h3>
+                  <h3 class="text-lg font-medium text-gray-900">Table structure</h3>
                 </div>
               </div>
               <div class="overflow-x-auto">
@@ -77,7 +77,7 @@
                   <thead>
                     <tr class="bg-gray-50">
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Colonne
+                        Column
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
@@ -86,13 +86,13 @@
                         Nullable
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Clé
+                        Key
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Description
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Valeur possible
+                        Range value
                       </th>
                     </tr>
                   </thead>
@@ -246,16 +246,16 @@
                   <thead>
                     <tr class="bg-gray-50">
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nom
+                        Name
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Colonnes
+                        Column
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Propriétés
+                        Properties
                       </th>
                     </tr>
                   </thead>
@@ -276,7 +276,7 @@
                         <div class="flex gap-2">
                           <span v-if="index.is_primary_key" 
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            Clé Primaire
+                            Primary Keys
                           </span>
                           <span v-if="index.is_unique" 
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -287,7 +287,7 @@
                     </tr>
                     <tr v-if="!tableDetails.indexes?.length">
                       <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                        Aucun index trouvé
+                        No Index found
                       </td>
                     </tr>
                   </tbody>
@@ -310,16 +310,16 @@
                   <thead>
                     <tr class="bg-gray-50">
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contrainte
+                        Constraint
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Colonne
+                        Column
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Table référencée
+                        Referenced table
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Colonne référencée
+                        referenced column
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -360,7 +360,7 @@
                     </tr>
                     <tr v-if="!tableDetails.relations?.length">
                       <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                        Aucune relation trouvée
+                        No relations found
                       </td>
                     </tr>
                   </tbody>
