@@ -5,7 +5,7 @@
       <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div class="flex justify-between items-center">
-            <h3 class="text-lg font-medium text-gray-900">Description de la fonction</h3>
+            <h3 class="text-lg font-medium text-gray-900">Functions description</h3>
             <button 
               @click="saveDescription"
               class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -38,7 +38,7 @@
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <h4 class="text-sm font-semibold text-gray-500 mb-1">Nom</h4>
+              <h4 class="text-sm font-semibold text-gray-500 mb-1">Name</h4>
               <div class="bg-gray-50 p-3 rounded">
                 <p class="text-gray-800">{{ functionData.name || 'Non spécifié' }}</p>
               </div>
@@ -50,7 +50,7 @@
               </div>
             </div>
             <div>
-              <h4 class="text-sm font-semibold text-gray-500 mb-1">Type de retour</h4>
+              <h4 class="text-sm font-semibold text-gray-500 mb-1">Return type</h4>
               <div class="bg-gray-50 p-3 rounded">
                 <p class="text-gray-800">{{ functionData.return_type || 'Non spécifié' }}</p>
               </div>
@@ -58,13 +58,13 @@
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <h4 class="text-sm font-semibold text-gray-500 mb-1">Date de création</h4>
+              <h4 class="text-sm font-semibold text-gray-500 mb-1">Create Date</h4>
               <div class="bg-gray-50 p-3 rounded">
                 <p class="text-gray-800">{{ formatDate(functionData.create_date) }}</p>
               </div>
             </div>
             <div>
-              <h4 class="text-sm font-semibold text-gray-500 mb-1">Dernière modification</h4>
+              <h4 class="text-sm font-semibold text-gray-500 mb-1">Modified date</h4>
               <div class="bg-gray-50 p-3 rounded">
                 <p class="text-gray-800">{{ formatDate(functionData.modify_date) }}</p>
               </div>
@@ -99,7 +99,7 @@
             <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
             </svg>
-            <h3 class="text-lg font-medium text-gray-900">Paramètres</h3>
+            <h3 class="text-lg font-medium text-gray-900">Parameters</h3>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -107,13 +107,13 @@
             <thead>
               <tr class="bg-gray-50">
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nom
+                  Name
                 </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
                 </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sortie
+                  Output
                 </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
@@ -188,7 +188,7 @@
               </tr>
               <tr v-if="!functionData.parameters || functionData.parameters.length === 0">
                 <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                  Aucun paramètre trouvé
+                  No parameters found
                 </td>
               </tr>
             </tbody>
@@ -203,7 +203,7 @@
             <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
             </svg>
-            <h3 class="text-lg font-medium text-gray-900">Définition</h3>
+            <h3 class="text-lg font-medium text-gray-900">Definition</h3>
           </div>
         </div>
         <div class="p-6">
