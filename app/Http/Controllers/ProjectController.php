@@ -29,8 +29,8 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'db_type' => 'required|in:sqlserver,mysql,postgres',
-            'description' => 'nullable|string|max:1000',
-            'release' => 'nullable|string|max:10' 
+            'description' => 'nullable|string|max:1000'
+            //'release' => 'nullable|string|max:10' 
         ]);
 
         $project = $request->user()->projects()->create($validated);

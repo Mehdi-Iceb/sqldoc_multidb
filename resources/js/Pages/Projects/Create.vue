@@ -16,7 +16,7 @@ const form = useForm({
     name: '',
     db_type: '',
     description: '', // Nouveau champ
-    release: ''      // Nouveau champ
+    //release: ''      // Nouveau champ
 });
 
 const submit = () => {
@@ -51,7 +51,7 @@ const submit = () => {
                             <InputError class="mt-2" :message="form.errors.name" />
                         </div>
 
-                        <!-- Nouveau champ description -->
+                        <!-- champ description -->
                         <div class="mb-6">
                             <InputLabel for="description" value="Description" />
                             <textarea
@@ -64,8 +64,8 @@ const submit = () => {
                             <InputError class="mt-2" :message="form.errors.description" />
                         </div>
 
-                        <!-- Nouveau champ release -->
-                        <div class="mb-6">
+                        <!-- champ release -->
+                        <!-- <div class="mb-6">
                             <InputLabel for="release" value="Release" />
                             <TextInput
                                 id="release"
@@ -75,7 +75,7 @@ const submit = () => {
                                 placeholder="Ex: 1.0.0 (optionnel)"
                             />
                             <InputError class="mt-2" :message="form.errors.release" />
-                        </div>
+                        </div> -->
 
                         <div class="mb-6">
                             <InputLabel for="db_type" value="Data base type" />
