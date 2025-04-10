@@ -228,11 +228,11 @@ import axios from 'axios'
 
 // États pour les sections dépliables
 const isOpen = ref({
-  tables: false,
-  views: false,
-  functions: false,
-  procedures: false,
-  triggers: false,
+  tables: true,
+  views: true,
+  functions: true,
+  procedures: true,
+  triggers: true,
 });
 
 
@@ -295,14 +295,14 @@ const filteredTables = computed(() => {
       return true;
     }
     
-    // Recherche des clés primaires (détecter différentes variations)
+    // Recherche des clés primaires 
     if ((query.includes('primary') || query.includes('pk') || query.includes('clé primaire')) && 
         hasPrimaryKey(table)) {
       table.matchReason = 'primaryKey';
       return true;
     }
     
-    // Recherche des clés étrangères (détecter différentes variations)
+    // Recherche des clés étrangères 
     if ((query.includes('foreign') || query.includes('fk') || query.includes('clé étrangère')) && 
         hasForeignKey(table)) {
       table.matchReason = 'foreignKey';
@@ -449,7 +449,7 @@ const getMatchedColumn = (table) => {
 //   if (!databaseStructure.value?.tables) return;
   
 //   try {
-//     // Ne chargez que pour les tables actuellement affichées
+//     // chargez que pour les tables actuellement affichées
 //     for (const table of databaseStructure.value.tables) {
 //       if (!tableColumns.value[table.name]) {
 //         await loadTableColumns(table.name);
@@ -509,6 +509,7 @@ onMounted(async () => {
     console.log("Triggers:", databaseStructure.value?.triggers);
     
     // Ouvrir la section tables par défaut
+    showingTables.value = true;
   } catch (error) {
     console.error('Erreur lors du chargement de la structure:', error);
   }
