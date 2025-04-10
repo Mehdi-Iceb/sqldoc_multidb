@@ -6,7 +6,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import Textarea from '@/Components/Textarea.vue'; // Ajoutez ce composant si vous l'avez
+import TextareaInput from '@/Components/TextareaInput.vue'; // Ajoutez ce composant si vous l'avez
 
 defineProps({
     dbTypes: Object
@@ -30,7 +30,7 @@ const submit = () => {
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Créer un nouveau projet
+                Create a new project
             </h2>
         </template>
 
@@ -39,7 +39,7 @@ const submit = () => {
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                     <form @submit.prevent="submit" class="max-w-lg mx-auto">
                         <div class="mb-6">
-                            <InputLabel for="name" value="Nom du projet" />
+                            <InputLabel for="name" value="Project name" />
                             <TextInput
                                 id="name"
                                 type="text"
@@ -66,7 +66,7 @@ const submit = () => {
 
                         <!-- Nouveau champ release -->
                         <div class="mb-6">
-                            <InputLabel for="release" value="Version" />
+                            <InputLabel for="release" value="Release" />
                             <TextInput
                                 id="release"
                                 type="text"
@@ -78,7 +78,7 @@ const submit = () => {
                         </div>
 
                         <div class="mb-6">
-                            <InputLabel for="db_type" value="Type de base de données" />
+                            <InputLabel for="db_type" value="Data base type" />
                             <div class="mt-1">
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div 
@@ -111,10 +111,10 @@ const submit = () => {
                                 :href="route('projects.index')"
                                 class="inline-flex items-center px-4 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                             >
-                                Annuler
+                                Cancel
                             </Link>
                             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                                Créer le projet
+                                Create the project
                             </PrimaryButton>
                         </div>
                     </form>
