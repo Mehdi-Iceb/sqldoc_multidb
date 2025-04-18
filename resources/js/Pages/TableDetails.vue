@@ -95,7 +95,13 @@
                         Range value
                       </th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        release
+                      </th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Show
+                      </th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        edit
                       </th>
                     </tr>
                   </thead>
@@ -228,14 +234,66 @@
                           </div>
                         </div>
                       </td>
+                      <td class="px-6 py-4 text-sm text-gray-500">
+                        <div class="flex items-center space-x-2">
+                          <span v-if="!editingPossibleValues[column.column_name]">
+                            {{ column.possible_values || '-' }}
+                          </span>
+                          <input
+                            v-else
+                            v-model="editingPossibleValuesValue"
+                            type="text"
+                            class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                            @keyup.enter="savePossibleValues(column.column_name)"
+                            @keyup.esc="cancelEdit('possibleValues', column.column_name)"
+                            placeholder="exemple of possible value"
+                          >
+                          <button
+                            v-if="!editingPossibleValues[column.column_name]"
+                            @click="startEdit('possibleValues', column.column_name, column.possible_values)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Modifier les valeurs possibles"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <div v-else class="flex space-x-1">
+                            <button
+                              @click="savePossibleValues(column.column_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              title="Sauvegarder"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEdit('possibleValues', column.column_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              title="Annuler"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </td>
                       <td class="px-4 py-3 text-sm">
-                          <!-- <SecondaryButton @click="openModalView(shop)"> -->
+                           <SecondaryButton >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="blue" class="size-6">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                               <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                             </svg>
-
-                          <!-- </SecondaryButton> -->
+                          </SecondaryButton>
+                      </td>
+                      <td class="px-4 py-3 text-sm">
+                          <SecondaryButton>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="blue" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
+                          </SecondaryButton>
                       </td>
                     </tr>
                   </tbody>
@@ -389,7 +447,11 @@
   import { ref, onMounted } from 'vue'
   import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
   import { Link } from '@inertiajs/vue3'
-  
+  import InputLabel from '@/Components/InputLabel.vue'
+  import TextInput from '@/Components/TextInput.vue'
+  import SecondaryButton from '@/Components/SecondaryButton.vue'
+  import PrimaryButton from '@/Components/PrimaryButton.vue'
+    
   const props = defineProps({
     tableName: {
       type: String,
@@ -560,4 +622,65 @@
       alert('Erreur lors de la sauvegarde des valeurs possibles');
     }
   };
+
+  // États pour le modal d'édition
+const showEditModal = ref(false);
+const editingColumn = ref({});
+const editForm = ref({
+  description: '',
+  possible_values: ''
+});
+const savingColumn = ref(false);
+
+// Ouvrir le modal d'édition
+const openEditModal = (column) => {
+  editingColumn.value = { ...column };
+  editForm.value.description = column.description || '';
+  editForm.value.possible_values = column.possible_values || '';
+  showEditModal.value = true;
+};
+
+// Enregistrer les modifications de la colonne
+const saveColumnChanges = async () => {
+  try {
+    savingColumn.value = true;
+    
+    // Enregistrer la description
+    const descResponse = await axios.post(
+      `/table/${props.tableName}/column/${editingColumn.value.column_name}/description`, 
+      { description: editForm.value.description }
+    );
+    
+    // Enregistrer les valeurs possibles
+    const valuesResponse = await axios.post(
+      `/table/${props.tableName}/column/${editingColumn.value.column_name}/possible-values`, 
+      { possible_values: editForm.value.possible_values }
+    );
+    
+    if (descResponse.data.success && valuesResponse.data.success) {
+      // Mettre à jour les données locales
+      const column = tableDetails.value.columns.find(
+        c => c.column_name === editingColumn.value.column_name
+      );
+      
+      if (column) {
+        column.description = editForm.value.description;
+        column.possible_values = editForm.value.possible_values;
+      }
+      
+      // Fermer le modal
+      showEditModal.value = false;
+      
+      // Notification de succès
+      alert('Modifications enregistrées avec succès');
+    } else {
+      throw new Error('Erreur lors de l\'enregistrement des modifications');
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la colonne:', error);
+    alert('Erreur lors de l\'enregistrement des modifications');
+  } finally {
+    savingColumn.value = false;
+  }
+};
   </script>
