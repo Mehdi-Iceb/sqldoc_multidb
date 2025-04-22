@@ -153,6 +153,42 @@ class TableController extends Controller
     }
 
     /**
+     * Enregistre une action dans les logs d'audit
+     */
+    private function logAudit($dbId, $tableId, $columnName, $changeType, $oldData, $newData)
+    {
+        try {
+            // Récupérer l'ID de l'utilisateur connecté
+            $userId = Auth::id() ?? null;
+            
+            // Créer l'entrée dans les logs d'audit
+            AuditLog::create([
+                'user_id' => $userId,
+                'db_id' => $dbId,
+                'table_id' => $tableId,
+                'column_name' => $columnName,
+                'change_type' => $changeType,
+                'old_data' => $oldData,
+                'new_data' => $newData
+            ]);
+            
+            Log::info('Audit log créé', [
+                'user_id' => $userId,
+                'db_id' => $dbId,
+                'table_id' => $tableId,
+                'column_name' => $columnName,
+                'change_type' => $changeType
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la création du log d\'audit', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+
+    /**
      * Sauvegarde la structure de la table (uniquement descriptions et valeurs possibles)
      */
     public function saveStructure(Request $request, $tableName)
@@ -183,9 +219,38 @@ class TableController extends Controller
                 return response()->json(['error' => 'Table non trouvée'], 404);
             }
 
-            // Mettre à jour la description de la table
-            $tableDesc->description = $validated['description'];
-            $tableDesc->language = $validated['language'];
+            // Mettre à jour la description de la table avec audit
+            if ($tableDesc->description !== $validated['description']) {
+                $oldDescription = $tableDesc->description;
+                $tableDesc->description = $validated['description'];
+                
+                // Log de l'audit pour la description de la table
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    'table_description', 
+                    'update', 
+                    $oldDescription, 
+                    $validated['description']
+                );
+            }
+            
+            // Mise à jour de la langue si elle a changé
+            if ($tableDesc->language !== $validated['language']) {
+                $oldLanguage = $tableDesc->language;
+                $tableDesc->language = $validated['language'];
+                
+                // Log de l'audit pour la langue
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    'table_language', 
+                    'update', 
+                    $oldLanguage, 
+                    $validated['language']
+                );
+            }
+            
             $tableDesc->save();
 
             // Mettre à jour les descriptions et valeurs possibles des colonnes
@@ -195,8 +260,38 @@ class TableController extends Controller
                     ->first();
 
                 if ($column) {
-                    $column->description = $columnData['description'];
-                    $column->rangevalues = $columnData['rangevalues'];
+                    // Vérifier si la description a changé
+                    if ($column->description !== $columnData['description']) {
+                        $oldDescription = $column->description;
+                        $column->description = $columnData['description'];
+                        
+                        // Log de l'audit pour la description de la colonne
+                        $this->logAudit(
+                            $dbId, 
+                            $tableDesc->id, 
+                            $columnData['column'] . '_description', 
+                            'update', 
+                            $oldDescription, 
+                            $columnData['description']
+                        );
+                    }
+                    
+                    // Vérifier si les valeurs possibles ont changé
+                    if ($column->rangevalues !== $columnData['rangevalues']) {
+                        $oldRangeValues = $column->rangevalues;
+                        $column->rangevalues = $columnData['rangevalues'];
+                        
+                        // Log de l'audit pour les valeurs possibles
+                        $this->logAudit(
+                            $dbId, 
+                            $tableDesc->id, 
+                            $columnData['column'] . '_rangevalues', 
+                            'update', 
+                            $oldRangeValues, 
+                            $columnData['rangevalues']
+                        );
+                    }
+                    
                     $column->save();
                 }
             }
@@ -243,8 +338,22 @@ class TableController extends Controller
                 return response()->json(['error' => 'Colonne non trouvée'], 404);
             }
 
-            $column->description = $validated['description'];
-            $column->save();
+            // Vérifier si la description a changé
+            if ($column->description !== $validated['description']) {
+                $oldDescription = $column->description;
+                $column->description = $validated['description'];
+                $column->save();
+                
+                // Log de l'audit pour la description de la colonne
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_description', 
+                    'update', 
+                    $oldDescription, 
+                    $validated['description']
+                );
+            }
 
             return response()->json(['success' => true]);
 
@@ -288,8 +397,22 @@ class TableController extends Controller
                 return response()->json(['error' => 'Colonne non trouvée'], 404);
             }
 
-            $column->rangevalues = $validated['possible_values'];
-            $column->save();
+            // Vérifier si les valeurs possibles ont changé
+            if ($column->rangevalues !== $validated['possible_values']) {
+                $oldRangeValues = $column->rangevalues;
+                $column->rangevalues = $validated['possible_values'];
+                $column->save();
+                
+                // Log de l'audit pour les valeurs possibles
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_rangevalues', 
+                    'update', 
+                    $oldRangeValues, 
+                    $validated['possible_values']
+                );
+            }
 
             return response()->json(['success' => true]);
 
