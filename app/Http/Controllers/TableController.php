@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Models\TableDescription;
 use App\Models\TableStructure;
+use App\Models\AuditLog;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -186,7 +188,6 @@ class TableController extends Controller
             ]);
         }
     }
-
 
     /**
      * Sauvegarde la structure de la table (uniquement descriptions et valeurs possibles)
@@ -418,6 +419,128 @@ class TableController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de la mise à jour des valeurs possibles: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Met à jour les propriétés structurelles d'une colonne
+     */
+    public function updateColumnProperties(Request $request, $tableName, $columnName)
+    {
+        try {
+            // Valider les données
+            $validated = $request->validate([
+                'column_name' => 'required|string',
+                'data_type' => 'required|string',
+                'is_nullable' => 'required|boolean',
+                'is_primary_key' => 'required|boolean',
+                'is_foreign_key' => 'required|boolean',
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Récupérer la colonne
+            $column = TableStructure::where('id_table', $tableDesc->id)
+                ->where('column', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Colonne non trouvée'], 404);
+            }
+
+            // Mettre à jour le nom de la colonne
+            if ($column->column !== $validated['column_name']) {
+                $oldColumnName = $column->column;
+                $column->column = $validated['column_name'];
+                
+                // Log de l'audit pour le nom de la colonne
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName, 
+                    'update_name', 
+                    $oldColumnName, 
+                    $validated['column_name']
+                );
+            }
+
+            // Mettre à jour le type de données
+            if ($column->type !== $validated['data_type']) {
+                $oldType = $column->type;
+                $column->type = $validated['data_type'];
+                
+                // Log de l'audit pour le type de données
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_type', 
+                    'update', 
+                    $oldType, 
+                    $validated['data_type']
+                );
+            }
+
+            // Mettre à jour la nullabilité
+            $newNullable = $validated['is_nullable'] ? 1 : 0;
+            if ($column->nullable != $newNullable) {
+                $oldNullable = $column->nullable;
+                $column->nullable = $newNullable;
+                
+                // Log de l'audit pour la nullabilité
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_nullable', 
+                    'update', 
+                    $oldNullable ? 'true' : 'false', 
+                    $newNullable ? 'true' : 'false'
+                );
+            }
+
+            // Mettre à jour les clés
+            $oldKey = $column->key;
+            $newKey = null;
+            
+            if ($validated['is_primary_key']) {
+                $newKey = 'PK';
+            } elseif ($validated['is_foreign_key']) {
+                $newKey = 'FK';
+            }
+            
+            if ($oldKey !== $newKey) {
+                $column->key = $newKey;
+                
+                // Log de l'audit pour le type de clé
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_key', 
+                    'update', 
+                    $oldKey ?: 'null', 
+                    $newKey ?: 'null'
+                );
+            }
+
+            // Sauvegarder les modifications
+            $column->save();
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la mise à jour des propriétés de la colonne: ' . $e->getMessage()], 500);
         }
     }
 
