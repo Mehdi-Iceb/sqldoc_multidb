@@ -188,6 +188,42 @@ class TableController extends Controller
             ]);
         }
     }
+    
+    /**
+    * Récupère les logs d'audit pour une colonne spécifique
+    */
+    public function getAuditLogs(Request $request, $tableName, $columnName)
+    {
+        try {
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Récupérer les logs d'audit liés à cette colonne
+            $auditLogs = AuditLog::where('db_id', $dbId)
+                ->where('table_id', $tableDesc->id)
+                ->where('column_name', 'like', $columnName . '%')
+                ->with('user')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($auditLogs);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la récupération des logs d\'audit: ' . $e->getMessage()], 500);
+        }
+    }
 
     /**
      * Sauvegarde la structure de la table (uniquement descriptions et valeurs possibles)
@@ -639,4 +675,5 @@ class TableController extends Controller
             return response()->json(['error' => 'Erreur lors de la récupération des détails de la table: ' . $e->getMessage()], 500);
         }
     }
+
 }

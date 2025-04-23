@@ -70,6 +70,10 @@ Route::middleware('auth')->group(function () {
         ->name('table.column.updatePossibleValues');
     Route::get('/api/table/{tableName}/details', [TableController::class, 'apiDetails'])
         ->name('api.table.details');
+    Route::get('/table/{tableName}/column/{columnName}/audit-logs', [TableController::class, 'getAuditLogs'])
+        ->name('table.audit.logs');
+    Route::post('/table/{tableName}/column/{columnName}/properties', [TableController::class, 'updateColumnProperties'])
+        ->name('table.column.properties');
 
     Route::get('/view/{viewName}/details', [ViewController::class, 'details'])
         ->name('view.details');
