@@ -23,4 +23,19 @@ class AuditLog extends Model
         'old_data',
         'new_data'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function dbdescription()
+    {
+        return $this->belongsTo(DbDescription::class);
+    }
+
+    public function tableDescription()
+    {
+        return $this->belongsTo(TableDescription::class, 'id_table', 'id');
+    }
 }
