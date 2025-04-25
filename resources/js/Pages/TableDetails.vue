@@ -188,14 +188,14 @@
                         <span v-if="!editingDescription[column.column_name]">
                           {{ column.description || '-' }}
                         </span>
-                        <input
+                        <textarea
                           v-else
                           v-model="editingDescriptionValue"
                           type="text"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          @keyup.enter="saveDescription(column.column_name)"
-                          @keyup.esc="cancelEdit('description', column.column_name)"
-                        >
+                          @keydown.ctrl.enter="saveDescription(column.column_name)"
+                          @keydown.esc="cancelEdit('description', column.column_name)"
+                        ></textarea>
                         <button
                           v-if="!editingDescription[column.column_name]"
                           @click="startEdit('description', column.column_name, column.description)"
@@ -233,7 +233,7 @@
                         <span v-if="!editingPossibleValues[column.column_name]">
                           {{ column.possible_values || '-' }}
                         </span>
-                        <input
+                        <textarea
                           v-else
                           v-model="editingPossibleValuesValue"
                           type="text"
@@ -241,7 +241,7 @@
                           @keyup.enter="savePossibleValues(column.column_name)"
                           @keyup.esc="cancelEdit('possibleValues', column.column_name)"
                           placeholder="exemple of possible value"
-                        >
+                        ></textarea>
                         <button
                           v-if="!editingPossibleValues[column.column_name]"
                           @click="startEdit('possibleValues', column.column_name, column.possible_values)"
@@ -439,7 +439,7 @@
       <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 shadow-lg rounded-md bg-white">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900">
-            Historique des modifications - {{ currentColumn }}
+            Change history - column name: {{ currentColumn }}
           </h3>
           <button @click="closeAuditModal" class="text-gray-400 hover:text-gray-500">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -461,10 +461,10 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilisateur</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ancienne valeur</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nouvelle valeur</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Old value</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New value</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
