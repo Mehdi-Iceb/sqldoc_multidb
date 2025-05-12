@@ -444,7 +444,7 @@ class TableController extends Controller
                 $this->logAudit(
                     $dbId, 
                     $tableDesc->id, 
-                    $columnName . '_rangevalues', 
+                    $columnName . '_range_value', 
                     'update', 
                     $oldRangeValues, 
                     $validated['possible_values']

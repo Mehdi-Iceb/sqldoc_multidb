@@ -156,14 +156,19 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                      <span :class="[
-                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                        column.is_nullable 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      ]">
-                        {{ column.is_nullable ? 'Oui' : 'Non' }}
-                      </span>
+                      <div class="flex items-center space-x-2">
+                        <span 
+                          :class="[
+                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer',
+                            column.is_nullable 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          ]"
+                          @click="toggleNullable(column)"
+                        >
+                          {{ column.is_nullable ? 'Oui' : 'Non' }}
+                        </span>
+                      </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       <div class="flex gap-1">
@@ -277,7 +282,14 @@
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
                         <!-- Placeholder for release column content -->
-                        -
+                        <select
+                          v-model="selectedVersion"
+                          class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+                        >
+                          <option v-for="version in versions" :key="version" :value="version">
+                            {{ version }}
+                          </option>
+                        </select>
                       </div>
                     </td>
                     <td class="px-4 py-3 text-sm">
@@ -453,7 +465,7 @@
         </div>
         
         <div v-else-if="auditLogs.length === 0" class="text-center py-4 text-gray-500">
-          Aucune modification trouvée pour cette colonne
+          No change found on this column !
         </div>
         
         <div v-else class="overflow-y-auto max-h-96">
@@ -462,6 +474,7 @@
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Old value</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New value</th>
@@ -474,6 +487,11 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ log.user?.name || 'N/A' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span class="font-medium" :class="getPropertyClass(log.column_name)">
+                    {{ getPropertyName(log.column_name) }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <span :class="[
@@ -509,6 +527,7 @@ import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+import Dropdown from '@/Components/Dropdown.vue'
   
 const props = defineProps({
   tableName: {
@@ -530,6 +549,9 @@ const tableDetails = ref({
 const form = ref({
   description: ''
 });
+
+const versions = ['1.0.0', '1.1.0', '1.2.0', '2.0.0']
+const selectedVersion = ref('1.0.0')
 
 // États pour l'édition
 const editingDescription = ref({});
@@ -720,6 +742,39 @@ const saveDataType = async (columnName) => {
   }
 };
 
+// Fonction pour basculer la nullabilité d'une colonne
+const toggleNullable = async (column) => {
+  try {
+    // Copier les propriétés actuelles de la colonne
+    const columnProperties = {
+      column_name: column.column_name,
+      data_type: column.data_type,
+      is_nullable: !column.is_nullable, // Inverser la valeur
+      is_primary_key: column.is_primary_key,
+      is_foreign_key: column.is_foreign_key
+    };
+    
+    // Appel à l'API pour mettre à jour les propriétés
+    const response = await axios.post(
+      `/table/${props.tableName}/column/${column.column_name}/properties`,
+      columnProperties
+    );
+    
+    if (response.data.success) {
+      // Mettre à jour localement la propriété is_nullable
+      column.is_nullable = !column.is_nullable;
+      
+      // Notification de succès
+      alert('Nullabilité modifiée avec succès');
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la modification de la nullabilité');
+    }
+  } catch (error) {
+    console.error('Erreur lors de la modification de la nullabilité:', error);
+    alert('Erreur lors de la modification de la nullabilité');
+  }
+};
+
 // Fonction pour afficher les audit logs
 const showAuditLogs = async (columnName) => {
   showAuditModal.value = true;
@@ -729,6 +784,11 @@ const showAuditLogs = async (columnName) => {
   try {
     const response = await axios.get(`/table/${props.tableName}/column/${columnName}/audit-logs`);
     auditLogs.value = response.data;
+    
+    // Analyser les noms de colonnes pour le débogage
+    const uniqueColumnNames = [...new Set(response.data.map(log => log.column_name))];
+    console.log('Unique column_name values in logs:', uniqueColumnNames);
+    
   } catch (error) {
     console.error('Erreur lors du chargement des logs d\'audit:', error);
     alert('Erreur lors du chargement de l\'historique des modifications');
@@ -753,6 +813,56 @@ const formatDate = (date) => {
     hour: '2-digit',
     minute: '2-digit'
   });
+};
+
+// Fonction pour obtenir le nom descriptif de la propriété modifiée
+const getPropertyName = (columnNameWithSuffix) => {
+  if (!columnNameWithSuffix) return 'Unknown';
+  
+  // Gestion des propriétés de table
+  if (columnNameWithSuffix === 'table_description') return 'Table Description';
+  if (columnNameWithSuffix === 'table_language') return 'Table Language';
+  
+  // Vérifier les suffixes spécifiques pour les propriétés de colonne
+  if (columnNameWithSuffix.endsWith('_description')) return 'Description';
+  
+  // Mettre à jour cette condition pour inclure votre nouveau format
+  if (columnNameWithSuffix.endsWith('_range_value') || 
+      columnNameWithSuffix.endsWith('_rangevalues') || 
+      columnNameWithSuffix.endsWith('_possible_values')) {
+    return 'Range Values';
+  }
+  
+  if (columnNameWithSuffix.endsWith('_type')) return 'Data Type';
+  if (columnNameWithSuffix.endsWith('_nullable')) return 'Nullable';
+  if (columnNameWithSuffix.endsWith('_key')) return 'Key Type';
+  if (columnNameWithSuffix.endsWith('_release')) return 'Release';
+  
+  // Si c'est une modification du nom de colonne ou autre
+  if (columnNameWithSuffix.includes('_')) {
+    const parts = columnNameWithSuffix.split('_');
+    const lastPart = parts[parts.length - 1];
+    if (['name', 'update_name'].includes(lastPart)) return 'Column Name';
+  }
+  
+  // Par défaut, retourner le nom tel quel
+  return columnNameWithSuffix;
+};
+
+// Fonction pour obtenir une classe CSS selon le type de propriété
+const getPropertyClass = (columnNameWithSuffix) => {
+  if (!columnNameWithSuffix) return '';
+  
+  // Couleurs différentes selon le type de propriété
+  if (columnNameWithSuffix.endsWith('_description')) return 'text-purple-700';
+  if (columnNameWithSuffix.endsWith('_rangevalues')) return 'text-green-700';
+  if (columnNameWithSuffix.endsWith('_type')) return 'text-blue-700';
+  if (columnNameWithSuffix.endsWith('_nullable')) return 'text-red-700';
+  if (columnNameWithSuffix.endsWith('_key')) return 'text-yellow-700';
+  if (columnNameWithSuffix.endsWith('_release')) return 'text-indigo-700';
+  
+  // Par défaut
+  return 'text-gray-900';
 };
 
 // Fonction pour formater les valeurs des logs

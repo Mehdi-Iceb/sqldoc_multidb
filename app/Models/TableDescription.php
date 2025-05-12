@@ -19,6 +19,7 @@ class TableDescription  extends Model
     'tablename',
     'language',
     'description',
+    'range_value',
     'created_at',
     'updated_at',
    ];
