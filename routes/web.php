@@ -74,6 +74,8 @@ Route::middleware('auth')->group(function () {
         ->name('table.audit.logs');
     Route::post('/table/{tableName}/column/{columnName}/properties', [TableController::class, 'updateColumnProperties'])
         ->name('table.column.properties');
+    Route::post('/table/{tableName}/column/add', [TableController::class, 'addColumn'])
+        ->name('table.column.add');
 
     Route::get('/view/{viewName}/details', [ViewController::class, 'details'])
         ->name('view.details');

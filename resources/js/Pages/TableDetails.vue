@@ -48,7 +48,7 @@
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   :disabled="saving"
                 >
-                  {{ saving ? 'Enregistrement...' : 'Enregistrer les descriptions' }}
+                  {{ saving ? 'Enregistrement...' : 'Save descriptions' }}
                 </button>
               </div>
             </div>
@@ -65,11 +65,161 @@
           <!-- Structure de la table -->
           <div class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <div class="flex items-center">
-                <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
-                </svg>
-                <h3 class="text-lg font-medium text-gray-900">Table structure</h3>
+              <div class="flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900">
+                  <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
+                  </svg>
+                  Table structure
+                </h3>
+                <PrimaryButton @click="showAddColumnModal = true">
+                  Add a column
+                </PrimaryButton>
+              </div>
+            </div>
+            <!-- 2. Ajoutez un modal pour ajouter une nouvelle colonne -->
+            <div v-if="showAddColumnModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-medium text-gray-900">
+                    Ajouter une nouvelle colonne
+                  </h3>
+                  <button @click="showAddColumnModal = false" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <form @submit.prevent="addNewColumn">
+                  <div class="space-y-4">
+                    <!-- Nom de la colonne -->
+                    <div>
+                      <label for="column_name" class="block text-sm font-medium text-gray-700">Nom de la colonne</label>
+                      <input 
+                        id="column_name" 
+                        v-model="newColumn.column_name" 
+                        type="text" 
+                        required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                    </div>
+                    
+                    <!-- Type de données -->
+                    <div>
+                      <label for="data_type" class="block text-sm font-medium text-gray-700">Type de données</label>
+                      <input 
+                        id="data_type" 
+                        v-model="newColumn.data_type" 
+                        type="text" 
+                        required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="ex: varchar(255), int, date..."
+                      >
+                    </div>
+                    
+                    <!-- Nullable -->
+                    <div class="flex items-center">
+                      <input 
+                        id="is_nullable" 
+                        v-model="newColumn.is_nullable" 
+                        type="checkbox" 
+                        class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      >
+                      <label for="is_nullable" class="ml-2 block text-sm text-gray-700">Nullable</label>
+                    </div>
+                    
+                    <!-- Type de clé -->
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Type de clé</label>
+                      <div class="mt-1 flex items-center space-x-4">
+                        <div class="flex items-center">
+                          <input 
+                            id="no_key" 
+                            v-model="newColumn.key_type" 
+                            type="radio" 
+                            value="none"
+                            class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          >
+                          <label for="no_key" class="ml-2 block text-sm text-gray-700">Aucune</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input 
+                            id="primary_key" 
+                            v-model="newColumn.key_type" 
+                            type="radio" 
+                            value="PK"
+                            class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          >
+                          <label for="primary_key" class="ml-2 block text-sm text-gray-700">Clé primaire</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input 
+                            id="foreign_key" 
+                            v-model="newColumn.key_type" 
+                            type="radio" 
+                            value="FK"
+                            class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          >
+                          <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Clé étrangère</label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div>
+                      <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                      <textarea 
+                        id="description" 
+                        v-model="newColumn.description" 
+                        rows="2"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      ></textarea>
+                    </div>
+                    
+                    <!-- Valeurs possibles -->
+                    <div>
+                      <label for="possible_values" class="block text-sm font-medium text-gray-700">Valeurs possibles</label>
+                      <textarea 
+                        id="possible_values" 
+                        v-model="newColumn.possible_values" 
+                        rows="2"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      ></textarea>
+                    </div>
+                    
+                    <!-- Version release -->
+                    <div>
+                      <label for="release" class="block text-sm font-medium text-gray-700">Version</label>
+                      <select 
+                        id="release" 
+                        v-model="newColumn.release"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      >
+                        <option v-for="version in versions" :key="version" :value="version">
+                          {{ version }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-6 flex justify-end space-x-3">
+                    <button 
+                      type="button"
+                      @click="showAddColumnModal = false"
+                      class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Annuler
+                    </button>
+                    <button 
+                      type="submit"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :disabled="addingColumn"
+                    >
+                      {{ addingColumn ? 'Ajout en cours...' : 'Ajouter' }}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
             <div class="overflow-x-auto">
@@ -885,6 +1035,82 @@ const formatLogValue = (value) => {
   } catch {
     // Si ce n'est pas du JSON, on retourne la valeur telle quelle
     return value;
+  }
+};
+
+// États pour le modal d'ajout de colonne
+const showAddColumnModal = ref(false);
+const addingColumn = ref(false);
+const newColumn = ref({
+  column_name: '',
+  data_type: '',
+  is_nullable: false,
+  key_type: 'none', // 'none', 'PK', ou 'FK'
+  description: '',
+  possible_values: '',
+  release: '1.0.0'
+});
+
+// Fonction pour ajouter une nouvelle colonne
+const addNewColumn = async () => {
+  try {
+    addingColumn.value = true;
+    
+    // Préparer les données à envoyer
+    const columnData = {
+      column_name: newColumn.value.column_name,
+      data_type: newColumn.value.data_type,
+      is_nullable: newColumn.value.is_nullable,
+      is_primary_key: newColumn.value.key_type === 'PK',
+      is_foreign_key: newColumn.value.key_type === 'FK',
+      description: newColumn.value.description,
+      possible_values: newColumn.value.possible_values,
+      release: newColumn.value.release
+    };
+    
+    console.log('Ajout d\'une nouvelle colonne:', columnData);
+    
+    // Appel à l'API
+    const response = await axios.post(`/table/${props.tableName}/column/add`, columnData);
+    
+    if (response.data.success) {
+      // Fermer le modal
+      showAddColumnModal.value = false;
+      
+      // Réinitialiser le formulaire
+      newColumn.value = {
+        column_name: '',
+        data_type: '',
+        is_nullable: false,
+        key_type: 'none',
+        description: '',
+        possible_values: '',
+        release: '1.0.0'
+      };
+      
+      // Recharger les données de la table pour afficher la nouvelle colonne
+      reloadTableData();
+      
+      // Notification de succès
+      alert('Colonne ajoutée avec succès');
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la colonne');
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout de la colonne:', error);
+    alert('Erreur lors de l\'ajout de la colonne: ' + (error.response?.data?.error || error.message));
+  } finally {
+    addingColumn.value = false;
+  }
+};
+
+// Fonction pour recharger les données de la table
+const reloadTableData = async () => {
+  try {
+    const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`);
+    tableDetails.value = response.data;
+  } catch (err) {
+    console.error('Erreur lors du rechargement des données:', err);
   }
 };
 </script>

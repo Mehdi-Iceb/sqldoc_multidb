@@ -690,4 +690,99 @@ class TableController extends Controller
         }
     }
 
+    public function addColumn(Request $request, $tableName)
+    {
+        try {
+            // Valider les données
+            $validated = $request->validate([
+                'column_name' => 'required|string|max:255',
+                'data_type' => 'required|string|max:255',
+                'is_nullable' => 'required|boolean',
+                'is_primary_key' => 'required|boolean',
+                'is_foreign_key' => 'required|boolean',
+                'description' => 'nullable|string',
+                'possible_values' => 'nullable|string',
+                'release' => 'nullable|string'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Vérifier si une colonne avec ce nom existe déjà
+            $existingColumn = TableStructure::where('id_table', $tableDesc->id)
+                ->where('column', $validated['column_name'])
+                ->first();
+
+            if ($existingColumn) {
+                return response()->json(['error' => 'Une colonne avec ce nom existe déjà dans cette table'], 400);
+            }
+
+            // Déterminer le type de clé
+            $keyType = null;
+            if ($validated['is_primary_key']) {
+                $keyType = 'PK';
+            } elseif ($validated['is_foreign_key']) {
+                $keyType = 'FK';
+            }
+
+            // Créer la nouvelle colonne
+            $newColumn = new TableStructure();
+            $newColumn->id_table = $tableDesc->id;
+            $newColumn->column = $validated['column_name'];
+            $newColumn->type = $validated['data_type'];
+            $newColumn->nullable = $validated['is_nullable'] ? 1 : 0;
+            $newColumn->key = $keyType;
+            $newColumn->description = $validated['description'];
+            $newColumn->rangevalues = $validated['possible_values'];
+            
+            // Ajouter le champ release si disponible
+            if (Schema::hasColumn('table_structure', 'release')) {
+                $newColumn->release = $validated['release'];
+            }
+            
+            $newColumn->save();
+
+            // Log de l'audit pour l'ajout de la colonne
+            $this->logAudit(
+                $dbId,
+                $tableDesc->id,
+                $validated['column_name'],
+                'add',
+                null,
+                json_encode([
+                    'column_name' => $validated['column_name'],
+                    'data_type' => $validated['data_type'],
+                    'is_nullable' => $validated['is_nullable'],
+                    'is_primary_key' => $validated['is_primary_key'],
+                    'is_foreign_key' => $validated['is_foreign_key'],
+                    'description' => $validated['description'],
+                    'possible_values' => $validated['possible_values'],
+                    'release' => $validated['release'] ?? null
+                ])
+            );
+
+            return response()->json(['success' => true, 'column_id' => $newColumn->id]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'ajout d\'une colonne', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Erreur lors de l\'ajout de la colonne: ' . $e->getMessage()], 500);
+        }
+    }
+
 }
