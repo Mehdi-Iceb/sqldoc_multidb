@@ -523,11 +523,140 @@
           <!-- Relations -->
           <div class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <div class="flex items-center">
-                <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-                <h3 class="text-lg font-medium text-gray-900">Relations</h3>
+              <div class="flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900">
+                  <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                  </svg>
+                  Relations
+                </h3>
+                <PrimaryButton @click="showAddRelationModal = true">
+                  Add relation
+                </PrimaryButton>
+              </div>
+            </div>
+
+            <!-- 2. Ajoutez un modal pour ajouter une nouvelle relation -->
+            <div v-if="showAddRelationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-medium text-gray-900">
+                    Add relation
+                  </h3>
+                  <button @click="showAddRelationModal = false" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <form @submit.prevent="addNewRelation">
+                  <div class="space-y-4">
+                    <!-- Nom de la contrainte -->
+                    <div>
+                      <label for="constraint_name" class="block text-sm font-medium text-gray-700">Nom de la contrainte</label>
+                      <input 
+                        id="constraint_name" 
+                        v-model="newRelation.constraint_name" 
+                        type="text" 
+                        required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="ex: FK_TableA_TableB"
+                      >
+                    </div>
+                    
+                    <!-- Colonne source -->
+                    <div>
+                      <label for="column_name" class="block text-sm font-medium text-gray-700">Colonne source</label>
+                      <select 
+                        id="column_name" 
+                        v-model="newRelation.column_name"
+                        required
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      >
+                        <option value="">Sélectionnez une colonne</option>
+                        <option v-for="column in tableDetails.columns" :key="column.column_name" :value="column.column_name">
+                          {{ column.column_name }}
+                        </option>
+                      </select>
+                    </div>
+                    
+                    <!-- Table référencée -->
+                    <div>
+                      <label for="referenced_table" class="block text-sm font-medium text-gray-700">Table référencée</label>
+                      <input 
+                        id="referenced_table" 
+                        v-model="newRelation.referenced_table" 
+                        type="text" 
+                        required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                    </div>
+                    
+                    <!-- Colonne référencée -->
+                    <div>
+                      <label for="referenced_column" class="block text-sm font-medium text-gray-700">Colonne référencée</label>
+                      <input 
+                        id="referenced_column" 
+                        v-model="newRelation.referenced_column" 
+                        type="text" 
+                        required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                    </div>
+                    
+                    <!-- Action ON DELETE -->
+                    <div>
+                      <label for="delete_rule" class="block text-sm font-medium text-gray-700">Action ON DELETE</label>
+                      <select 
+                        id="delete_rule" 
+                        v-model="newRelation.delete_rule"
+                        required
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      >
+                        <option value="NO ACTION">NO ACTION</option>
+                        <option value="CASCADE">CASCADE</option>
+                        <option value="SET NULL">SET NULL</option>
+                        <option value="SET DEFAULT">SET DEFAULT</option>
+                        <option value="RESTRICT">RESTRICT</option>
+                      </select>
+                    </div>
+                    
+                    <!-- Action ON UPDATE -->
+                    <div>
+                      <label for="update_rule" class="block text-sm font-medium text-gray-700">Action ON UPDATE</label>
+                      <select 
+                        id="update_rule" 
+                        v-model="newRelation.update_rule"
+                        required
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      >
+                        <option value="NO ACTION">NO ACTION</option>
+                        <option value="CASCADE">CASCADE</option>
+                        <option value="SET NULL">SET NULL</option>
+                        <option value="SET DEFAULT">SET DEFAULT</option>
+                        <option value="RESTRICT">RESTRICT</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-6 flex justify-end space-x-3">
+                    <button 
+                      type="button"
+                      @click="showAddRelationModal = false"
+                      class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Annuler
+                    </button>
+                    <button 
+                      type="submit"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :disabled="addingRelation"
+                    >
+                      {{ addingRelation ? 'Ajout en cours...' : 'Ajouter' }}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
             <div class="overflow-x-auto">
@@ -1111,6 +1240,68 @@ const reloadTableData = async () => {
     tableDetails.value = response.data;
   } catch (err) {
     console.error('Erreur lors du rechargement des données:', err);
+  }
+};
+
+// États pour le modal d'ajout de relation
+const showAddRelationModal = ref(false);
+const addingRelation = ref(false);
+const newRelation = ref({
+  constraint_name: '',
+  column_name: '',
+  referenced_table: '',
+  referenced_column: '',
+  delete_rule: 'NO ACTION',
+  update_rule: 'NO ACTION'
+});
+
+// Fonction pour ajouter une nouvelle relation
+const addNewRelation = async () => {
+  try {
+    addingRelation.value = true;
+    
+    // Préparer les données à envoyer
+    const relationData = {
+      constraint_name: newRelation.value.constraint_name,
+      column_name: newRelation.value.column_name,
+      referenced_table: newRelation.value.referenced_table,
+      referenced_column: newRelation.value.referenced_column,
+      delete_rule: newRelation.value.delete_rule,
+      update_rule: newRelation.value.update_rule
+    };
+    
+    console.log('Ajout d\'une nouvelle relation:', relationData);
+    
+    // Appel à l'API
+    const response = await axios.post(`/table/${props.tableName}/relation/add`, relationData);
+    
+    if (response.data.success) {
+      // Fermer le modal
+      showAddRelationModal.value = false;
+      
+      // Réinitialiser le formulaire
+      newRelation.value = {
+        constraint_name: '',
+        column_name: '',
+        referenced_table: '',
+        referenced_column: '',
+        delete_rule: 'NO ACTION',
+        update_rule: 'NO ACTION'
+      };
+      
+      // Recharger les données de la table pour afficher la nouvelle relation
+      reloadTableData();
+      
+      // Notification de succès
+      alert('Relation ajoutée avec succès');
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la relation');
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout de la relation:', error);
+    alert('Erreur lors de l\'ajout de la relation: ' + (error.response?.data?.error || error.message));
+  } finally {
+    addingRelation.value = false;
   }
 };
 </script>

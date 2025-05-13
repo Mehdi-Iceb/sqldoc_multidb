@@ -785,4 +785,120 @@ class TableController extends Controller
         }
     }
 
+    public function addRelation(Request $request, $tableName)
+    {
+        try {
+            // Valider les données
+            $validated = $request->validate([
+                'constraint_name' => 'required|string|max:255',
+                'column_name' => 'required|string|max:255',
+                'referenced_table' => 'required|string|max:255',
+                'referenced_column' => 'required|string|max:255',
+                'delete_rule' => 'required|string|max:255',
+                'update_rule' => 'required|string|max:255'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Vérifier si une relation avec ce nom de contrainte existe déjà
+            $existingRelation = DB::table('table_relations')
+                ->where('id_table', $tableDesc->id)
+                ->where('constraints', $validated['constraint_name'])
+                ->first();
+
+            if ($existingRelation) {
+                return response()->json(['error' => 'Une relation avec ce nom de contrainte existe déjà'], 400);
+            }
+
+            // Vérifier si la colonne source existe
+            $column = TableStructure::where('id_table', $tableDesc->id)
+                ->where('column', $validated['column_name'])
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'La colonne source n\'existe pas dans cette table'], 404);
+            }
+
+            // Construire la chaîne d'action à partir des règles ON DELETE et ON UPDATE
+            $action = '';
+            if ($validated['delete_rule'] !== 'NO ACTION') {
+                $action .= 'ON DELETE ' . $validated['delete_rule'];
+            }
+            if ($validated['update_rule'] !== 'NO ACTION') {
+                if (!empty($action)) {
+                    $action .= ' ';
+                }
+                $action .= 'ON UPDATE ' . $validated['update_rule'];
+            }
+
+            // Créer la nouvelle relation
+            $relationId = DB::table('table_relations')->insertGetId([
+                'id_table' => $tableDesc->id,
+                'constraints' => $validated['constraint_name'],
+                'column' => $validated['column_name'],
+                'referenced_table' => $validated['referenced_table'],
+                'referenced_column' => $validated['referenced_column'],
+                'action' => $action,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Log de l'audit pour l'ajout de la relation
+            $this->logAudit(
+                $dbId,
+                $tableDesc->id,
+                $validated['constraint_name'],
+                'add_relation',
+                null,
+                json_encode([
+                    'constraint_name' => $validated['constraint_name'],
+                    'column_name' => $validated['column_name'],
+                    'referenced_table' => $validated['referenced_table'],
+                    'referenced_column' => $validated['referenced_column'],
+                    'delete_rule' => $validated['delete_rule'],
+                    'update_rule' => $validated['update_rule']
+                ])
+            );
+
+            // Mettre à jour la colonne pour indiquer qu'elle est une clé étrangère si ce n'est pas déjà le cas
+            if ($column->key !== 'PK' && $column->key !== 'FK') {
+                $column->key = 'FK';
+                $column->save();
+                
+                // Log de l'audit pour la mise à jour du type de clé
+                $this->logAudit(
+                    $dbId,
+                    $tableDesc->id,
+                    $validated['column_name'] . '_key',
+                    'update',
+                    $column->key ?: 'null',
+                    'FK'
+                );
+            }
+
+            return response()->json(['success' => true, 'relation_id' => $relationId]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'ajout d\'une relation', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Erreur lors de l\'ajout de la relation: ' . $e->getMessage()], 500);
+        }
+    }
+
 }
