@@ -438,13 +438,22 @@ class TableController extends Controller
             if ($column->rangevalues !== $validated['possible_values']) {
                 $oldRangeValues = $column->rangevalues;
                 $column->rangevalues = $validated['possible_values'];
-                $column->save();
+                
+                // Sauvegarde et stocke le résultat 
+                $result = $column->save(); // Utilisez $result au lieu de $saved
+                
+                // Log pour déboguer le résultat de la sauvegarde
+                Log::info('Résultat de la sauvegarde', [
+                    'column' => $columnName,
+                    'rangevalues après' => $column->rangevalues,
+                    'saveResult' => $result // Utilisez $result au lieu de $saved
+                ]);
                 
                 // Log de l'audit pour les valeurs possibles
                 $this->logAudit(
                     $dbId, 
                     $tableDesc->id, 
-                    $columnName . '_range_value', 
+                    $columnName . '_rangevalues', 
                     'update', 
                     $oldRangeValues, 
                     $validated['possible_values']
@@ -454,6 +463,11 @@ class TableController extends Controller
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour des valeurs possibles', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json(['error' => 'Erreur lors de la mise à jour des valeurs possibles: ' . $e->getMessage()], 500);
         }
     }

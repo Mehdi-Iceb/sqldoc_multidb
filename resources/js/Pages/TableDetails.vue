@@ -691,15 +691,25 @@ const saveDescription = async (columnName) => {
 // Fonction pour sauvegarder les valeurs possibles
 const savePossibleValues = async (columnName) => {
   try {
+    console.log('Sauvegarde des valeurs possibles pour', columnName, ':', editingPossibleValuesValue.value);
+    
     const response = await axios.post(`/table/${props.tableName}/column/${columnName}/possible-values`, {
       possible_values: editingPossibleValuesValue.value
     });
+    
+    console.log('Réponse du serveur:', response.data);
     
     if (response.data.success) {
       // Mise à jour des valeurs possibles dans les données locales
       const column = tableDetails.value.columns.find(c => c.column_name === columnName);
       if (column) {
+        const oldValue = column.possible_values;
         column.possible_values = editingPossibleValuesValue.value;
+        console.log('Valeur mise à jour localement:', {
+          column: columnName,
+          old: oldValue,
+          new: column.possible_values
+        });
       }
       
       // Réinitialise l'état d'édition
@@ -708,7 +718,7 @@ const savePossibleValues = async (columnName) => {
       throw new Error(response.data.error || 'Erreur lors de la sauvegarde des valeurs possibles');
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des valeurs possibles:', error);
+    console.error('Erreur détaillée:', error);
     alert('Erreur lors de la sauvegarde des valeurs possibles');
   }
 };
@@ -827,7 +837,7 @@ const getPropertyName = (columnNameWithSuffix) => {
   if (columnNameWithSuffix.endsWith('_description')) return 'Description';
   
   // Mettre à jour cette condition pour inclure votre nouveau format
-  if (columnNameWithSuffix.endsWith('_range_value') || 
+  if (columnNameWithSuffix.endsWith('_rangevalues') || 
       columnNameWithSuffix.endsWith('_rangevalues') || 
       columnNameWithSuffix.endsWith('_possible_values')) {
     return 'Range Values';
