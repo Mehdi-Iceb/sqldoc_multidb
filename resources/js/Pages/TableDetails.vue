@@ -307,17 +307,17 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       <div class="flex items-center space-x-2">
-                        <span 
+                        <select 
                           :class="[
-                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer',
-                            column.is_nullable 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
+                            'block w-full pl-3 pr-10 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md',
+                            column.is_nullable ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
                           ]"
-                          @click="toggleNullable(column)"
+                          :value="column.is_nullable ? 'true' : 'false'"
+                          @change="updateNullable(column, $event.target.value === 'true')"
                         >
-                          {{ column.is_nullable ? 'Oui' : 'Non' }}
-                        </span>
+                          <option value="true">Oui</option>
+                          <option value="false">Non</option>
+                        </select>
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -1032,13 +1032,23 @@ const saveDataType = async (columnName) => {
 };
 
 // Fonction pour basculer la nullabilité d'une colonne
-const toggleNullable = async (column) => {
+const updateNullable = async (column, isNullable) => {
   try {
+    // Convertir la valeur string en boolean si nécessaire
+    if (typeof isNullable === 'string') {
+      isNullable = isNullable === 'true';
+    }
+    
+    // Ne rien faire si la valeur n'a pas changé
+    if (column.is_nullable === isNullable) {
+      return;
+    }
+    
     // Copier les propriétés actuelles de la colonne
     const columnProperties = {
       column_name: column.column_name,
       data_type: column.data_type,
-      is_nullable: !column.is_nullable, // Inverser la valeur
+      is_nullable: isNullable, // Nouvelle valeur
       is_primary_key: column.is_primary_key,
       is_foreign_key: column.is_foreign_key
     };
@@ -1051,16 +1061,18 @@ const toggleNullable = async (column) => {
     
     if (response.data.success) {
       // Mettre à jour localement la propriété is_nullable
-      column.is_nullable = !column.is_nullable;
+      column.is_nullable = isNullable;
       
-      // Notification de succès
-      alert('Nullabilité modifiée avec succès');
+      // alert('Nullabilité modifiée avec succès');
     } else {
       throw new Error(response.data.error || 'Erreur lors de la modification de la nullabilité');
     }
   } catch (error) {
     console.error('Erreur lors de la modification de la nullabilité:', error);
     alert('Erreur lors de la modification de la nullabilité');
+    
+    // Recharger les données pour revenir à l'état initial en cas d'erreur
+    await reloadTableData();
   }
 };
 
