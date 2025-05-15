@@ -77,12 +77,12 @@
                 </PrimaryButton>
               </div>
             </div>
-            <!-- 2. Ajoutez un modal pour ajouter une nouvelle colonne -->
+            <!-- modal pour ajouter une nouvelle colonne -->
             <div v-if="showAddColumnModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="text-lg font-medium text-gray-900">
-                    Ajouter une nouvelle colonne
+                    Add new column
                   </h3>
                   <button @click="showAddColumnModal = false" class="text-gray-400 hover:text-gray-500">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -95,7 +95,7 @@
                   <div class="space-y-4">
                     <!-- Nom de la colonne -->
                     <div>
-                      <label for="column_name" class="block text-sm font-medium text-gray-700">Nom de la colonne</label>
+                      <label for="column_name" class="block text-sm font-medium text-gray-700">Column name</label>
                       <input 
                         id="column_name" 
                         v-model="newColumn.column_name" 
@@ -107,7 +107,7 @@
                     
                     <!-- Type de données -->
                     <div>
-                      <label for="data_type" class="block text-sm font-medium text-gray-700">Type de données</label>
+                      <label for="data_type" class="block text-sm font-medium text-gray-700">Data type</label>
                       <input 
                         id="data_type" 
                         v-model="newColumn.data_type" 
@@ -131,7 +131,7 @@
                     
                     <!-- Type de clé -->
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Type de clé</label>
+                      <label class="block text-sm font-medium text-gray-700">Key type</label>
                       <div class="mt-1 flex items-center space-x-4">
                         <div class="flex items-center">
                           <input 
@@ -141,7 +141,7 @@
                             value="none"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="no_key" class="ml-2 block text-sm text-gray-700">Aucune</label>
+                          <label for="no_key" class="ml-2 block text-sm text-gray-700">None</label>
                         </div>
                         <div class="flex items-center">
                           <input 
@@ -151,7 +151,7 @@
                             value="PK"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="primary_key" class="ml-2 block text-sm text-gray-700">Clé primaire</label>
+                          <label for="primary_key" class="ml-2 block text-sm text-gray-700">Primary key</label>
                         </div>
                         <div class="flex items-center">
                           <input 
@@ -161,7 +161,7 @@
                             value="FK"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Clé étrangère</label>
+                          <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Foreign key</label>
                         </div>
                       </div>
                     </div>
@@ -179,7 +179,7 @@
                     
                     <!-- Valeurs possibles -->
                     <div>
-                      <label for="possible_values" class="block text-sm font-medium text-gray-700">Valeurs possibles</label>
+                      <label for="possible_values" class="block text-sm font-medium text-gray-700">Range possible</label>
                       <textarea 
                         id="possible_values" 
                         v-model="newColumn.possible_values" 
@@ -209,14 +209,14 @@
                       @click="showAddColumnModal = false"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
-                      Annuler
+                      Cancel
                     </button>
                     <button 
                       type="submit"
                       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       :disabled="addingColumn"
                     >
-                      {{ addingColumn ? 'Ajout en cours...' : 'Ajouter' }}
+                      {{ addingColumn ? 'Ajout en cours...' : 'Add' }}
                     </button>
                   </div>
                 </form>
@@ -536,7 +536,7 @@
               </div>
             </div>
 
-            <!-- 2. Ajoutez un modal pour ajouter une nouvelle relation -->
+            <!-- modal pour ajouter une nouvelle relation -->
             <div v-if="showAddRelationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
                 <div class="flex items-center justify-between mb-4">
@@ -554,7 +554,7 @@
                   <div class="space-y-4">
                     <!-- Nom de la contrainte -->
                     <div>
-                      <label for="constraint_name" class="block text-sm font-medium text-gray-700">Nom de la contrainte</label>
+                      <label for="constraint_name" class="block text-sm font-medium text-gray-700">Name of constraint</label>
                       <input 
                         id="constraint_name" 
                         v-model="newRelation.constraint_name" 
@@ -567,14 +567,14 @@
                     
                     <!-- Colonne source -->
                     <div>
-                      <label for="column_name" class="block text-sm font-medium text-gray-700">Colonne source</label>
+                      <label for="column_name" class="block text-sm font-medium text-gray-700">Column origin</label>
                       <select 
                         id="column_name" 
                         v-model="newRelation.column_name"
                         required
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
-                        <option value="">Sélectionnez une colonne</option>
+                        <option value="">Select a column</option>
                         <option v-for="column in tableDetails.columns" :key="column.column_name" :value="column.column_name">
                           {{ column.column_name }}
                         </option>
@@ -583,7 +583,7 @@
                     
                     <!-- Table référencée -->
                     <div>
-                      <label for="referenced_table" class="block text-sm font-medium text-gray-700">Table référencée</label>
+                      <label for="referenced_table" class="block text-sm font-medium text-gray-700">Referenced Table</label>
                       <input 
                         id="referenced_table" 
                         v-model="newRelation.referenced_table" 
@@ -595,7 +595,7 @@
                     
                     <!-- Colonne référencée -->
                     <div>
-                      <label for="referenced_column" class="block text-sm font-medium text-gray-700">Colonne référencée</label>
+                      <label for="referenced_column" class="block text-sm font-medium text-gray-700">Referenced Column</label>
                       <input 
                         id="referenced_column" 
                         v-model="newRelation.referenced_column" 
