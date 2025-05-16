@@ -7,6 +7,8 @@ use App\Http\Controllers\ProcedureController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ReleaseApiController;
+use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\TableController;
 use App\Http\Controllers\TriggerController;
 use App\Http\Controllers\ViewController;
@@ -128,5 +130,39 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard-data', [DashboardController::class, 'index']);
 
 });
+
+// Routes pour le contrôleur Release
+Route::prefix('releases')->name('releases.')->group(function () {
+    Route::get('/', [ReleaseController::class, 'index'])->name('releases.index');
+    Route::get('/create', [ReleaseController::class, 'create'])->name('create');
+    Route::post('/', [ReleaseController::class, 'store'])->name('store');
+    Route::get('/{id}', [ReleaseController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [ReleaseController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [ReleaseController::class, 'update'])->name('update');
+    Route::delete('/{id}', [ReleaseController::class, 'destroy'])->name('destroy');
+});
+
+// Routes API pour les versions
+Route::prefix('api')->group(function () {
+    Route::get('/versions', [ReleaseController::class, 'getVersions'])->name('api.versions');
+    Route::get('/versions/{versionNumber}/columns', [ReleaseController::class, 'getColumnsByVersion'])->name('api.versions.columns');
+});
+
+Route::prefix('api')->group(function () {
+    // Routes pour la gestion des versions
+    Route::get('/releases', [ReleaseApiController::class, 'index'])->name('api.releases.index');
+    Route::post('/releases', [ReleaseApiController::class, 'store'])->name('api.releases.store');
+    Route::put('/releases/{id}', [ReleaseApiController::class, 'update'])->name('api.releases.update');
+    Route::delete('/releases/{id}', [ReleaseApiController::class, 'destroy'])->name('api.releases.destroy');
+    
+    // Routes pour les données supplémentaires
+    Route::get('/releases/table-structures', [ReleaseApiController::class, 'getTableStructures'])->name('api.releases.table-structures');
+    Route::get('/releases/version-stats/{versionNumber}', [ReleaseApiController::class, 'getVersionStats'])->name('api.releases.stats');
+});
+
+// Route pour la page principale des versions
+Route::get('/releases', function () {
+    return Inertia::render('Releases');
+})->name('releases.index');
 
 require __DIR__.'/auth.php';

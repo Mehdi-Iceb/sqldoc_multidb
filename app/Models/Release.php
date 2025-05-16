@@ -16,14 +16,14 @@ class Release extends Model
     protected $table = 'release';
 
     protected $fillable = [
-        'id_table_structure',
+        'id_db',
         'version_number',
         'created_at', 
         'updated_at'
     ];
 
-    public function tableStructure(): BelongsTo
+    public function dbdescription(): BelongsTo
     {
-        return $this->belongsTo(TableStructure::class, 'id_table_structure', 'id');
+        return $this->belongsTo(DbDescription::class, 'id_db', 'id');
     }
 }

@@ -35,4 +35,9 @@ class DbDescription  extends Model
    {
         return $this->hasMany(FunctionDescription::class);
    }
+
+    public function releases()
+    {
+        return $this->hasMany(Release::class, 'id_db', 'id');
+    }
 }

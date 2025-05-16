@@ -29,8 +29,4 @@ class TableStructure  extends Model
         return $this->belongsTo(TableDescription::class, 'id_table', 'id');
     }
 
-    public function releases()
-{
-    return $this->hasMany(Release::class, 'id_table_structure', 'id');
-}
 }

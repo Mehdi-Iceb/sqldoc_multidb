@@ -32,4 +32,5 @@ class PsDescription extends Model
     {
         return $this->hasMany(PsParameter::class, 'id_ps');
     }
+
 }
