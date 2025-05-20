@@ -142,22 +142,18 @@ Route::prefix('releases')->name('releases.')->group(function () {
     Route::delete('/{id}', [ReleaseController::class, 'destroy'])->name('destroy');
 });
 
-// Routes API pour les versions
-Route::prefix('api')->group(function () {
-    Route::get('/versions', [ReleaseController::class, 'getVersions'])->name('api.versions');
-    Route::get('/versions/{versionNumber}/columns', [ReleaseController::class, 'getColumnsByVersion'])->name('api.versions.columns');
-});
-
+// Routes API pour les versions et associations de colonnes
 Route::prefix('api')->group(function () {
     // Routes pour la gestion des versions
     Route::get('/releases', [ReleaseApiController::class, 'index'])->name('api.releases.index');
+    Route::get('/releases/all', [ReleaseApiController::class, 'getAllVersions'])->name('api.releases.all');
     Route::post('/releases', [ReleaseApiController::class, 'store'])->name('api.releases.store');
     Route::put('/releases/{id}', [ReleaseApiController::class, 'update'])->name('api.releases.update');
     Route::delete('/releases/{id}', [ReleaseApiController::class, 'destroy'])->name('api.releases.destroy');
     
-    // Routes pour les données supplémentaires
-    Route::get('/releases/table-structures', [ReleaseApiController::class, 'getTableStructures'])->name('api.releases.table-structures');
-    Route::get('/releases/version-stats/{versionNumber}', [ReleaseApiController::class, 'getVersionStats'])->name('api.releases.stats');
+    // Routes pour l'association des versions aux colonnes
+    Route::post('/releases/assign-to-column', [ReleaseApiController::class, 'assignReleaseToColumn'])->name('api.releases.assign');
+    Route::post('/releases/remove-from-column', [ReleaseApiController::class, 'removeReleaseFromColumn'])->name('api.releases.remove');
 });
 
 // Route pour la page principale des versions

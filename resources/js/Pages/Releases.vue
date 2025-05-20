@@ -4,8 +4,8 @@
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold text-gray-800">
-          <span class="text-gray-500 font-normal">Releases :</span> 
-          Releases management
+          <span class="text-gray-500 font-normal">Versions :</span> 
+          Gestion des versions
         </h2>
       </div>
     </template>
@@ -45,7 +45,7 @@
                   <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
-                  Releases available
+                  Versions disponibles
                 </h3>
                 <div class="flex space-x-2">
                   <div class="relative">
@@ -68,6 +68,15 @@
                       {{ version }}
                     </option>
                   </select>
+                  <select 
+                    v-model="filterProject" 
+                    class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Tous les projets</option>
+                    <option v-for="project in projects" :key="project.id" :value="project.id">
+                      {{ project.name }}
+                    </option>
+                  </select>
                   <PrimaryButton @click="showAddReleaseModal = true">
                     Ajouter une version
                   </PrimaryButton>
@@ -82,13 +91,13 @@
                       Version
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Table
+                      Projet
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Colonne
+                      Description
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
+                      Colonnes associées
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Créée le
@@ -106,13 +115,13 @@
                       {{ release.version_number }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ release.table_name || 'N/A' }}
+                      {{ release.project_name || 'N/A' }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ release.column_name || 'N/A' }}
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                      {{ release.description || '-' }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
-                      {{ release.data_type || 'N/A' }}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {{ release.column_count || 0 }} colonnes
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {{ release.created_at }}
@@ -139,42 +148,6 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
-          </div>
-          
-          <!-- Graphique des versions -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 class="text-lg font-medium text-gray-900">
-                <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                Évolution des versions
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="mb-4">
-                <select 
-                  v-model="selectedVersionForStats" 
-                  class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Sélectionner une version</option>
-                  <option v-for="version in uniqueVersions" :key="version" :value="version">
-                    {{ version }}
-                  </option>
-                </select>
-              </div>
-              <div v-if="selectedVersionForStats" class="h-64 bg-gray-50 rounded p-4">
-                <div class="text-center text-gray-400">
-                  Graphique de l'évolution des colonnes dans la version {{ selectedVersionForStats }}
-                </div>
-                <!-- Ici, vous pouvez intégrer un composant de graphique pour visualiser l'évolution des colonnes -->
-              </div>
-              <div v-else class="h-64 flex items-center justify-center bg-gray-50 rounded">
-                <div class="text-center text-gray-400">
-                  Sélectionnez une version pour afficher les statistiques
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -210,20 +183,32 @@
               >
             </div>
             
-            <!-- Structure de table/colonne -->
+            <!-- Projet associé -->
             <div>
-              <label for="table_structure" class="block text-sm font-medium text-gray-700">Structure de table</label>
+              <label for="project_id" class="block text-sm font-medium text-gray-700">Projet</label>
               <select 
-                id="table_structure" 
-                v-model="newRelease.id_table_structure"
+                id="project_id" 
+                v-model="newRelease.project_id"
                 required
                 class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
               >
-                <option value="">Sélectionnez une colonne</option>
-                <option v-for="structure in tableStructures" :key="structure.id" :value="structure.id">
-                  {{ structure.table_name }}.{{ structure.column }} ({{ structure.type }})
+                <option value="">Sélectionnez un projet</option>
+                <option v-for="project in projects" :key="project.id" :value="project.id">
+                  {{ project.name }}
                 </option>
               </select>
+            </div>
+            
+            <!-- Description -->
+            <div>
+              <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+              <textarea 
+                id="description" 
+                v-model="newRelease.description" 
+                rows="3"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Description optionnelle de cette version"
+              ></textarea>
             </div>
             
             <!-- Date de création (optionnelle) -->
@@ -264,7 +249,7 @@
             Supprimer la version
           </h3>
           <p class="text-sm text-gray-500 text-center mb-6">
-            Êtes-vous sûr de vouloir supprimer la version <span class="font-semibold">{{ releaseToDelete?.version_number }}</span> pour la colonne <span class="font-semibold">{{ releaseToDelete?.column_name }}</span> ?<br>
+            Êtes-vous sûr de vouloir supprimer la version <span class="font-semibold">{{ releaseToDelete?.version_number }}</span> du projet <span class="font-semibold">{{ releaseToDelete?.project_name }}</span> ?<br>
             Cette action est irréversible.
           </p>
           
@@ -300,12 +285,12 @@ const loading = ref(true);
 const error = ref(null);
 const releases = ref([]);
 const uniqueVersions = ref([]);
-const tableStructures = ref([]);
+const projects = ref([]);
 
 // États de filtrage
 const searchQuery = ref('');
 const filterVersion = ref('');
-const selectedVersionForStats = ref('');
+const filterProject = ref('');
 
 // États pour le modal d'ajout/édition
 const showAddReleaseModal = ref(false);
@@ -313,7 +298,8 @@ const savingRelease = ref(false);
 const editingReleaseId = ref(null);
 const newRelease = ref({
   version_number: '',
-  id_table_structure: '',
+  project_id: '',
+  description: '',
   created_at: null
 });
 
@@ -327,10 +313,6 @@ onMounted(async () => {
   try {
     // Charger les versions
     await loadReleases();
-    
-    // Charger les structures de table disponibles
-    await loadTableStructures();
-    
   } catch (err) {
     console.error('Erreur lors du chargement des données:', err);
     error.value = `Erreur: ${err.response?.data?.error || err.message}`;
@@ -345,16 +327,7 @@ const loadReleases = async () => {
     const response = await axios.get('/api/releases');
     releases.value = response.data.releases;
     uniqueVersions.value = response.data.uniqueVersions;
-  } catch (err) {
-    throw err;
-  }
-};
-
-// Fonction pour charger les structures de table
-const loadTableStructures = async () => {
-  try {
-    const response = await axios.get('/api/releases/table-structures');
-    tableStructures.value = response.data;
+    projects.value = response.data.projects;
   } catch (err) {
     throw err;
   }
@@ -365,12 +338,13 @@ const filteredReleases = computed(() => {
   return releases.value.filter(release => {
     const matchesSearch = searchQuery.value === '' || 
       release.version_number.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (release.table_name && release.table_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-      (release.column_name && release.column_name.toLowerCase().includes(searchQuery.value.toLowerCase()));
+      (release.project_name && release.project_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
+      (release.description && release.description.toLowerCase().includes(searchQuery.value.toLowerCase()));
     
     const matchesVersion = filterVersion.value === '' || release.version_number === filterVersion.value;
+    const matchesProject = filterProject.value === '' || release.project_id === parseInt(filterProject.value);
     
-    return matchesSearch && matchesVersion;
+    return matchesSearch && matchesVersion && matchesProject;
   });
 });
 
@@ -379,7 +353,8 @@ const editRelease = (release) => {
   editingReleaseId.value = release.id;
   newRelease.value = {
     version_number: release.version_number,
-    id_table_structure: release.id_table_structure,
+    project_id: release.project_id,
+    description: release.description || '',
     created_at: release.created_at
   };
   showAddReleaseModal.value = true;
@@ -391,7 +366,8 @@ const closeReleaseModal = () => {
   editingReleaseId.value = null;
   newRelease.value = {
     version_number: '',
-    id_table_structure: '',
+    project_id: '',
+    description: '',
     created_at: null
   };
 };

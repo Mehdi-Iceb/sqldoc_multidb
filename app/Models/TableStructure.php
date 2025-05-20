@@ -21,12 +21,18 @@ class TableStructure  extends Model
     'nullable',
     'key',
     'description',
-    'rangevalues'
+    'rangevalues',
+    'release_id'
    ];
 
    public function tableDescription()
     {
         return $this->belongsTo(TableDescription::class, 'id_table', 'id');
+    }
+
+    public function release()
+    {
+        return $this->belongsTo(Release::class, 'release_id', 'id');
     }
 
 }

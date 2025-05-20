@@ -432,12 +432,15 @@
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
                         <!-- Placeholder for release column content -->
-                        <select
-                          v-model="selectedVersion"
-                          class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+                        <select 
+                          :value="column.release_id || ''"
+                          @change="updateColumnRelease(column, $event.target.value)"
+                          class="block w-full pl-3 pr-8 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                          :class="column.release_id ? 'bg-blue-50 text-blue-800' : ''"
                         >
-                          <option v-for="version in versions" :key="version" :value="version">
-                            {{ version }}
+                          <option value="">-- Aucune version --</option>
+                          <option v-for="release in availableReleases" :key="release.id" :value="release.id">
+                            {{ release.display_name }}
                           </option>
                         </select>
                       </div>
@@ -829,9 +832,6 @@ const form = ref({
   description: ''
 });
 
-const versions = ['1.0.0', '1.1.0', '1.2.0', '2.0.0']
-const selectedVersion = ref('1.0.0')
-
 // États pour l'édition
 const editingDescription = ref({});
 const editingDescriptionValue = ref('');
@@ -855,6 +855,8 @@ onMounted(async () => {
     
     tableDetails.value = response.data;
     form.value.description = response.data.description || '';
+
+    await loadAvailableReleases();
     
   } catch (err) {
     console.error('Erreur complète:', err);
@@ -1316,4 +1318,54 @@ const addNewRelation = async () => {
     addingRelation.value = false;
   }
 };
+
+// Variables d'état pour les versions
+const availableReleases = ref([]);
+
+// Fonction pour charger les versions disponibles
+const loadAvailableReleases = async () => {
+  try {
+    const response = await axios.get('/api/releases/all');
+    availableReleases.value = response.data;
+  } catch (error) {
+    console.error('Erreur lors du chargement des versions:', error);
+  }
+};
+
+// Fonction pour mettre à jour la version d'une colonne
+const updateColumnRelease = async (column, releaseId) => {
+  try {
+    // Si releaseId est une chaîne vide, la convertir en null
+    const finalReleaseId = releaseId === '' ? null : releaseId;
+    
+    // Requête API pour mettre à jour la version
+    const response = await axios.post('/api/releases/assign-to-column', {
+      release_id: finalReleaseId,
+      table_id: tableDesc.id,
+      column_name: column.column_name
+    });
+    
+    if (response.data.success) {
+      // Mettre à jour localement
+      column.release_id = finalReleaseId;
+      
+      // Mettre à jour le nom de la version pour l'affichage
+      if (finalReleaseId) {
+        const selectedRelease = availableReleases.value.find(r => r.id === parseInt(finalReleaseId));
+        column.release_version = selectedRelease ? selectedRelease.version_number : '';
+      } else {
+        column.release_version = null;
+      }
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la mise à jour');
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la version:', error);
+    alert('Erreur: ' + (error.response?.data?.error || error.message));
+    
+    // Recharger les données en cas d'erreur pour rétablir l'état initial
+    await reloadTableData();
+  }
+};
+
 </script>

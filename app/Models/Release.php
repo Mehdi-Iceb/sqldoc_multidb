@@ -16,14 +16,20 @@ class Release extends Model
     protected $table = 'release';
 
     protected $fillable = [
-        'id_db',
+        'project_id',
         'version_number',
+        'description',
         'created_at', 
         'updated_at'
     ];
 
-    public function dbdescription(): BelongsTo
+    public function project()
     {
-        return $this->belongsTo(DbDescription::class, 'id_db', 'id');
+        return $this->belongsTo(Project::class, 'project_id', 'id');
+    }
+
+    public function tableStructures()
+    {
+        return $this->hasMany(TableStructure::class, 'release_id', 'id');
     }
 }
