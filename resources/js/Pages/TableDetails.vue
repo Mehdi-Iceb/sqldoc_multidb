@@ -1332,38 +1332,63 @@ const loadAvailableReleases = async () => {
   }
 };
 
-// Fonction pour mettre à jour la version d'une colonne
+// Fonction améliorée pour mettre à jour la version d'une colonne
 const updateColumnRelease = async (column, releaseId) => {
   try {
+    console.log('Début de updateColumnRelease', {
+      column: column,
+      releaseId: releaseId
+    });
+    
     // Si releaseId est une chaîne vide, la convertir en null
-    const finalReleaseId = releaseId === '' ? null : releaseId;
-
-    console.log("Structure de tableDetails:", tableDetails.value);
-    console.log("Structure de la colonne:", column);
-
+    const finalReleaseId = releaseId === '' ? null : parseInt(releaseId);
+    
+    console.log('Finding table_id', {
+      tableDetails: tableDetails.value
+    });
+    
+    // Trouver l'ID de la table - explorons toutes les possibilités
     let tableId;
     
-    if (tableDetails.value && tableDetails.value.id) {
+    // Option 1: Directement dans tableDetails
+    if (tableDetails.value && typeof tableDetails.value.id !== 'undefined') {
       tableId = tableDetails.value.id;
-      console.log("Utilisation de tableDetails.value.id:", tableId);
-    } else if (column.id_table) {
+      console.log('Using tableDetails.value.id', tableId);
+    } 
+    // Option 2: Dans les données de la colonne
+    else if (column.id_table) {
       tableId = column.id_table;
-      console.log("Utilisation de column.id_table:", tableId);
-    } else if (column.table_id) {
-      tableId = column.table_id;
-      console.log("Utilisation de column.table_id:", tableId);
-    } else {
-      console.log("Impossible de déterminer l'ID de la table automatiquement");
-      
-      // Si vous ne trouvez pas l'ID, vous pouvez faire une requête supplémentaire pour l'obtenir
-      const response = await axios.get(`/api/table-id/${props.tableName}`);
-      tableId = response.data.id;
-      console.log("ID de la table récupéré par requête API:", tableId);
+      console.log('Using column.id_table', tableId);
+    } 
+    // Option 3: ID de tableau spécifique aux colonnes
+    else if (tableDetails.value && tableDetails.value.columns && tableDetails.value.columns.length > 0 && tableDetails.value.columns[0].table_id) {
+      tableId = tableDetails.value.columns[0].table_id;
+      console.log('Using tableDetails.value.columns[0].table_id', tableId);
+    }
+    // Option 4: Rechercher dans l'URL
+    else {
+      const urlSegments = window.location.pathname.split('/');
+      const tableNameIndex = urlSegments.indexOf('table');
+      if (tableNameIndex !== -1 && tableNameIndex + 1 < urlSegments.length) {
+        const tableName = urlSegments[tableNameIndex + 1];
+        console.log('Found table name from URL:', tableName);
+        
+        // Faire une requête pour obtenir l'ID de la table
+        const tableInfoResponse = await axios.get(`/api/table-id/${tableName}`);
+        tableId = tableInfoResponse.data.id;
+        console.log('Retrieved table_id from API:', tableId);
+      }
     }
     
     if (!tableId) {
-      throw new Error("Impossible de déterminer l'ID de la table");
+      throw new Error('Impossible de déterminer l\'ID de la table');
     }
+    
+    console.log('Envoi de la requête pour mettre à jour la version', {
+      release_id: finalReleaseId,
+      table_id: tableId,
+      column_name: column.column_name
+    });
     
     // Requête API pour mettre à jour la version
     const response = await axios.post('/api/releases/assign-to-column', {
@@ -1372,16 +1397,34 @@ const updateColumnRelease = async (column, releaseId) => {
       column_name: column.column_name
     });
     
+    console.log('Réponse de l\'API', response.data);
+    
     if (response.data.success) {
       // Mettre à jour localement
       column.release_id = finalReleaseId;
       
-      // Mettre à jour le nom de la version pour l'affichage
-      if (finalReleaseId) {
-        const selectedRelease = availableReleases.value.find(r => r.id === parseInt(finalReleaseId));
-        column.release_version = selectedRelease ? selectedRelease.version_number : '';
-      } else {
-        column.release_version = null;
+      // Stocker en localStorage pour la persistance entre les rechargements
+      try {
+        const storageKey = `column_release_${tableId}_${column.column_name}`;
+        if (finalReleaseId) {
+          localStorage.setItem(storageKey, finalReleaseId);
+          
+          // Mettre à jour le nom de la version pour l'affichage
+          const selectedRelease = availableReleases.value.find(r => r.id === finalReleaseId);
+          column.release_version = selectedRelease ? selectedRelease.version_number : '';
+          
+          console.log('Version mise à jour localement et dans localStorage', {
+            column: column,
+            release_id: finalReleaseId,
+            release_version: column.release_version
+          });
+        } else {
+          localStorage.removeItem(storageKey);
+          column.release_version = null;
+          console.log('Version retirée localement et du localStorage');
+        }
+      } catch (storageError) {
+        console.warn('Erreur lors de l\'écriture dans localStorage', storageError);
       }
     } else {
       throw new Error(response.data.error || 'Erreur lors de la mise à jour');
@@ -1390,8 +1433,12 @@ const updateColumnRelease = async (column, releaseId) => {
     console.error('Erreur lors de la mise à jour de la version:', error);
     alert('Erreur: ' + (error.response?.data?.error || error.message));
     
-    // Recharger les données en cas d'erreur pour rétablir l'état initial
-    await reloadTableData();
+    // Recharger les données en cas d'erreur
+    try {
+      await reloadTableData();
+    } catch (reloadError) {
+      console.error('Erreur lors du rechargement des données:', reloadError);
+    }
   }
 };
 

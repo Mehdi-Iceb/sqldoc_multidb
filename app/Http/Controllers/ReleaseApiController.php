@@ -233,11 +233,20 @@ class ReleaseApiController extends Controller
     public function assignReleaseToColumn(Request $request)
     {
         try {
+
+            Log::info('Début de assignReleaseToColumn', [
+            'request_all' => $request->all()
+            ]);
+
             // Valider les données
             $validated = $request->validate([
                 'release_id' => 'required|exists:release,id',
                 'table_id' => 'required|integer',
                 'column_name' => 'required|string'
+            ]);
+
+            Log::info('Données validées', [
+            'validated' => $validated
             ]);
 
             // Récupérer la structure de la table
@@ -247,19 +256,46 @@ class ReleaseApiController extends Controller
                 ->first();
 
             if (!$column) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Colonne non trouvée'
-                ], 404);
+            Log::error('Colonne non trouvée', [
+                'table_id' => $validated['table_id'],
+                'column_name' => $validated['column_name']
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Colonne non trouvée'
+            ], 404);
             }
 
+            Log::info('Colonne trouvée', [
+                'column' => $column
+            ]);
+
             // Mettre à jour la colonne avec l'ID de version
-            DB::table('table_structure')
+            $updateResult = DB::table('table_structure')
                 ->where('id', $column->id)
                 ->update(['release_id' => $validated['release_id']]);
 
+            Log::info('Résultat de la mise à jour', [
+                'updateResult' => $updateResult,
+                'column_id' => $column->id,
+                'release_id' => $validated['release_id']
+            ]);
+
+            // Vérifier après la mise à jour
+            $updatedColumn = DB::table('table_structure')
+                ->where('id', $column->id)
+                ->first();
+
+            Log::info('État de la colonne après mise à jour', [
+                'release_id' => $updatedColumn->release_id
+            ]);
+
             return response()->json([
-                'success' => true
+                'success' => true,
+                'update_result' => $updateResult,
+                'column_id' => $column->id,
+                'new_release_id' => $validated['release_id'],
+                'updated_column' => $updatedColumn
             ]);
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::assignReleaseToColumn', [

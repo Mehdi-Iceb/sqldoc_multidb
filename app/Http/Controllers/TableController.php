@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TableDescription;
 use App\Models\TableStructure;
+use App\Models\Release;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -62,8 +63,11 @@ class TableController extends Controller
                         'is_primary_key' => $column->key === 'PK',
                         'is_foreign_key' => $column->key === 'FK',
                         'description' => $column->description,
-                        'possible_values' => $column->rangevalues
-                    ];
+                        'possible_values' => $column->rangevalues,
+                        'release_id' => $column->release_id, // Ajout de l'ID de la version
+                        'release_version' => $column->release ? $column->release->version_number : null,
+                        'project_id' => $column->release ? $column->release->project_id : null
+                        ];
                 });
 
             // Récupérer les index de la table
@@ -238,7 +242,8 @@ class TableController extends Controller
                 'columns' => 'required|array',
                 'columns.*.column' => 'required|string',
                 'columns.*.description' => 'nullable|string',
-                'columns.*.rangevalues' => 'nullable|string'
+                'columns.*.rangevalues' => 'nullable|string',
+                
             ]);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
