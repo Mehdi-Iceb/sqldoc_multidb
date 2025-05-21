@@ -1337,11 +1337,38 @@ const updateColumnRelease = async (column, releaseId) => {
   try {
     // Si releaseId est une chaîne vide, la convertir en null
     const finalReleaseId = releaseId === '' ? null : releaseId;
+
+    console.log("Structure de tableDetails:", tableDetails.value);
+    console.log("Structure de la colonne:", column);
+
+    let tableId;
+    
+    if (tableDetails.value && tableDetails.value.id) {
+      tableId = tableDetails.value.id;
+      console.log("Utilisation de tableDetails.value.id:", tableId);
+    } else if (column.id_table) {
+      tableId = column.id_table;
+      console.log("Utilisation de column.id_table:", tableId);
+    } else if (column.table_id) {
+      tableId = column.table_id;
+      console.log("Utilisation de column.table_id:", tableId);
+    } else {
+      console.log("Impossible de déterminer l'ID de la table automatiquement");
+      
+      // Si vous ne trouvez pas l'ID, vous pouvez faire une requête supplémentaire pour l'obtenir
+      const response = await axios.get(`/api/table-id/${props.tableName}`);
+      tableId = response.data.id;
+      console.log("ID de la table récupéré par requête API:", tableId);
+    }
+    
+    if (!tableId) {
+      throw new Error("Impossible de déterminer l'ID de la table");
+    }
     
     // Requête API pour mettre à jour la version
     const response = await axios.post('/api/releases/assign-to-column', {
       release_id: finalReleaseId,
-      table_id: tableDesc.id,
+      table_id: tableId,
       column_name: column.column_name
     });
     

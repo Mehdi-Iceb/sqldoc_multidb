@@ -901,4 +901,22 @@ class TableController extends Controller
         }
     }
 
+    public function getTableId($tableName)
+{
+    try {
+        $dbId = session('current_db_id');
+        $tableDesc = TableDescription::where('dbid', $dbId)
+            ->where('tablename', $tableName)
+            ->first();
+
+        if (!$tableDesc) {
+            return response()->json(['error' => 'Table non trouvée'], 404);
+        }
+
+        return response()->json(['id' => $tableDesc->id]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erreur: ' . $e->getMessage()], 500);
+    }
+}
+
 }

@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
         ->name('table.column.add');
     Route::post('/table/{tableName}/relation/add', [TableController::class, 'addRelation'])
         ->name('table.relation.add');
+    Route::get('/api/table-id/{tableName}', [TableController::class, 'getTableId']);
 
     Route::get('/view/{viewName}/details', [ViewController::class, 'details'])
         ->name('view.details');

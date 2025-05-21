@@ -43,7 +43,7 @@ class ReleaseApiController extends Controller
             $projects = Project::select('id', 'name')->orderBy('name')->get();
 
             return response()->json([
-                'releases' => $releases,
+                'release' => $releases,
                 'uniqueVersions' => $uniqueVersions,
                 'projects' => $projects
             ]);
@@ -235,7 +235,7 @@ class ReleaseApiController extends Controller
         try {
             // Valider les données
             $validated = $request->validate([
-                'release_id' => 'required|exists:releases,id',
+                'release_id' => 'required|exists:release,id',
                 'table_id' => 'required|integer',
                 'column_name' => 'required|string'
             ]);
