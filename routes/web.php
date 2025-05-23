@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseStructureController;
 use App\Http\Controllers\FunctionController;
@@ -41,6 +42,25 @@ Route::get('/', function () {
 Route::get('/projects', function () {
     return Inertia::render('projects/index');
 })->middleware(['auth', 'verified'])->name('projects');
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin');
+    Route::post('/admin/users', [AdminController::class, 'createUser']);
+    Route::put('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
+    Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
+
+    // Routes pour le contrôleur Release
+    Route::prefix('releases')->name('releases.')->group(function () {
+        Route::get('/', [ReleaseController::class, 'index'])->name('releases.index');
+        Route::get('/create', [ReleaseController::class, 'create'])->name('create');
+        Route::post('/', [ReleaseController::class, 'store'])->name('store');
+        Route::get('/{id}', [ReleaseController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [ReleaseController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ReleaseController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ReleaseController::class, 'destroy'])->name('destroy');
+    });
+
+});
 
 
 Route::middleware('auth')->group(function () {
@@ -132,16 +152,6 @@ Route::middleware('auth')->group(function () {
 
 });
 
-// Routes pour le contrôleur Release
-Route::prefix('releases')->name('releases.')->group(function () {
-    Route::get('/', [ReleaseController::class, 'index'])->name('releases.index');
-    Route::get('/create', [ReleaseController::class, 'create'])->name('create');
-    Route::post('/', [ReleaseController::class, 'store'])->name('store');
-    Route::get('/{id}', [ReleaseController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [ReleaseController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [ReleaseController::class, 'update'])->name('update');
-    Route::delete('/{id}', [ReleaseController::class, 'destroy'])->name('destroy');
-});
 
 // Routes API pour les versions et associations de colonnes
 Route::prefix('api')->group(function () {
