@@ -20,6 +20,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
     ];
 
     /**
@@ -50,8 +51,19 @@ class User extends Authenticatable
         return $this->hasMany(Project::class);
     }
 
-public function auditLog()
+    public function auditLog()
     {
         return $this->hasMany(AuditLog::class);
     }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function permissions()
+    {
+        return $this->role->permissions->pluck('name');
+    }
+
 }
