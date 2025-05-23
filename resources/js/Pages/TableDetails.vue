@@ -1191,7 +1191,7 @@ const newColumn = ref({
   key_type: 'none', // 'none', 'PK', ou 'FK'
   description: '',
   possible_values: '',
-  release: '1.0.0'
+  release: '',
 });
 
 // Fonction pour ajouter une nouvelle colonne
@@ -1228,7 +1228,7 @@ const addNewColumn = async () => {
         key_type: 'none',
         description: '',
         possible_values: '',
-        release: '1.0.0'
+        release: ''
       };
       
       // Recharger les données de la table pour afficher la nouvelle colonne
