@@ -4,8 +4,8 @@
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold text-gray-800">
-          <span class="text-gray-500 font-normal">Versions :</span> 
-          Gestion des versions
+          <span class="text-gray-500 font-normal">Releases :</span> 
+          Release management
         </h2>
       </div>
     </template>
@@ -45,14 +45,14 @@
                   <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
-                  Versions disponibles
+                  Available releases
                 </h3>
                 <div class="flex space-x-2">
                   <div class="relative">
                     <input 
                       v-model="searchQuery" 
                       type="text" 
-                      placeholder="Rechercher..." 
+                      placeholder="Search..." 
                       class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                     />
                     <svg v-if="searchQuery" @click="searchQuery = ''" class="absolute top-2 right-2 h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,9 +61,9 @@
                   </div>
                   <select 
                     v-model="filterVersion" 
-                    class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                    class="pl-2 pr-6 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Toutes les versions</option>
+                    <option value="">All releases</option>
                     <option v-for="version in uniqueVersions" :key="version" :value="version">
                       {{ version }}
                     </option>
@@ -72,13 +72,13 @@
                     v-model="filterProject" 
                     class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Tous les projets</option>
+                    <option value="">All projects</option>
                     <option v-for="project in projects" :key="project.id" :value="project.id">
                       {{ project.name }}
                     </option>
                   </select>
                   <PrimaryButton @click="showAddReleaseModal = true">
-                    Ajouter une version
+                    Add a release
                   </PrimaryButton>
                 </div>
               </div>
@@ -88,19 +88,19 @@
                 <thead>
                   <tr class="bg-gray-50">
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Version
+                      Release
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Projet
+                      Project
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Colonnes associées
+                      Associated column
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Créée le
+                      Created at
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -324,11 +324,18 @@ onMounted(async () => {
 // Fonction pour charger les versions
 const loadReleases = async () => {
   try {
+    console.log('Tentative de chargement des releases...');
     const response = await axios.get('/api/releases');
-    releases.value = response.data.releases;
-    uniqueVersions.value = response.data.uniqueVersions;
-    projects.value = response.data.projects;
+    console.log('Réponse reçue:', response.data);
+    if (response.data && typeof response.data === 'object') {
+      releases.value = response.data.releases || [];
+      uniqueVersions.value = response.data.uniqueVersions || [];
+      projects.value = response.data.projects || [];
+    } else {
+      throw new Error('Format de réponse inattendu');
+    }
   } catch (err) {
+    console.error('Erreur détaillée:', err);
     throw err;
   }
 };

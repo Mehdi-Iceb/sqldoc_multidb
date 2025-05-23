@@ -43,7 +43,7 @@ class ReleaseApiController extends Controller
             $projects = Project::select('id', 'name')->orderBy('name')->get();
 
             return response()->json([
-                'release' => $releases,
+                'releases' => $releases,
                 'uniqueVersions' => $uniqueVersions,
                 'projects' => $projects
             ]);
