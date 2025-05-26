@@ -395,6 +395,14 @@ class ProjectController extends Controller
     public function restore($id)
     {
         try {
+            // Vérifier si l'utilisateur est admin
+            if (!auth()->user()->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent restaurer des projets.'
+                ], 403);
+            }
+
             $project = Project::withTrashed()
                 ->where('user_id', auth()->id())
                 ->findOrFail($id);
@@ -408,10 +416,10 @@ class ProjectController extends Controller
 
             $project->restore();
 
-            Log::info('Projet restauré', [
+            Log::info('Projet restauré par admin', [
                 'project_id' => $id,
                 'project_name' => $project->name,
-                'user_id' => auth()->id()
+                'admin_id' => auth()->id()
             ]);
 
             return response()->json([
@@ -439,11 +447,18 @@ class ProjectController extends Controller
     public function forceDelete($id)
     {
         try {
+            // Vérifier si l'utilisateur est admin
+            if (!auth()->user()->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent supprimer définitivement des projets.'
+                ], 403);
+            }
+
             $project = Project::withTrashed()
                 ->where('user_id', auth()->id())
                 ->findOrFail($id);
             
-            // Vérifier s'il y a des dépendances critiques
             $dbDescriptionsCount = DbDescription::where('project_id', $project->id)->count();
             
             if ($dbDescriptionsCount > 0) {
@@ -456,10 +471,10 @@ class ProjectController extends Controller
             $projectName = $project->name;
             $project->forceDelete();
 
-            Log::info('Projet supprimé définitivement', [
+            Log::info('Projet supprimé définitivement par admin', [
                 'project_id' => $id,
                 'project_name' => $projectName,
-                'user_id' => auth()->id()
+                'admin_id' => auth()->id()
             ]);
 
             return response()->json([
@@ -487,6 +502,14 @@ class ProjectController extends Controller
     public function deleted()
     {
         try {
+            // Vérifier si l'utilisateur est admin
+            if (!auth()->user()->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent voir les projets supprimés.'
+                ], 403);
+            }
+
             $deletedProjects = Project::onlyTrashed()
                 ->where('user_id', auth()->id())
                 ->orderBy('deleted_at', 'desc')
@@ -497,8 +520,8 @@ class ProjectController extends Controller
                         'name' => $project->name,
                         'description' => $project->description,
                         'db_type' => $project->db_type,
-                        'deleted_at' => $project->deleted_at->format('d/m/Y H:i'),
-                        'created_at' => $project->created_at->format('d/m/Y H:i')
+                        'deleted_at' => $project->deleted_at ? $project->deleted_at->toISOString() : null,
+                        'created_at' => $project->created_at ? $project->created_at->format('Y-m-d H:i:s') : null
                     ];
                 });
 

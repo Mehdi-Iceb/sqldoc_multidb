@@ -10,7 +10,7 @@ class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $dateFormat = 'd-m-Y H:i:s';
+    protected $dateFormat = 'Y-d-m H:i:s';
 
     protected $table = 'projects';
 

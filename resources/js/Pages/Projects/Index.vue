@@ -98,8 +98,8 @@
                     <!-- Projets supprimés -->
                     <div v-else>
                         <div v-if="deletedProjects.length === 0" class="text-center py-8">
-                            <h3 class="text-lg font-medium text-gray-900">Aucun projet supprimé</h3>
-                            <p class="mt-2 text-gray-600">Les projets supprimés apparaîtront ici.</p>
+                            <h3 class="text-lg font-medium text-gray-900">No deleted project</h3>
+                            <p class="mt-2 text-gray-600">Deleted project will appear here.</p>
                         </div>
                         
                         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -178,7 +178,7 @@
                             class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                             :disabled="deleting"
                         >
-                            {{ deleting ? 'Suppression...' : 'Delete' }}
+                            {{ deleting ? 'Deletion...' : 'Delete' }}
                         </button>
                     </div>
                 </div>
@@ -193,11 +193,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <h3 class="text-lg font-medium text-gray-900 mb-2 text-center">
-                        Suppression définitive
+                        Definitive deletion
                     </h3>
                     <p class="text-sm text-gray-500 text-center mb-6">
-                        Êtes-vous sûr de vouloir supprimer définitivement le projet <span class="font-semibold">{{ selectedProject?.name }}</span> ?<br>
-                        <span class="text-red-600 font-medium">Cette action est irréversible !</span>
+                        Delete definitively the project <span class="font-semibold">{{ selectedProject?.name }}</span> ?<br>
+                        <span class="text-red-600 font-medium">This action is irreversible !</span>
                     </p>
                     
                     <div class="flex justify-center space-x-4 w-full">
@@ -212,7 +212,7 @@
                             class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                             :disabled="deleting"
                         >
-                            {{ deleting ? 'Suppression...' : 'Supprimer définitivement' }}
+                            {{ deleting ? 'Deletion...' : 'Permanently delete' }}
                         </button>
                     </div>
                 </div>
@@ -279,7 +279,14 @@ const loadDeletedProjects = async () => {
         }
     } catch (error) {
         console.error('Erreur lors du chargement des projets supprimés:', error);
-        alert('Erreur lors du chargement des projets supprimés');
+        
+        // Gestion spécifique de l'erreur d'autorisation
+        if (error.response?.status === 403) {
+            alert('Accès non autorisé. Seuls les administrateurs peuvent voir les projets supprimés.');
+            showDeleted.value = false; // Revenir à la vue normale
+        } else {
+            alert('Erreur lors du chargement des projets supprimés');
+        }
     }
 };
 
@@ -361,4 +368,10 @@ const restoreProject = async (project) => {
         alert('Erreur: ' + (error.response?.data?.error || error.message));
     }
 };
+
+const isAdmin = computed(() => {
+    return window.Laravel?.user?.role === 'admin' || 
+           usePage().props.auth.user.role === 'admin';
+});
+
 </script>
