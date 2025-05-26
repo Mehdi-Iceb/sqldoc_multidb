@@ -90,6 +90,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/table/{tableName}/relation/add', [TableController::class, 'addRelation'])
         ->name('table.relation.add');
     Route::get('/api/table-id/{tableName}', [TableController::class, 'getTableId']);
+    Route::post('/table/{tableName}/column/{columnName}/release', [TableController::class, 'updateColumnRelease']);
+    Route::post('/api/table/{tableName}/column/{columnName}/release', [TableController::class, 'updateColumnRelease']);
+    Route::get('/api/table-id/{tableName}', [TableController::class, 'getTableId']);
 
     Route::get('/view/{viewName}/details', [ViewController::class, 'details'])
         ->name('view.details');

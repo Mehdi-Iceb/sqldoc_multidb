@@ -121,7 +121,7 @@
                       {{ release.description || '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {{ release.column_count || 0 }} colonnes
+                      {{ release.column_count || 0 }} columns
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {{ release.created_at }}
@@ -143,7 +143,7 @@
                   </tr>
                   <tr v-if="filteredReleases.length === 0">
                     <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                      Aucune version trouvée
+                      No release found
                     </td>
                   </tr>
                 </tbody>
@@ -172,7 +172,7 @@
           <div class="space-y-4">
             <!-- Numéro de version -->
             <div>
-              <label for="version_number" class="block text-sm font-medium text-gray-700">Numéro de version</label>
+              <label for="version_number" class="block text-sm font-medium text-gray-700">Release number</label>
               <input 
                 id="version_number" 
                 v-model="newRelease.version_number" 
@@ -185,14 +185,14 @@
             
             <!-- Projet associé -->
             <div>
-              <label for="project_id" class="block text-sm font-medium text-gray-700">Projet</label>
+              <label for="project_id" class="block text-sm font-medium text-gray-700">Project</label>
               <select 
                 id="project_id" 
                 v-model="newRelease.project_id"
                 required
                 class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
               >
-                <option value="">Sélectionnez un projet</option>
+                <option value="">Select a project</option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
@@ -213,7 +213,7 @@
             
             <!-- Date de création (optionnelle) -->
             <div v-if="editingReleaseId">
-              <label class="block text-sm font-medium text-gray-700">Date de création</label>
+              <label class="block text-sm font-medium text-gray-700">Creation date</label>
               <div class="mt-1 text-sm text-gray-500">{{ newRelease.created_at || 'Non disponible' }}</div>
             </div>
           </div>
@@ -224,14 +224,14 @@
               @click="closeReleaseModal"
               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
-              Annuler
+              Cancel
             </button>
             <button 
               type="submit"
               class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               :disabled="savingRelease"
             >
-              {{ savingRelease ? 'Enregistrement...' : (editingReleaseId ? 'Mettre à jour' : 'Ajouter') }}
+              {{ savingRelease ? 'Enregistrement...' : (editingReleaseId ? 'Update' : 'Add') }}
             </button>
           </div>
         </form>
@@ -246,11 +246,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <h3 class="text-lg font-medium text-gray-900 mb-2 text-center">
-            Supprimer la version
+            Delete the version
           </h3>
           <p class="text-sm text-gray-500 text-center mb-6">
-            Êtes-vous sûr de vouloir supprimer la version <span class="font-semibold">{{ releaseToDelete?.version_number }}</span> du projet <span class="font-semibold">{{ releaseToDelete?.project_name }}</span> ?<br>
-            Cette action est irréversible.
+            Are you sure to delete the release <span class="font-semibold">{{ releaseToDelete?.version_number }}</span> from project <span class="font-semibold">{{ releaseToDelete?.project_name }}</span> ?<br>
+            This action is irreversible.
           </p>
           
           <div class="flex justify-center space-x-4 w-full">
@@ -265,7 +265,7 @@
               class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               :disabled="deletingRelease"
             >
-              {{ deletingRelease ? 'Suppression...' : 'Supprimer' }}
+              {{ deletingRelease ? 'Suppression...' : 'Delete' }}
             </button>
           </div>
         </div>

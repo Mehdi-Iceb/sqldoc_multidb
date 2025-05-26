@@ -599,6 +599,147 @@ class TableController extends Controller
         }
     }
 
+    public function updateColumnRelease(Request $request, $tableName, $columnName)
+    {
+        try {
+            // Valider les données
+            $validated = $request->validate([
+                'release_id' => 'nullable|exists:release,id'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Récupérer la colonne
+            $column = TableStructure::where('id_table', $tableDesc->id)
+                ->where('column', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Colonne non trouvée'], 404);
+            }
+
+            // Vérifier si la version a changé
+            $newReleaseId = $validated['release_id'];
+            if ($column->release_id != $newReleaseId) {
+                $oldReleaseId = $column->release_id;
+                
+                // Récupérer les informations des versions pour le log
+                $oldReleaseInfo = null;
+                $newReleaseInfo = null;
+                
+                if ($oldReleaseId) {
+                    $oldRelease = Release::find($oldReleaseId);
+                    $oldReleaseInfo = $oldRelease ? $oldRelease->version_number : 'Version supprimée';
+                }
+                
+                if ($newReleaseId) {
+                    $newRelease = Release::find($newReleaseId);
+                    $newReleaseInfo = $newRelease ? $newRelease->version_number : 'Version inconnue';
+                }
+                
+                // Mettre à jour la colonne
+                $column->release_id = $newReleaseId;
+                $column->save();
+                
+                // Log de l'audit pour la version
+                $this->logAudit(
+                    $dbId, 
+                    $tableDesc->id, 
+                    $columnName . '_release', 
+                    'update', 
+                    $oldReleaseInfo ?: 'null', 
+                    $newReleaseInfo ?: 'null'
+                );
+            }
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de la version de colonne', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Erreur lors de la mise à jour de la version: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function assignReleaseToColumn(Request $request)
+    {
+        try {
+            Log::info('Début de assignReleaseToColumn', [
+                'request_all' => $request->all()
+            ]);
+
+            // Valider les données
+            $validated = $request->validate([
+                'release_id' => 'nullable|exists:release,id', // nullable pour permettre la suppression
+                'table_id' => 'required|integer',
+                'column_name' => 'required|string'
+            ]);
+
+            Log::info('Données validées', [
+                'validated' => $validated
+            ]);
+
+            // Récupérer les informations de la table
+            $tableDesc = DB::table('table_description')
+                ->where('id', $validated['table_id'])
+                ->first();
+
+            if (!$tableDesc) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Table non trouvée'
+                ], 404);
+            }
+
+            // Appeler la méthode du TableController pour la mise à jour avec audit
+            $tableController = new \App\Http\Controllers\TableController();
+            
+            // Créer une nouvelle requête avec les bonnes données
+            $updateRequest = new Request([
+                'release_id' => $validated['release_id']
+            ]);
+
+            // Appeler la méthode qui gère l'audit
+            $response = $tableController->updateColumnRelease(
+                $updateRequest, 
+                $tableDesc->tablename, 
+                $validated['column_name']
+            );
+
+            // Retourner la réponse de la méthode d'audit
+            return $response;
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ReleaseApiController::assignReleaseToColumn', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de l\'association de la version à la colonne: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 
     public function apiDetails($tableName)
     {
