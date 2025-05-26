@@ -17,8 +17,13 @@ class ReleaseApiController extends Controller
     public function index()
     {
         try {
-            // Récupérer toutes les versions avec leur projet associé
-            $releases = Release::with('project')
+            // Récupérer toutes les versions avec leur projet associé (non supprimé)
+            $releases = Release::with(['project' => function($query) {
+                    $query->whereNull('deleted_at'); // Exclure les projets supprimés
+                }])
+                ->whereHas('project', function($query) {
+                    $query->whereNull('deleted_at'); // Ne récupérer que les releases des projets actifs
+                })
                 ->orderBy('version_number', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -27,20 +32,27 @@ class ReleaseApiController extends Controller
                         'id' => $release->id,
                         'version_number' => $release->version_number,
                         'project_id' => $release->project_id,
-                        'project_name' => $release->project ? $release->project->name : 'N/A',
+                        'project_name' => $release->project ? $release->project->name : 'Projet supprimé',
                         'description' => $release->description ?? '',
+                        'column_count' => 1,
                         'created_at' => $release->created_at->format('d/m/Y H:i'),
                         'updated_at' => $release->updated_at->format('d/m/Y H:i')
                     ];
                 });
 
             // Obtenir les versions uniques pour le filtre
-            $uniqueVersions = Release::distinct()
+            $uniqueVersions = Release::whereHas('project', function($query) {
+                    $query->whereNull('deleted_at');
+                })
+                ->distinct()
                 ->orderBy('version_number', 'desc')
                 ->pluck('version_number');
                 
-            // Récupérer tous les projets
-            $projects = Project::select('id', 'name')->orderBy('name')->get();
+            // Récupérer tous les projets actifs (non supprimés)
+            $projects = Project::whereNull('deleted_at')
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
 
             return response()->json([
                 'releases' => $releases,
@@ -64,7 +76,12 @@ class ReleaseApiController extends Controller
     {
         try {
             $versions = Release::select('id', 'version_number', 'project_id')
-                ->with('project:id,name')
+                ->with(['project' => function($query) {
+                    $query->select('id', 'name')->whereNull('deleted_at');
+                }])
+                ->whereHas('project', function($query) {
+                    $query->whereNull('deleted_at'); // Ne récupérer que les releases des projets actifs
+                })
                 ->orderBy('version_number', 'desc')
                 ->get()
                 ->map(function ($release) {
@@ -101,6 +118,15 @@ class ReleaseApiController extends Controller
                 'version_number' => 'required|string|max:20',
                 'description' => 'nullable|string'
             ]);
+
+            // Vérifier que le projet n'est pas supprimé
+            $project = Project::find($validated['project_id']);
+            if (!$project || $project->trashed()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Le projet sélectionné n\'existe pas ou a été supprimé.'
+                ], 400);
+            }
 
             // Vérifier si ce projet a déjà une version identique
             $existingRelease = Release::where('project_id', $validated['project_id'])

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $dateFormat = 'd-m-Y H:i:s';
 
@@ -21,6 +22,8 @@ class Project extends Model
         'release'
     ];
 
+    protected $dates = ['deleted_at'];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -29,5 +32,20 @@ class Project extends Model
     public function dbdescripion()
     {
         return $this->Hasmany(DbDescription::class);
+    }
+
+     public function scopeActive($query)
+    {
+        return $query->whereNull('deleted_at');
+    }
+
+    public function scopeDeleted($query)
+    {
+        return $query->onlyTrashed();
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

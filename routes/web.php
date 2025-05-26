@@ -142,6 +142,19 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard-data', [DashboardController::class, 'index']);
 
+    // Routes pour le soft delete des projets
+    Route::delete('/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
+    Route::post('/projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
+    Route::delete('/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
+    Route::get('/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
+    Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+
+    Route::delete('/api/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
+    Route::post('/api/projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
+    Route::delete('/api/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
+    Route::get('/api/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
+    Route::put('/api/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+
 });
 
 // Routes pour le contrôleur Release

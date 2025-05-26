@@ -17,8 +17,12 @@ class ProjectController extends Controller
 
     public function index()
     {
-        $projects = Project::where('user_id', auth()->id())->get();
+        $projects = Project::where('user_id', auth()->id())
+            ->whereNull('deleted_at') // Exclure les projets supprimés
+            ->get();
+        
         Log::info('Projects récupérés :', ['count' => $projects->count()]);
+        
         return Inertia::render('Projects/Index', [
             'projects' => $projects
         ]);
@@ -183,13 +187,17 @@ class ProjectController extends Controller
     public function open($id)
     {
         try {
-            // Récupérer le projet
-            $project = Project::findOrFail($id);
+            // Récupérer le projet (en incluant les projets supprimés pour pouvoir les ouvrir si nécessaire)
+            $project = Project::withTrashed()->findOrFail($id);
+            
+            // Vérifier si le projet est supprimé
+            if ($project->trashed()) {
+                return redirect()->route('projects.index')
+                    ->with('error', 'Ce projet a été supprimé et ne peut pas être ouvert.');
+            }
             
             // Rechercher la description de BD
-            $dbDescription = DbDescription::where('project_id', $project->id)
-                ->orWhere('project_id', $project->id)
-                ->first();
+            $dbDescription = DbDescription::where('project_id', $project->id)->first();
             
             if (!$dbDescription) {
                 return redirect()->route('projects.index')
@@ -205,7 +213,6 @@ class ProjectController extends Controller
                     $connectionInfo = $project->connection_info;
                 }
             } else {
-                // Si aucune info de connexion, créer un tableau vide mais avec la structure minimale requise
                 $connectionInfo = [
                     'driver' => $project->db_type === 'sqlserver' ? 'sqlsrv' : $project->db_type,
                     'host' => 'localhost',
@@ -215,7 +222,6 @@ class ProjectController extends Controller
                 ];
             }
             
-            // S'assurer que driver est défini
             if (!isset($connectionInfo['driver'])) {
                 $connectionInfo['driver'] = $project->db_type === 'sqlserver' ? 'sqlsrv' : $project->db_type;
             }
@@ -231,9 +237,9 @@ class ProjectController extends Controller
                 'current_db_id' => $dbDescription->id
             ]);
             
-            // Rediriger vers le tableau de bord
             return redirect()->route('dashboard')
                 ->with('success', 'Projet "' . $project->name . '" ouvert avec succès.');
+                
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'ouverture du projet', [
                 'project_id' => $id,
@@ -299,4 +305,292 @@ class ProjectController extends Controller
             return redirect()->back()->with('error', 'Erreur lors de la déconnexion: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Soft delete d'un projet
+     */
+    public function softDelete($id)
+    {
+        try {
+            Log::info('Tentative de soft delete', [
+                'project_id' => $id,
+                'user_id' => auth()->id()
+            ]);
+
+            // Vérifier que l'utilisateur est connecté
+            if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            // Rechercher le projet
+            $project = Project::where('user_id', auth()->id())
+                ->where('id', $id)
+                ->first();
+
+            if (!$project) {
+                Log::warning('Projet non trouvé pour suppression', [
+                    'project_id' => $id,
+                    'user_id' => auth()->id()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Projet non trouvé ou vous n\'avez pas les permissions'
+                ], 404);
+            }
+
+            // Vérifier si le projet est déjà supprimé
+            if ($project->trashed()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Ce projet est déjà supprimé'
+                ], 400);
+            }
+
+            Log::info('Projet trouvé, tentative de suppression', [
+                'project' => $project->toArray()
+            ]);
+
+            // Effectuer le soft delete
+            $result = $project->delete();
+
+            Log::info('Résultat du soft delete', [
+                'result' => $result,
+                'project_id' => $id
+            ]);
+
+            if ($result) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Projet supprimé avec succès'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Échec de la suppression du projet'
+                ], 500);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du soft delete du projet', [
+                'project_id' => $id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Restaure un projet supprimé
+     */
+    public function restore($id)
+    {
+        try {
+            $project = Project::withTrashed()
+                ->where('user_id', auth()->id())
+                ->findOrFail($id);
+            
+            if (!$project->trashed()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Ce projet n\'est pas supprimé'
+                ], 400);
+            }
+
+            $project->restore();
+
+            Log::info('Projet restauré', [
+                'project_id' => $id,
+                'project_name' => $project->name,
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projet restauré avec succès'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ProjectController::restore', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la restauration du projet: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Suppression définitive d'un projet
+     */
+    public function forceDelete($id)
+    {
+        try {
+            $project = Project::withTrashed()
+                ->where('user_id', auth()->id())
+                ->findOrFail($id);
+            
+            // Vérifier s'il y a des dépendances critiques
+            $dbDescriptionsCount = DbDescription::where('project_id', $project->id)->count();
+            
+            if ($dbDescriptionsCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'error' => "Impossible de supprimer définitivement ce projet car il contient {$dbDescriptionsCount} base(s) de données associée(s)."
+                ], 400);
+            }
+
+            $projectName = $project->name;
+            $project->forceDelete();
+
+            Log::info('Projet supprimé définitivement', [
+                'project_id' => $id,
+                'project_name' => $projectName,
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projet supprimé définitivement'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ProjectController::forceDelete', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la suppression définitive: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Affiche les projets supprimés pour l'utilisateur connecté
+     */
+    public function deleted()
+    {
+        try {
+            $deletedProjects = Project::onlyTrashed()
+                ->where('user_id', auth()->id())
+                ->orderBy('deleted_at', 'desc')
+                ->get()
+                ->map(function ($project) {
+                    return [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'description' => $project->description,
+                        'db_type' => $project->db_type,
+                        'deleted_at' => $project->deleted_at->format('d/m/Y H:i'),
+                        'created_at' => $project->created_at->format('d/m/Y H:i')
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'projects' => $deletedProjects
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ProjectController::deleted', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des projets supprimés: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Met à jour un projet
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $project = Project::where('user_id', auth()->id())->findOrFail($id);
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'db_type' => 'required|in:sqlserver,mysql,postgres'
+            ]);
+
+            $project->update($validated);
+
+            Log::info('Projet mis à jour', [
+                'project_id' => $id,
+                'project_name' => $project->name,
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'project' => $project,
+                'message' => 'Projet mis à jour avec succès'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ProjectController::update', [
+                'id' => $id,
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la mise à jour du projet: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Retourne tous les projets actifs pour les API (par exemple pour les listes déroulantes)
+     */
+    public function apiIndex()
+    {
+        try {
+            $projects = Project::where('user_id', auth()->id())
+                ->whereNull('deleted_at')
+                ->select('id', 'name', 'description', 'db_type')
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'projects' => $projects
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans ProjectController::apiIndex', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des projets: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
