@@ -49,6 +49,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::put('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
     Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
 
+    Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects']);
+    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject']);
+    Route::delete('/projects/{id}/force', [AdminController::class, 'forceDeleteProject']);
+    Route::get('/projects/stats', [AdminController::class, 'getProjectStats']);
+
 });
 
 
@@ -149,11 +154,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
     Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
 
-    Route::delete('/api/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
-    Route::post('/api/projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
-    Route::delete('/api/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
-    Route::get('/api/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
-    Route::put('/api/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+    // Route::delete('/api/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
+    // Route::post('/api/projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
+    // Route::delete('/api/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
+    // Route::get('/api/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
+    // Route::put('/api/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
 
 });
 

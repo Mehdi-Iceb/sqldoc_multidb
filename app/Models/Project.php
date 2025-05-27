@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,7 +11,14 @@ class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $dateFormat = 'Y-d-m H:i:s';
+    protected $dateFormat = 'Y-m-d H:i:s';
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
+
 
     protected $table = 'projects';
 

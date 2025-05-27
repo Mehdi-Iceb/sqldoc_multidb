@@ -1,5 +1,5 @@
 <template>
-    <Head title="Projets" />
+    <Head title="Projects" />
     
     <AuthenticatedLayout>
         <template #header>
@@ -271,7 +271,14 @@ const loadDeletedProjects = async () => {
     showDeleted.value = true;
     
     try {
-        const response = await axios.get('/api/projects/deleted');
+        const response = await axios.get('/projects/deleted', {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
         if (response.data.success) {
             deletedProjects.value = response.data.projects;
         } else {
@@ -280,10 +287,11 @@ const loadDeletedProjects = async () => {
     } catch (error) {
         console.error('Erreur lors du chargement des projets supprimés:', error);
         
-        // Gestion spécifique de l'erreur d'autorisation
         if (error.response?.status === 403) {
-            alert('Accès non autorisé. Seuls les administrateurs peuvent voir les projets supprimés.');
-            showDeleted.value = false; // Revenir à la vue normale
+            alert('Accès non autorisé. Privilèges administrateur requis.');
+            showDeleted.value = false;
+        } else if (error.response?.status === 404) {
+            alert('Route non trouvée. Vérifiez que vous êtes administrateur.');
         } else {
             alert('Erreur lors du chargement des projets supprimés');
         }
@@ -307,13 +315,18 @@ const deleteProject = async () => {
     deleting.value = true;
     
     try {
-        const response = await axios.delete(`/api/projects/${selectedProject.value.id}/soft`);
+        
+        const response = await axios.delete(`/projects/${selectedProject.value.id}/soft`, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (response.data.success) {
             showDeleteModal.value = false;
             selectedProject.value = null;
-            
-            // Recharger la page pour mettre à jour la liste
             window.location.reload();
         } else {
             throw new Error(response.data.error || 'Erreur lors de la suppression');
@@ -331,13 +344,18 @@ const forceDeleteProject = async () => {
     deleting.value = true;
     
     try {
-        const response = await axios.delete(`/api/projects/${selectedProject.value.id}/force`);
+        
+        const response = await axios.delete(`/projects/${selectedProject.value.id}/force`, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (response.data.success) {
             showForceDeleteModal.value = false;
             selectedProject.value = null;
-            
-            // Recharger les projets supprimés
             await loadDeletedProjects();
             alert('Projet supprimé définitivement');
         } else {
@@ -354,10 +372,16 @@ const forceDeleteProject = async () => {
 // Restaurer un projet
 const restoreProject = async (project) => {
     try {
-        const response = await axios.post(`/api/projects/${project.id}/restore`);
+        
+        const response = await axios.post(`/projects/${project.id}/restore`, {}, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (response.data.success) {
-            // Recharger les projets supprimés
             await loadDeletedProjects();
             alert('Projet restauré avec succès');
         } else {

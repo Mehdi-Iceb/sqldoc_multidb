@@ -66,4 +66,29 @@ class User extends Authenticatable
         return $this->role->permissions->pluck('name');
     }
 
+    public function isAdmin()
+    {
+        if ($this->role && $this->role->name === 'admin') {
+            return true;
+        }
+
+        if (isset($this->role_name) && $this->role_name === 'admin') {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hasPermission($permission)
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        return $this->role->permissions()
+            ->where('name', $permission)
+            ->exists();
+    }
+
+
 }

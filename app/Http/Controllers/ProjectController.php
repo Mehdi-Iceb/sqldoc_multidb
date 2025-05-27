@@ -317,32 +317,17 @@ class ProjectController extends Controller
                 'user_id' => auth()->id()
             ]);
 
-            // Vérifier que l'utilisateur est connecté
-            if (!auth()->check()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Utilisateur non authentifié'
-                ], 401);
-            }
-
-            // Rechercher le projet
             $project = Project::where('user_id', auth()->id())
                 ->where('id', $id)
                 ->first();
 
             if (!$project) {
-                Log::warning('Projet non trouvé pour suppression', [
-                    'project_id' => $id,
-                    'user_id' => auth()->id()
-                ]);
-                
                 return response()->json([
                     'success' => false,
-                    'error' => 'Projet non trouvé ou vous n\'avez pas les permissions'
+                    'error' => 'Projet non trouvé'
                 ], 404);
             }
 
-            // Vérifier si le projet est déjà supprimé
             if ($project->trashed()) {
                 return response()->json([
                     'success' => false,
@@ -350,36 +335,28 @@ class ProjectController extends Controller
                 ], 400);
             }
 
-            Log::info('Projet trouvé, tentative de suppression', [
-                'project' => $project->toArray()
-            ]);
-
-            // Effectuer le soft delete
-            $result = $project->delete();
-
-            Log::info('Résultat du soft delete', [
-                'result' => $result,
-                'project_id' => $id
-            ]);
+            // SOLUTION A: Utiliser GETDATE() de SQL Server directement
+            $result = DB::statement("
+                UPDATE projects 
+                SET deleted_at = GETDATE(), 
+                    updated_at = GETDATE() 
+                WHERE id = ? AND user_id = ?
+            ", [$id, auth()->id()]);
 
             if ($result) {
+                Log::info('Projet supprimé avec succès', ['project_id' => $id]);
                 return response()->json([
                     'success' => true,
                     'message' => 'Projet supprimé avec succès'
                 ]);
             } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Échec de la suppression du projet'
-                ], 500);
+                throw new \Exception('Échec de la mise à jour');
             }
 
         } catch (\Exception $e) {
-            Log::error('Erreur lors du soft delete du projet', [
-                'project_id' => $id,
-                'user_id' => auth()->id(),
+            Log::error('Erreur soft delete:', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'project_id' => $id
             ]);
 
             return response()->json([
@@ -522,6 +499,7 @@ class ProjectController extends Controller
                         'db_type' => $project->db_type,
                         'deleted_at' => $project->deleted_at ? $project->deleted_at->toISOString() : null,
                         'created_at' => $project->created_at ? $project->created_at->format('Y-m-d H:i:s') : null
+                        //'updated_at' => $project->updated_at ? $project->updated_at->format('Y-m-d H:i:s') : null
                     ];
                 });
 
