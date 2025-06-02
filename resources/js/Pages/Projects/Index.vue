@@ -113,14 +113,14 @@
                                         <div>
                                             <h3 class="text-lg font-semibold text-gray-800">{{ project.name }}</h3>
                                             <p class="text-sm text-red-600 mt-1">
-                                                Supprimé le {{ formatDate(project.deleted_at) }}
+                                                Deleted on {{ formatDate(project.deleted_at) }}
                                             </p>
                                         </div>
                                         <!-- Bouton restore -->
                                         <button
                                             @click="restoreProject(project)"
                                             class="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                                            title="Restaurer le projet"
+                                            title="Restore the project"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -282,18 +282,18 @@ const loadDeletedProjects = async () => {
         if (response.data.success) {
             deletedProjects.value = response.data.projects;
         } else {
-            throw new Error(response.data.error || 'Erreur lors du chargement');
+            throw new Error(response.data.error || 'Error loading');
         }
     } catch (error) {
-        console.error('Erreur lors du chargement des projets supprimés:', error);
+        console.error('Error loading deleted projects:', error);
         
         if (error.response?.status === 403) {
-            alert('Accès non autorisé. Privilèges administrateur requis.');
+            alert('Unauthorized access. Administrator privileges required.');
             showDeleted.value = false;
         } else if (error.response?.status === 404) {
-            alert('Route non trouvée. Vérifiez que vous êtes administrateur.');
+            alert('Route not found. Make sure you are an administrator.');
         } else {
-            alert('Erreur lors du chargement des projets supprimés');
+            alert('Error loading deleted projects');
         }
     }
 };
@@ -329,10 +329,10 @@ const deleteProject = async () => {
             selectedProject.value = null;
             window.location.reload();
         } else {
-            throw new Error(response.data.error || 'Erreur lors de la suppression');
+            throw new Error(response.data.error || 'Error while deleting');
         }
     } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
+        console.error('Error while deleting:', error);
         alert('Erreur: ' + (error.response?.data?.error || error.message));
     } finally {
         deleting.value = false;
@@ -357,12 +357,12 @@ const forceDeleteProject = async () => {
             showForceDeleteModal.value = false;
             selectedProject.value = null;
             await loadDeletedProjects();
-            alert('Projet supprimé définitivement');
+            alert('Project definitively deleted');
         } else {
-            throw new Error(response.data.error || 'Erreur lors de la suppression définitive');
+            throw new Error(response.data.error || 'Error while definitive deletion');
         }
     } catch (error) {
-        console.error('Erreur lors de la suppression définitive:', error);
+        console.error('Error while definitive deletion:', error);
         alert('Erreur: ' + (error.response?.data?.error || error.message));
     } finally {
         deleting.value = false;
@@ -383,13 +383,13 @@ const restoreProject = async (project) => {
         
         if (response.data.success) {
             await loadDeletedProjects();
-            alert('Projet restauré avec succès');
+            alert('Project successfully restored');
         } else {
-            throw new Error(response.data.error || 'Erreur lors de la restauration');
+            throw new Error(response.data.error || 'Error while restoring');
         }
     } catch (error) {
-        console.error('Erreur lors de la restauration:', error);
-        alert('Erreur: ' + (error.response?.data?.error || error.message));
+        console.error('Error while restoring:', error);
+        alert('Error: ' + (error.response?.data?.error || error.message));
     }
 };
 
