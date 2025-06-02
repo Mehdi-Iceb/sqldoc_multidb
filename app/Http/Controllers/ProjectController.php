@@ -335,7 +335,7 @@ class ProjectController extends Controller
                 ], 400);
             }
 
-            // SOLUTION A: Utiliser GETDATE() de SQL Server directement
+            
             $result = DB::statement("
                 UPDATE projects 
                 SET deleted_at = GETDATE(), 
@@ -522,7 +522,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Met à jour un projet
+     * Mise a jour projet
      */
     public function update(Request $request, $id)
     {
@@ -565,7 +565,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Retourne tous les projets actifs pour les API (par exemple pour les listes déroulantes)
+     * Retourne tous les projets actifs pour les API
      */
     public function apiIndex()
     {
