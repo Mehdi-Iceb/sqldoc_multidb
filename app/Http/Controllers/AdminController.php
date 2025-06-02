@@ -290,10 +290,8 @@ class AdminController extends Controller
         }
     }
 
-    // ==================== MÉTHODES HELPER ====================
-
     /**
-     * Vérifie si l'utilisateur connecté est administrateur
+     * check if admin connecté
      */
     private function isUserAdmin()
     {
@@ -303,17 +301,17 @@ class AdminController extends Controller
             return false;
         }
 
-        // Si vous avez une relation role
+        
         if ($user->role && $user->role->name === 'admin') {
             return true;
         }
 
-        // Si vous avez un champ role direct
+        
         if (isset($user->role) && $user->role === 'admin') {
             return true;
         }
 
-        // Si vous avez des permissions spécifiques
+       
         if ($user->role && $user->role->permissions()->where('name', 'manage_projects')->exists()) {
             return true;
         }
