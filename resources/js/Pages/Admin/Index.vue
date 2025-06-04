@@ -206,10 +206,10 @@ const createUser = async () => {
     // Rafraîchir la page pour voir le nouvel utilisateur
     window.location.reload()
     
-    alert('Utilisateur créé avec succès')
+    alert('User created with success !')
   } catch (error) {
-    console.error('Erreur lors de la création de l\'utilisateur:', error)
-    alert('Erreur lors de la création de l\'utilisateur')
+    console.error('Error while creating user:', error)
+    alert('Error while creating user !')
   }
 }
 
@@ -243,10 +243,10 @@ const createUser = async () => {
       })
       
       // Notification de succès
-      alert('Permissions mises à jour avec succès')
+      alert('Permissions updating with success !')
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des permissions:', error)
-      alert('Erreur lors de la mise à jour des permissions')
+      console.error('Error while updating permissions:', error)
+      alert('Error while updating permissions !')
     }
   }
   
@@ -257,10 +257,10 @@ const createUser = async () => {
       })
       
       // Notification de succès
-      alert('Rôle mis à jour avec succès')
+      alert('Role updating with success !')
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du rôle:', error)
-      alert('Erreur lors de la mise à jour du rôle')
+      console.error('Error while updating role:', error)
+      alert('Error while updating role !')
     }
     
   }
