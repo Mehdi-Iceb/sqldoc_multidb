@@ -11,7 +11,7 @@
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center mb-6">
-                    <!-- Toggle pour afficher les projets supprimés -->
+                    <!-- afficher les projets supprimés -->
                     <div class="flex items-center space-x-4">
                         <button
                             @click="showDeleted = false"
@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <!-- Modal de confirmation de suppression -->
+        <!-- Modal confirmation suppression -->
         <div v-if="showDeleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/3 shadow-lg rounded-md bg-white">
                 <div class="flex flex-col items-center">
@@ -185,7 +185,7 @@
             </div>
         </div>
 
-        <!-- Modal de confirmation de suppression définitive -->
+        <!-- Modal confirmation suppression définitive -->
         <div v-if="showForceDeleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/3 shadow-lg rounded-md bg-white">
                 <div class="flex flex-col items-center">
