@@ -63,8 +63,8 @@ class TableController extends Controller
                         'is_primary_key' => $column->key === 'PK',
                         'is_foreign_key' => $column->key === 'FK',
                         'description' => $column->description,
-                        'possible_values' => $column->rangevalues,
-                        'release_id' => $column->release_id, // Ajout de l'ID de la version
+                        'rangevalues' => $column->rangevalues,
+                        'release_id' => $column->release_id, 
                         'release_version' => $column->release ? $column->release->version_number : null,
                         'project_id' => $column->release ? $column->release->project_id : null
                         ];
@@ -443,15 +443,13 @@ class TableController extends Controller
             if ($column->rangevalues !== $validated['possible_values']) {
                 $oldRangeValues = $column->rangevalues;
                 $column->rangevalues = $validated['possible_values'];
-                
-                // Sauvegarde et stocke le résultat 
-                $result = $column->save(); // Utilisez $result au lieu de $saved
+                $column->save();
                 
                 // Log pour déboguer le résultat de la sauvegarde
                 Log::info('Résultat de la sauvegarde', [
                     'column' => $columnName,
-                    'rangevalues après' => $column->rangevalues,
-                    'saveResult' => $result // Utilisez $result au lieu de $saved
+                    'rangevalues' => $column->rangevalues,
+                    'saveResult' => $column 
                 ]);
                 
                 // Log de l'audit pour les valeurs possibles

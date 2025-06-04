@@ -984,12 +984,12 @@ const savePossibleValues = async (columnName) => {
       // Mise à jour des valeurs possibles dans les données locales
       const column = tableDetails.value.columns.find(c => c.column_name === columnName);
       if (column) {
-        const oldValue = column.possible_values;
+        const oldValue = column.rangevalues;
         column.possible_values = editingPossibleValuesValue.value;
         console.log('Valeur mise à jour localement:', {
           column: columnName,
           old: oldValue,
-          new: column.possible_values
+          new: column.rangevalues
         });
       }
       
