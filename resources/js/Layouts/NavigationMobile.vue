@@ -18,14 +18,40 @@
     <aside v-show="$page.props.showingMobileMenu" class="fixed inset-y-0 z-20 flex-shrink-0 w-64 mt-16 overflow-y-auto bg-white md:hidden">
       <div class="py-4 text-gray-500">
         <Link class="ml-6 text-lg font-bold text-gray-800" :href="route('dashboard')">
-        Windmill
+        SQL-INFO 2025
       </Link>
         <ul class="mt-6">
+          <li class="relative px-6 py-3">
+            <ResponsiveNavLink :href="route('admin')" :active="route().current('admin')">
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </template>
+              administration
+            </ResponsiveNavLink>
+          </li>
+
+          <li class="relative px-6 py-3">
+            <ResponsiveNavLink :href="route('releases.index')" :active="route().current('releases.index')">
+              <template #icon>
+                <svg class="w-5 h-5" aria-hidden="true" fill="none" stroke-linecap="round"
+                    stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </template>
+              Releases
+            </ResponsiveNavLink>
+          </li>
+
           <li class="relative px-6 py-3">
             <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
               <template #icon>
                 <svg class="w-5 h-5" aria-hidden="true" fill="none" stroke-linecap="round"
-                     stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+                    stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                       d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                 </svg>
@@ -34,57 +60,185 @@
             </ResponsiveNavLink>
           </li>
 
-          <li class="relative px-6 py-3">
-            <ResponsiveNavLink :href="route('users.index')" :active="route().current('users.index')">
-              <template #icon>
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                     xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                </svg>
-              </template>
-              Users
-            </ResponsiveNavLink>
-          </li>
-
-          <li class="relative px-6 py-3">
-            <ResponsiveNavLink :href="route('about')" :active="route().current('about')">
-              <template #icon>
-                <svg class="w-5 h-5" aria-hidden="true" fill="none" stroke-linecap="round"
-                     stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
-                </svg>
-              </template>
-              About us
-            </ResponsiveNavLink>
-          </li>
-
         <li class="relative px-6 py-3">
-          <button @click="showingTwoLevelMenu = !showingTwoLevelMenu"
-              class="inline-flex items-center justify-between w-full text-sm font-semibold transition-colors duration-150 hover:text-gray-800"
-              aria-haspopup="true">
-                <span class="inline-flex items-center">
-                    <svg class="w-5 h-5" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round"
-                         stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                    </svg>
-                    <span class="ml-4">Two-level menu</span>
-                </span>
-            <svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-            </svg>
-          </button>
-            <ul v-show="showingTwoLevelMenu" class="p-2 mt-2 space-y-2 overflow-hidden text-sm font-medium text-gray-500 rounded-md shadow-inner bg-gray-50"
-                aria-label="submenu">
-              <li class="px-2 py-1 transition-colors duration-150 hover:text-gray-800">
-                <a class="w-full" href="#">Child menu</a>
-              </li>
-            </ul>
+          <ResponsiveNavLink :href="route('projects.index')" :active="route().current('projects.index')">
+            <template #icon>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+              </svg>
+            </template>
+            My project
+          </ResponsiveNavLink>
         </li>
         </ul>
+
+        <!-- Barre de recherche -->
+      <div class="px-6 mt-4">
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Rechercher..."
+          class="w-full px-3 py-2 text-sm text-gray-900 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
+      </div>
+
+      <!-- Filtres -->
+      <div class="px-6 mt-2 flex flex-wrap gap-2">
+        <button
+          v-for="filter in filters"
+          :key="filter.type"
+          @click="toggleFilter(filter.type)"
+          :class="[
+            'px-2 py-1 text-xs rounded-full transition-colors',
+            activeFilters.includes(filter.type)
+              ? 'bg-blue-700 text-white'
+              : 'bg-gray-200 text-gray-800'
+          ]"
+        >
+          {{ filter.label }} ({{ getFilterCount(filter.type) }})
+        </button>
+      </div>
+
+      <!-- Section Tables -->
+      <div v-if="databaseStructure && shouldShowSection('tables')" class="px-6 py-3">
+        <button @click="toggleSection('tables')" class="flex items-center w-full">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path :d="isOpen.tables ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+          Tables ({{ filteredTables.length }})
+        </button>
+        <ul v-if="isOpen.tables" class="pl-4 mt-2">
+          <li v-for="table in filteredTables" :key="table.id" class="py-1 hover:text-white cursor-pointer text-sm">
+            <Link 
+              :href="route('table.details', { tableName: table.name })" 
+              class="flex items-center text-gray-200 hover:text-white"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" 
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              {{ table.name }}
+              <span v-if="table.matchReason && table.matchReason !== 'name'" class="ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded">
+                <template v-if="table.matchReason === 'column'">Col: {{ table.matchedColumn }}</template>
+                <template v-else-if="table.matchReason === 'primaryKey'">PK: {{ getPrimaryKeyColumn(table) || '' }}</template>
+                <template v-else-if="table.matchReason === 'foreignKey'">FK: {{ getForeignKeyColumn(table) || '' }}</template>
+                <template v-else-if="table.matchReason === 'description'">Desc: {{ table.matchedColumn }}</template>
+              </span>
+            </Link>
+          </li>
+          <li v-if="filteredTables.length === 0" class="py-1 text-gray-400 italic text-sm">
+            No Tables found
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section Vues -->
+      <div v-if="databaseStructure && shouldShowSection('views')" class="px-6 py-3">
+        <button @click="toggleSection('views')" class="flex items-center w-full">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path :d="isOpen.views ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+          Views ({{ filteredViews.length }})
+        </button>
+        <ul v-if="isOpen.views" class="pl-4 mt-2">
+          <li v-for="view in filteredViews" :key="view.id" class="py-1 hover:text-white cursor-pointer text-sm">
+            <Link 
+              :href="route('view.details', { viewName: view.name })" 
+              class="flex items-center text-gray-200 hover:text-white"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              {{ view.name }}
+            </Link>
+          </li>
+          <li v-if="filteredViews.length === 0" class="py-1 text-gray-400 italic text-sm">
+            No Views found
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section Fonctions -->
+      <div v-if="databaseStructure && shouldShowSection('functions')" class="px-6 py-3">
+        <button @click="toggleSection('functions')" class="flex items-center w-full">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path :d="isOpen.functions ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+          Functions ({{ filteredFunctions.length }})
+        </button>
+        <ul v-if="isOpen.functions" class="pl-4 mt-2">
+          <li v-for="func in filteredFunctions" :key="func.id" class="py-1 hover:text-white cursor-pointer text-sm">
+            <Link 
+              :href="route('function.details', { functionName: func.name })" 
+              class="flex items-center text-gray-200 hover:text-white"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M10 20l4-16m4 4l4 4-4 4M4 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              {{ func.name }}
+            </Link>
+          </li>
+          <li v-if="filteredFunctions.length === 0" class="py-1 text-gray-400 italic text-sm">
+            No functions found
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section Procédures -->
+      <div v-if="databaseStructure && shouldShowSection('procedures')" class="px-6 py-3">
+        <button @click="toggleSection('procedures')" class="flex items-center w-full">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path :d="isOpen.procedures ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+          Procedures ({{ filteredProcedures.length }})
+        </button>
+        <ul v-if="isOpen.procedures" class="pl-4 mt-2">
+          <li v-for="proc in filteredProcedures" :key="proc.id" class="py-1 hover:text-white cursor-pointer text-sm">
+            <Link 
+              :href="route('procedure.details', { procedureName: proc.name })" 
+              class="flex items-center text-gray-200 hover:text-white"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" 
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              {{ proc.name }}
+            </Link>
+          </li>
+          <li v-if="filteredProcedures.length === 0" class="py-1 text-gray-400 italic text-sm">
+            No procedures found
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section Triggers -->
+      <div v-if="databaseStructure && shouldShowSection('triggers')" class="px-6 py-3">
+        <button @click="toggleSection('triggers')" class="flex items-center w-full">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path :d="isOpen.triggers ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+          Triggers ({{ filteredTriggers.length }})
+        </button>
+        <ul v-if="isOpen.triggers" class="pl-4 mt-2">
+          <li v-for="trigger in filteredTriggers" :key="trigger.id" class="py-1 hover:text-white cursor-pointer text-sm">
+            <Link 
+              :href="route('trigger.details', { triggerName: trigger.name })" 
+              class="flex items-center text-gray-200 hover:text-white"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              {{ trigger.name }}
+            </Link>
+          </li>
+          <li v-if="filteredTriggers.length === 0" class="py-1 text-gray-400 italic text-sm">
+            No triggers found
+          </li>
+
+          </ul>
+        </div>
       </div>
     </aside>
   </transition>
@@ -93,7 +247,297 @@
 <script setup>
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue'
 import { Link } from '@inertiajs/vue3';
-import { ref } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 
 let showingTwoLevelMenu = ref(false)
+
+// États pour les sections dépliables
+const isOpen = ref({
+  tables: true,
+  views: true,
+  functions: true,
+  procedures: true,
+  triggers: true,
+});
+
+
+
+// État pour les données de la base de données
+const databaseStructure = ref(null);
+
+// État pour la recherche
+const searchQuery = ref('');
+const activeFilters = ref(['tables', 'views', 'functions', 'procedures', 'triggers']);
+
+// État pour stocker les colonnes de tables (initialement vide)
+const tableColumns = ref({});
+
+// Configuration des filtres
+const filters = [
+  { type: 'tables', label: 'Tables' },
+  { type: 'views', label: 'Vues' },
+  { type: 'functions', label: 'Fonctions' },
+  { type: 'procedures', label: 'Procédures' },
+  { type: 'triggers', label: 'Triggers' }
+];
+
+// Fonction pour basculer les sections
+const toggleSection = (section) => {
+  isOpen.value[section] = !isOpen.value[section];
+};
+
+// Fonction pour basculer les filtres
+const toggleFilter = (filterType) => {
+  const index = activeFilters.value.indexOf(filterType);
+  if (index === -1) {
+    activeFilters.value.push(filterType);
+  } else {
+    activeFilters.value.splice(index, 1);
+  }
+};
+
+// Fonction pour vérifier si une section doit être affichée
+const shouldShowSection = (section) => {
+  console.log("activeFilters:", activeFilters.value);
+  return activeFilters.value.includes(section);
+};
+
+// Fonction pour obtenir le nombre d'éléments pour un type
+const getFilterCount = (type) => {
+  return databaseStructure.value?.[type]?.length || 0;
+};
+
+// Tables filtrées par recherche
+const filteredTables = computed(() => {
+  if (!databaseStructure.value?.tables) return [];
+  if (!searchQuery.value) return databaseStructure.value.tables;
+  
+  const query = searchQuery.value.toLowerCase();
+  
+  return databaseStructure.value.tables.filter(table => {
+    // Recherche dans le nom de la table
+    if (table.name.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    // Recherche des clés primaires 
+    if ((query.includes('primary') || query.includes('pk') || query.includes('clé primaire')) && 
+        hasPrimaryKey(table)) {
+      table.matchReason = 'primaryKey';
+      return true;
+    }
+    
+    // Recherche des clés étrangères 
+    if ((query.includes('foreign') || query.includes('fk') || query.includes('clé étrangère')) && 
+        hasForeignKey(table)) {
+      table.matchReason = 'foreignKey';
+      return true;
+    }
+    
+    // Recherche approfondie dans les colonnes individuelles
+    if (table.columns) {
+      for (const column of table.columns) {
+        // Recherche par nom de colonne
+        if (column.name.toLowerCase().includes(query)) {
+          table.matchReason = 'column';
+          table.matchedColumn = column.name;
+          return true;
+        }
+        
+        // Recherche dans les descriptions de colonnes
+        if (column.description && column.description.toLowerCase().includes(query)) {
+          table.matchReason = 'description';
+          table.matchedColumn = column.name;
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  });
+});
+
+const hasPrimaryKey = (table) => {
+  if (table.has_primary_key) return true;
+  
+  if (table.columns) {
+    return table.columns.some(column => column.key === 'PK');
+  }
+  
+  return false;
+};
+
+const hasForeignKey = (table) => {
+  if (table.has_foreign_key) return true;
+  
+  if (table.columns) {
+    return table.columns.some(column => column.key === 'FK');
+  }
+  
+  return false;
+};
+
+// Obtenir la colonne clé primaire
+const getPrimaryKeyColumn = (table) => {
+  if (!table.columns) return null;
+  
+  return table.columns.find(column => column.key === 'PK')?.name || null;
+};
+
+// Obtenir la colonne clé étrangère
+const getForeignKeyColumn = (table) => {
+  if (!table.columns) return null;
+  
+  return table.columns.find(column => column.key === 'FK')?.name || null;
+};
+
+// Autres computed properties pour filtrer les vues, fonctions, etc.
+const filteredViews = computed(() => {
+  if (!databaseStructure.value?.views) return [];
+  if (!searchQuery.value) return databaseStructure.value.views;
+  
+  const query = searchQuery.value.toLowerCase();
+  return databaseStructure.value.views.filter(view => {
+    return view.name.toLowerCase().includes(query);
+  });
+});
+
+const filteredFunctions = computed(() => {
+  if (!databaseStructure.value?.functions) return [];
+  if (!searchQuery.value) return databaseStructure.value.functions;
+  
+  const query = searchQuery.value.toLowerCase();
+  return databaseStructure.value.functions.filter(func => {
+    return func.name.toLowerCase().includes(query);
+  });
+});
+
+const filteredProcedures = computed(() => {
+  if (!databaseStructure.value?.procedures) return [];
+  if (!searchQuery.value) return databaseStructure.value.procedures;
+  
+  const query = searchQuery.value.toLowerCase();
+  return databaseStructure.value.procedures.filter(proc => {
+    return proc.name.toLowerCase().includes(query);
+  });
+});
+
+const filteredTriggers = computed(() => {
+  if (!databaseStructure.value?.triggers) return [];
+  if (!searchQuery.value) return databaseStructure.value.triggers;
+  
+  const query = searchQuery.value.toLowerCase();
+  return databaseStructure.value.triggers.filter(trigger => {
+    return trigger.name.toLowerCase().includes(query);
+  });
+});
+
+// Détermine si on doit afficher les détails de correspondance
+const shouldShowMatchDetails = (table) => {
+  if (!searchQuery.value) return false;
+  
+  const query = searchQuery.value.toLowerCase();
+  
+  // Si le nom de la table correspond à la recherche, pas besoin de détails
+  if (table.name.toLowerCase().includes(query)) {
+    return false;
+  }
+  
+  // Si c'est une recherche de clé primaire ou étrangère, afficher le badge correspondant
+  if ((query.includes('primary') && table.has_primary_key) || 
+      (query.includes('foreign') && table.has_foreign_key)) {
+    return true;
+  }
+  
+  // Si on a trouvé une colonne correspondante, afficher son nom
+  return getMatchedColumn(table) !== null;
+};
+
+// Obtient le nom de la première colonne correspondante
+const getMatchedColumn = (table) => {
+  if (!searchQuery.value || !table.columns) return null;
+  
+  const query = searchQuery.value.toLowerCase();
+  
+  for (const column of table.columns) {
+    if (column.name.toLowerCase().includes(query)) {
+      return column.name;
+    }
+  }
+  
+  return null;
+};
+
+
+// const searchInTableColumns = async () => {
+//   if (!searchQuery.value || searchQuery.value.length < 2) return;
+//   if (!databaseStructure.value?.tables) return;
+  
+//   try {
+//     // chargez que pour les tables actuellement affichées
+//     for (const table of databaseStructure.value.tables) {
+//       if (!tableColumns.value[table.name]) {
+//         await loadTableColumns(table.name);
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Erreur lors de la recherche dans les colonnes:', error);
+//   }
+// };
+
+const loadTableColumns = async (tableName) => {
+  if (tableColumns.value[tableName]) return;
+  
+  try {
+    console.log(`Chargement des colonnes pour ${tableName}...`);
+    const response = await axios.get(`/api/table/${encodeURIComponent(tableName)}/details`);
+    if (response.data && response.data.columns) {
+      console.log(`Colonnes chargées pour ${tableName}`);
+      tableColumns.value[tableName] = response.data.columns;
+    }
+  } catch (error) {
+    console.error(`Erreur lors du chargement des colonnes pour ${tableName}:`, error);
+  }
+};
+
+const preloadVisibleTablesColumns = async () => {
+  if (!databaseStructure.value?.tables) return;
+  
+  // Si la recherche est active
+  if (searchQuery.value && searchQuery.value.length > 2) {
+    for (const table of databaseStructure.value.tables) {
+      await loadTableColumns(table.name);
+    }
+  }
+};
+
+// Effet lorsque la recherche change
+watch(searchQuery, () => {
+  // Charge les colonnes uniquement si nécessaire
+  if (searchQuery.value.length > 1) {
+    preloadVisibleTablesColumns();
+  }
+}, { immediate: false });
+
+// Récupérer la structure de la base de données au chargement
+onMounted(async () => {
+  try {
+    console.log("Chargement de la structure de la base de données...");
+    const response = await axios.get('/database-structure');
+    console.log("Réponse reçue:", response);
+    databaseStructure.value = response.data;
+    console.log("Structure chargée:", databaseStructure.value);
+    console.log("Tables:", databaseStructure.value?.tables);
+    console.log("Vues:", databaseStructure.value?.views);
+    console.log("Fonctions:", databaseStructure.value?.functions);
+    console.log("Procédures:", databaseStructure.value?.procedures);
+    console.log("Triggers:", databaseStructure.value?.triggers);
+    
+    // Ouvrir la section tables par défaut
+    showingTables.value = true;
+  } catch (error) {
+    console.error('Erreur lors du chargement de la structure:', error);
+  }
+});
 </script>
