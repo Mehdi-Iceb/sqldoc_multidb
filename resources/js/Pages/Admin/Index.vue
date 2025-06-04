@@ -10,13 +10,13 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
           <!-- Gestion des rôles et permissions -->
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-6">Gestion des rôles et permissions</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Roles and permissions management</h3>
             <div class="space-y-6">
                 <!-- Table des rôles et permissions -->
                 <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -47,7 +47,7 @@
                         @click="saveRolePermissions(role)"
                         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                         >
-                        Sauvegarder
+                        Save
                         </button>
                     </td>
                     </tr>
@@ -58,12 +58,12 @@
 
           <!-- Formulaire de création d'utilisateur -->
         <div class="mb-8 p-6 bg-white rounded-lg shadow">
-        <h4 class="text-lg font-medium text-gray-900 mb-4">Créer un nouvel utilisateur</h4>
+        <h4 class="text-lg font-medium text-gray-900 mb-4">Create a user</h4>
         <form @submit.prevent="createUser" class="space-y-4">
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <!-- Nom -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Nom</label>
+                <label class="block text-sm font-medium text-gray-700">Name</label>
                 <input 
                 v-model="newUser.name"
                 type="text" 
@@ -85,7 +85,7 @@
 
             <!-- Mot de passe -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                <label class="block text-sm font-medium text-gray-700">Password</label>
                 <input 
                 v-model="newUser.password"
                 type="password" 
@@ -96,13 +96,13 @@
 
             <!-- Rôle -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Rôle</label>
+                <label class="block text-sm font-medium text-gray-700">Role</label>
                 <select 
                 v-model="newUser.role_id"
                 required
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                <option value="">Sélectionnez un rôle</option>
+                <option value="">Select role</option>
                 <option v-for="role in roles" :key="role.id" :value="role.id">
                     {{ role.name }}
                 </option>
@@ -116,7 +116,7 @@
                 type="submit"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition"
             >
-                Créer l'utilisateur
+                Create user
             </button>
             </div>
         </form>
@@ -124,20 +124,20 @@
         
           <!-- Gestion des utilisateurs -->
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-6">Gestion des utilisateurs</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-6">User management</h3>
   
             <!-- Liste des utilisateurs avec leur rôle -->
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nom
+                    NAme
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rôle
+                    Role
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -168,7 +168,7 @@
                       @click="updateUserRole(user)"
                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest bg-green-600 hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150"
                     >
-                      Sauvegarder
+                      Save
                     </button>
                   </td>
                 </tr>
