@@ -12,14 +12,54 @@
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-        <!-- Loading state -->
-        <div v-if="loading" class="bg-white rounded-lg shadow-sm p-6">
-          <div class="animate-pulse space-y-4">
-            <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div class="space-y-3">
-              <div class="h-4 bg-gray-200 rounded"></div>
-              <div class="h-4 bg-gray-200 rounded"></div>
-              <div class="h-4 bg-gray-200 rounded"></div>
+        <!-- 🎯 SPINNER DE CHARGEMENT PRINCIPAL DE LA PAGE -->
+        <div v-if="loading" class="fixed inset-0 bg-gray-200 bg-opacity-20 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center max-w-sm w-full mx-4">
+            <!-- Spinner principal -->
+            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mb-6"></div>
+            
+            <!-- Titre et sous-titre -->
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Loading table details</h3>
+            <p class="text-gray-600 text-center mb-4">
+              Retrieving structure for <span class="font-medium text-blue-600">{{ tableName }}</span>
+            </p>
+            
+            <!-- Barre de progression simulée -->
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div class="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out" 
+                   :style="{ width: loadingProgress + '%' }"></div>
+            </div>
+            
+            <!-- Messages de progression -->
+            <div class="text-sm text-gray-500 text-center">
+              <div v-if="loadingProgress < 30" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Connecting to database...
+              </div>
+              <div v-else-if="loadingProgress < 60" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading table structure...
+              </div>
+              <div v-else-if="loadingProgress < 90" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading relations and indexes...
+              </div>
+              <div v-else class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Almost ready...
+              </div>
             </div>
           </div>
         </div>
@@ -45,10 +85,19 @@
                 <h3 class="text-lg font-medium text-gray-900">Table description</h3>
                 <button 
                   @click="saveTableStructure" 
-                  class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 relative"
+                  :class="{ 'opacity-50 cursor-not-allowed': saving }"
                   :disabled="saving"
                 >
-                  {{ saving ? 'Enregistrement...' : 'Save descriptions' }}
+                  <!-- 🎯 SPINNER 1: Bouton Save descriptions -->
+                  <span v-if="!saving">Save descriptions</span>
+                  <span v-else class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
                 </button>
               </div>
             </div>
@@ -58,6 +107,7 @@
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="Description optionnelle (usage, environnement, contenu...)"
+                :disabled="saving"
               ></textarea>
             </div>
           </div>
@@ -77,23 +127,29 @@
                 </PrimaryButton>
               </div>
             </div>
-            <!-- modal pour ajouter une nouvelle colonne -->
+
+            <!-- 🎯 MODAL 1: Add Column avec spinner -->
             <div v-if="showAddColumnModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <!-- Overlay de chargement pour le modal -->
+                <div v-if="addingColumn" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
+                  <div class="flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                    <p class="text-gray-600 text-sm">Adding column...</p>
+                  </div>
+                </div>
+
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-medium text-gray-900">
-                    Add new column
-                  </h3>
-                  <button @click="showAddColumnModal = false" class="text-gray-400 hover:text-gray-500">
+                  <h3 class="text-lg font-medium text-gray-900">Add new column</h3>
+                  <button @click="showAddColumnModal = false" class="text-gray-400 hover:text-gray-500" :disabled="addingColumn">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
                 
-                <form @submit.prevent="addNewColumn">
+                <form @submit.prevent="addNewColumn" :class="{ 'opacity-50 pointer-events-none': addingColumn }">
                   <div class="space-y-4">
-                    <!-- Nom de la colonne -->
                     <div>
                       <label for="column_name" class="block text-sm font-medium text-gray-700">Column name</label>
                       <input 
@@ -101,11 +157,11 @@
                         v-model="newColumn.column_name" 
                         type="text" 
                         required
+                        :disabled="addingColumn"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
                     </div>
                     
-                    <!-- Type de données -->
                     <div>
                       <label for="data_type" class="block text-sm font-medium text-gray-700">Data type</label>
                       <input 
@@ -113,23 +169,23 @@
                         v-model="newColumn.data_type" 
                         type="text" 
                         required
+                        :disabled="addingColumn"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="ex: varchar(255), int, date..."
                       >
                     </div>
                     
-                    <!-- Nullable -->
                     <div class="flex items-center">
                       <input 
                         id="is_nullable" 
                         v-model="newColumn.is_nullable" 
                         type="checkbox" 
+                        :disabled="addingColumn"
                         class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       >
                       <label for="is_nullable" class="ml-2 block text-sm text-gray-700">Nullable</label>
                     </div>
                     
-                    <!-- Type de clé -->
                     <div>
                       <label class="block text-sm font-medium text-gray-700">Key type</label>
                       <div class="mt-1 flex items-center space-x-4">
@@ -139,6 +195,7 @@
                             v-model="newColumn.key_type" 
                             type="radio" 
                             value="none"
+                            :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
                           <label for="no_key" class="ml-2 block text-sm text-gray-700">None</label>
@@ -149,6 +206,7 @@
                             v-model="newColumn.key_type" 
                             type="radio" 
                             value="PK"
+                            :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
                           <label for="primary_key" class="ml-2 block text-sm text-gray-700">Primary key</label>
@@ -159,6 +217,7 @@
                             v-model="newColumn.key_type" 
                             type="radio" 
                             value="FK"
+                            :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
                           <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Foreign key</label>
@@ -166,38 +225,38 @@
                       </div>
                     </div>
                     
-                    <!-- Description -->
                     <div>
                       <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
                       <textarea 
                         id="description" 
                         v-model="newColumn.description" 
                         rows="2"
+                        :disabled="addingColumn"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       ></textarea>
                     </div>
                     
-                    <!-- Valeurs possibles -->
                     <div>
                       <label for="possible_values" class="block text-sm font-medium text-gray-700">Range possible</label>
                       <textarea 
                         id="possible_values" 
                         v-model="newColumn.possible_values" 
                         rows="2"
+                        :disabled="addingColumn"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       ></textarea>
                     </div>
                     
-                    <!-- Version release -->
                     <div>
                       <label for="release" class="block text-sm font-medium text-gray-700">Version</label>
                       <select 
                         id="release" 
                         v-model="newColumn.release"
+                        :disabled="addingColumn"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
-                        <option v-for="version in versions" :key="version" :value="version">
-                          {{ version }}
+                        <option v-for="release in availableReleases" :key="release.id" :value="release.id">
+                          {{ release.display_name }}
                         </option>
                       </select>
                     </div>
@@ -207,49 +266,43 @@
                     <button 
                       type="button"
                       @click="showAddColumnModal = false"
+                      :disabled="addingColumn"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                       Cancel
                     </button>
                     <button 
                       type="submit"
-                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 relative"
                       :disabled="addingColumn"
                     >
-                      {{ addingColumn ? 'Ajout en cours...' : 'Add' }}
+                      <span v-if="!addingColumn">Add</span>
+                      <span v-else class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Adding...
+                      </span>
                     </button>
                   </div>
                 </form>
               </div>
             </div>
+
+            <!-- Table structure -->
             <div class="overflow-x-auto">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Column
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nullable
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Key
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Range value
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      release
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Show
-                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nullable</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Range value</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Release</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Show</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -260,6 +313,7 @@
                       {{ column.column_name }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <!-- 🎯 SPINNER 2: Édition du type de données -->
                       <div class="flex items-center space-x-2">
                         <span v-if="!editingDataType[column.column_name]" class="font-mono">
                           {{ formatDataType(column) }}
@@ -286,17 +340,23 @@
                         <div v-else class="flex space-x-1">
                           <button
                             @click="saveDataType(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
+                            class="p-1 text-green-600 hover:text-green-700 relative"
                             title="Sauvegarder"
+                            :disabled="savingDataType[column.column_name]"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg v-if="!savingDataType[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </button>
                           <button
                             @click="cancelEdit('dataType', column.column_name)"
                             class="p-1 text-red-600 hover:text-red-700"
                             title="Annuler"
+                            :disabled="savingDataType[column.column_name]"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -306,18 +366,28 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                      <div class="flex items-center space-x-2">
+                      <!-- 🎯 SPINNER 3: Mise à jour Nullable avec overlay -->
+                      <div class="flex items-center space-x-2 relative">
                         <select 
                           :class="[
-                            'block w-full pl-3 pr-10 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md',
-                            column.is_nullable ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                            'block w-full pl-3 pr-10 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity',
+                            column.is_nullable ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800',
+                            updatingNullable[column.column_name] ? 'opacity-50' : ''
                           ]"
                           :value="column.is_nullable ? 'true' : 'false'"
                           @change="updateNullable(column, $event.target.value === 'true')"
+                          :disabled="updatingNullable[column.column_name]"
                         >
                           <option value="true">Oui</option>
                           <option value="false">Non</option>
                         </select>
+                        <!-- Mini spinner pour nullable -->
+                        <div v-if="updatingNullable[column.column_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          <svg class="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -346,7 +416,6 @@
                         <textarea
                           v-else
                           v-model="editingDescriptionValue"
-                          type="text"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                           @keydown.ctrl.enter="saveDescription(column.column_name)"
                           @keydown.esc="cancelEdit('description', column.column_name)"
@@ -364,17 +433,23 @@
                         <div v-else class="flex space-x-1">
                           <button
                             @click="saveDescription(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
+                            class="p-1 text-green-600 hover:text-green-700 relative"
                             title="Sauvegarder"
+                            :disabled="savingDescription[column.column_name]"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </button>
                           <button
                             @click="cancelEdit('description', column.column_name)"
                             class="p-1 text-red-600 hover:text-red-700"
                             title="Annuler"
+                            :disabled="savingDescription[column.column_name]"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -391,7 +466,6 @@
                         <textarea
                           v-else
                           v-model="editingPossibleValuesValue"
-                          type="text"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                           @keyup.enter="savePossibleValues(column.column_name)"
                           @keyup.esc="cancelEdit('possibleValues', column.column_name)"
@@ -410,17 +484,23 @@
                         <div v-else class="flex space-x-1">
                           <button
                             @click="savePossibleValues(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
+                            class="p-1 text-green-600 hover:text-green-700 relative"
                             title="Sauvegarder"
+                            :disabled="savingPossibleValues[column.column_name]"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg v-if="!savingPossibleValues[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </button>
                           <button
                             @click="cancelEdit('possibleValues', column.column_name)"
                             class="p-1 text-red-600 hover:text-red-700"
                             title="Annuler"
+                            :disabled="savingPossibleValues[column.column_name]"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -430,28 +510,47 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
-                      <div class="flex items-center space-x-2">
-                        <!-- Placeholder for release column content -->
+                      <!-- 🎯 SPINNER 4: Release dropdown avec spinner -->
+                      <div class="flex items-center space-x-2 relative">
                         <select 
                           :value="column.release_id || ''"
                           @change="updateColumnRelease(column, $event.target.value)"
-                          class="block w-full pl-3 pr-8 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                          :class="column.release_id ? 'bg-blue-50 text-blue-800' : ''"
+                          class="block w-full pl-3 pr-8 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity"
+                          :class="[
+                            column.release_id ? 'bg-blue-50 text-blue-800' : '',
+                            updatingRelease[column.column_name] ? 'opacity-50' : ''
+                          ]"
+                          :disabled="updatingRelease[column.column_name]"
                         >
                           <option value="">-- Aucune version --</option>
                           <option v-for="release in availableReleases" :key="release.id" :value="release.id">
                             {{ release.display_name }}
                           </option>
                         </select>
+                        <!-- Mini spinner pour release -->
+                        <div v-if="updatingRelease[column.column_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          <svg class="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
                       </div>
                     </td>
                     <td class="px-4 py-3 text-sm">
-                         <SecondaryButton @click="showAuditLogs(column.column_name)">
+                      <SecondaryButton @click="showAuditLogs(column.column_name)" :disabled="loadingAuditLogs && currentColumn === column.column_name">
+                        <span v-if="!(loadingAuditLogs && currentColumn === column.column_name)">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="blue" class="size-6">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                           </svg>
-                        </SecondaryButton>
+                        </span>
+                        <span v-else class="flex items-center">
+                          <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </span>
+                      </SecondaryButton>
                     </td>
                   </tr>
                 </tbody>
@@ -473,18 +572,10 @@
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Column
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Properties
-                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Properties</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -539,23 +630,28 @@
               </div>
             </div>
 
-            <!-- modal pour ajouter une nouvelle relation -->
+            <!-- 🎯 MODAL 2: Add Relation avec spinner -->
             <div v-if="showAddRelationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <!-- Overlay de chargement pour le modal relation -->
+                <div v-if="addingRelation" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
+                  <div class="flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                    <p class="text-gray-600 text-sm">Adding relation...</p>
+                  </div>
+                </div>
+
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-medium text-gray-900">
-                    Add relation
-                  </h3>
-                  <button @click="showAddRelationModal = false" class="text-gray-400 hover:text-gray-500">
+                  <h3 class="text-lg font-medium text-gray-900">Add relation</h3>
+                  <button @click="showAddRelationModal = false" class="text-gray-400 hover:text-gray-500" :disabled="addingRelation">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
                 
-                <form @submit.prevent="addNewRelation">
+                <form @submit.prevent="addNewRelation" :class="{ 'opacity-50 pointer-events-none': addingRelation }">
                   <div class="space-y-4">
-                    <!-- Nom de la contrainte -->
                     <div>
                       <label for="constraint_name" class="block text-sm font-medium text-gray-700">Name of constraint</label>
                       <input 
@@ -563,18 +659,19 @@
                         v-model="newRelation.constraint_name" 
                         type="text" 
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="ex: FK_TableA_TableB"
                       >
                     </div>
                     
-                    <!-- Colonne source -->
                     <div>
                       <label for="column_name" class="block text-sm font-medium text-gray-700">Column origin</label>
                       <select 
                         id="column_name" 
                         v-model="newRelation.column_name"
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
                         <option value="">Select a column</option>
@@ -584,7 +681,6 @@
                       </select>
                     </div>
                     
-                    <!-- Table référencée -->
                     <div>
                       <label for="referenced_table" class="block text-sm font-medium text-gray-700">Referenced Table</label>
                       <input 
@@ -592,11 +688,11 @@
                         v-model="newRelation.referenced_table" 
                         type="text" 
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
                     </div>
                     
-                    <!-- Colonne référencée -->
                     <div>
                       <label for="referenced_column" class="block text-sm font-medium text-gray-700">Referenced Column</label>
                       <input 
@@ -604,17 +700,18 @@
                         v-model="newRelation.referenced_column" 
                         type="text" 
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
                     </div>
                     
-                    <!-- Action ON DELETE -->
                     <div>
                       <label for="delete_rule" class="block text-sm font-medium text-gray-700">Action ON DELETE</label>
                       <select 
                         id="delete_rule" 
                         v-model="newRelation.delete_rule"
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
                         <option value="NO ACTION">NO ACTION</option>
@@ -625,13 +722,13 @@
                       </select>
                     </div>
                     
-                    <!-- Action ON UPDATE -->
                     <div>
                       <label for="update_rule" class="block text-sm font-medium text-gray-700">Action ON UPDATE</label>
                       <select 
                         id="update_rule" 
                         v-model="newRelation.update_rule"
                         required
+                        :disabled="addingRelation"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
                         <option value="NO ACTION">NO ACTION</option>
@@ -647,40 +744,39 @@
                     <button 
                       type="button"
                       @click="showAddRelationModal = false"
+                      :disabled="addingRelation"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                       Annuler
                     </button>
                     <button 
                       type="submit"
-                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 relative"
                       :disabled="addingRelation"
                     >
-                      {{ addingRelation ? 'Ajout en cours...' : 'Ajouter' }}
+                      <span v-if="!addingRelation">Ajouter</span>
+                      <span v-else class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Adding...
+                      </span>
                     </button>
                   </div>
                 </form>
               </div>
             </div>
+
             <div class="overflow-x-auto">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Constraint
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Column
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Referenced table
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      referenced column
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Constraint</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referenced table</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referenced column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -742,8 +838,12 @@
           </button>
         </div>
         
-        <div v-if="loadingAuditLogs" class="text-center py-4">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <!-- 🎯 SPINNER 5: Loading audit logs -->
+        <div v-if="loadingAuditLogs" class="text-center py-8">
+          <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+            <p class="text-gray-600">Loading change history...</p>
+          </div>
         </div>
         
         <div v-else-if="auditLogs.length === 0" class="text-center py-4 text-gray-500">
@@ -802,7 +902,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -810,85 +910,168 @@ import TextInput from '@/Components/TextInput.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import Dropdown from '@/Components/Dropdown.vue'
-  
+
 const props = defineProps({
   tableName: {
     type: String,
     required: true
   }
-});
+})
 
-// États
-const loading = ref(true);
-const error = ref(null);
-const saving = ref(false);
+// 🎯 VARIABLES D'ÉTAT POUR LES SPINNERS
+const loadingProgress = ref(0)
+const savingDataType = ref({})
+const savingDescription = ref({})
+const savingPossibleValues = ref({})
+const updatingNullable = ref({})
+const updatingRelease = ref({})
+
+// 🎯 SIMULATION DE PROGRESSION DE CHARGEMENT
+let progressInterval = null
+
+const simulateLoadingProgress = () => {
+  loadingProgress.value = 0
+  
+  // Nettoyer l'intervalle précédent s'il existe
+  if (progressInterval) {
+    clearInterval(progressInterval)
+  }
+  
+  progressInterval = setInterval(() => {
+    if (loadingProgress.value < 95) {
+      // Progression plus rapide au début, plus lente vers la fin
+      const increment = loadingProgress.value < 50 ? 
+        Math.random() * 15 + 5 : // 5-20% au début
+        Math.random() * 8 + 2   // 2-10% vers la fin
+      
+      loadingProgress.value = Math.min(95, loadingProgress.value + increment)
+    }
+  }, 200)
+}
+
+const stopLoadingProgress = () => {
+  if (progressInterval) {
+    clearInterval(progressInterval)
+    progressInterval = null
+  }
+  loadingProgress.value = 100
+}
+
+// États principaux
+const loading = ref(true) // 🎯 IMPORTANT: Démarrer en loading=true
+const error = ref(null)
+const saving = ref(false)
 const tableDetails = ref({
   description: '',
   columns: [],
   indexes: [],
   relations: []
-});
+})
 const form = ref({
   description: ''
-});
+})
 
 // États pour l'édition
-const editingDescription = ref({});
-const editingDescriptionValue = ref('');
-const editingPossibleValues = ref({});
-const editingPossibleValuesValue = ref('');
-const editingDataType = ref({});
-const editingDataTypeValue = ref('');
+const editingDescription = ref({})
+const editingDescriptionValue = ref('')
+const editingPossibleValues = ref({})
+const editingPossibleValuesValue = ref('')
+const editingDataType = ref({})
+const editingDataTypeValue = ref('')
 
 // États pour le modal d'audit
-const showAuditModal = ref(false);
-const loadingAuditLogs = ref(false);
-const auditLogs = ref([]);
-const currentColumn = ref('');
+const showAuditModal = ref(false)
+const loadingAuditLogs = ref(false)
+const auditLogs = ref([])
+const currentColumn = ref('')
 
-// Chargement des détails de la table
+// États pour les modaux
+const showAddColumnModal = ref(false)
+const addingColumn = ref(false)
+const newColumn = ref({
+  column_name: '',
+  data_type: '',
+  is_nullable: false,
+  key_type: 'none',
+  description: '',
+  possible_values: '',
+  release: ''
+})
+
+const showAddRelationModal = ref(false)
+const addingRelation = ref(false)
+const newRelation = ref({
+  constraint_name: '',
+  column_name: '',
+  referenced_table: '',
+  referenced_column: '',
+  delete_rule: 'NO ACTION',
+  update_rule: 'NO ACTION'
+})
+
+const availableReleases = ref([])
+
+// 🎯 CHARGEMENT INITIAL AVEC SPINNER
 onMounted(async () => {
   try {
-    console.log('Chargement des détails pour:', props.tableName);
-    const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`);
-    console.log('Réponse reçue:', response.data);
+    console.log('🎯 Début du chargement pour:', props.tableName)
+    console.log('🎯 Loading state:', loading.value)
     
-    tableDetails.value = response.data;
-    form.value.description = response.data.description || '';
+    // Démarrer la simulation de progression
+    simulateLoadingProgress()
+    
+    console.log('🎯 Simulation de progression démarrée')
+    
+    const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`)
+    console.log('🎯 Réponse reçue:', response.data)
+    
+    tableDetails.value = response.data
+    form.value.description = response.data.description || ''
 
-    await loadAvailableReleases();
+    await loadAvailableReleases()
+    
+    console.log('🎯 Données chargées avec succès')
     
   } catch (err) {
-    console.error('Erreur complète:', err);
-    error.value = `Erreur: ${err.response?.data?.error || err.message}`;
+    console.error('🎯 Erreur complète:', err)
+    error.value = `Erreur: ${err.response?.data?.error || err.message}`
   } finally {
-    loading.value = false;
+    console.log('🎯 Finalisation du chargement')
+    
+    // Finaliser la progression et arrêter le loading
+    stopLoadingProgress()
+    
+    setTimeout(() => {
+      console.log('🎯 Masquage du spinner')
+      loading.value = false
+    }, 500) // Délai pour voir la progression à 100%
   }
-});
+})
+
+// 🎯 FONCTIONS AVEC SPINNERS AMÉLIORÉES
 
 // Formatage du type de données
 const formatDataType = (column) => {
-  let type = column.data_type;
+  let type = column.data_type
   
   if (['varchar', 'nvarchar', 'char', 'nchar'].includes(type.toLowerCase())) {
     if (column.max_length) {
-      type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`;
+      type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`
     }
   } else if (['decimal', 'numeric'].includes(type.toLowerCase())) {
     if (column.precision && column.scale !== undefined) {
-      type += `(${column.precision},${column.scale})`;
+      type += `(${column.precision},${column.scale})`
     }
   }
   
-  return type;
-};
+  return type
+}
 
 // Fonction pour sauvegarder toute la structure
 const saveTableStructure = async () => {
   try {
-    saving.value = true;
+    saving.value = true
     
-    // Préparer les données à envoyer - uniquement les descriptions et valeurs possibles
     const tableData = {
       description: form.value.description,
       language: 'fr',
@@ -897,215 +1080,224 @@ const saveTableStructure = async () => {
         description: column.description || null,
         rangevalues: column.possible_values || null
       }))
-    };
+    }
     
-    // Appel à l'API
-    const response = await axios.post(`/table/${props.tableName}/save-structure`, tableData);
+    const response = await axios.post(`/table/${props.tableName}/save-structure`, tableData)
     
     if (response.data.success) {
-      alert('Descriptions et valeurs possibles enregistrées avec succès');
+      alert('Descriptions et valeurs possibles enregistrées avec succès')
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde');
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
     }
     
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
-    alert('Erreur lors de la sauvegarde des descriptions et valeurs possibles');
+    console.error('Erreur lors de la sauvegarde:', error)
+    alert('Erreur lors de la sauvegarde des descriptions et valeurs possibles')
   } finally {
-    saving.value = false;
+    saving.value = false
   }
-};
+}
 
 // Fonction générique pour démarrer l'édition
 const startEdit = (type, columnName, currentValue) => {
   if (type === 'description') {
-    editingDescription.value = { [columnName]: true };
-    editingDescriptionValue.value = currentValue || '';
+    editingDescription.value = { [columnName]: true }
+    editingDescriptionValue.value = currentValue || ''
   } else if (type === 'possibleValues') {
-    editingPossibleValues.value = { [columnName]: true };
-    editingPossibleValuesValue.value = currentValue || '';
+    editingPossibleValues.value = { [columnName]: true }
+    editingPossibleValuesValue.value = currentValue || ''
   } else if (type === 'dataType') {
-    editingDataType.value = { [columnName]: true };
-    editingDataTypeValue.value = currentValue || '';
+    editingDataType.value = { [columnName]: true }
+    editingDataTypeValue.value = currentValue || ''
   }
-};
+}
 
 // Fonction générique pour annuler l'édition
 const cancelEdit = (type, columnName) => {
   if (type === 'description') {
-    editingDescription.value = { [columnName]: false };
-    editingDescriptionValue.value = '';
+    editingDescription.value = { [columnName]: false }
+    editingDescriptionValue.value = ''
   } else if (type === 'possibleValues') {
-    editingPossibleValues.value = { [columnName]: false };
-    editingPossibleValuesValue.value = '';
+    editingPossibleValues.value = { [columnName]: false }
+    editingPossibleValuesValue.value = ''
   } else if (type === 'dataType') {
-    editingDataType.value = { [columnName]: false };
-    editingDataTypeValue.value = '';
+    editingDataType.value = { [columnName]: false }
+    editingDataTypeValue.value = ''
   }
-};
+}
 
-// Fonction pour sauvegarder la description
+// 🎯 FONCTION POUR SAUVEGARDER LA DESCRIPTION AVEC SPINNER
 const saveDescription = async (columnName) => {
   try {
+    savingDescription.value[columnName] = true
+    
     const response = await axios.post(`/table/${props.tableName}/column/${columnName}/description`, {
       description: editingDescriptionValue.value
-    });
+    })
     
     if (response.data.success) {
-      // Mise à jour de la description dans les données locales
-      const column = tableDetails.value.columns.find(c => c.column_name === columnName);
+      const column = tableDetails.value.columns.find(c => c.column_name === columnName)
       if (column) {
-        column.description = editingDescriptionValue.value;
+        column.description = editingDescriptionValue.value
       }
-      
-      // Réinitialise l'état d'édition
-      cancelEdit('description', columnName);
+      cancelEdit('description', columnName)
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde de la description');
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde de la description')
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la description:', error);
-    alert('Erreur lors de la sauvegarde de la description');
+    console.error('Erreur lors de la mise à jour de la description:', error)
+    alert('Erreur lors de la sauvegarde de la description')
+  } finally {
+    savingDescription.value[columnName] = false
   }
-};
+}
 
-// Fonction pour sauvegarder les valeurs possibles
+// 🎯 FONCTION POUR SAUVEGARDER LES VALEURS POSSIBLES AVEC SPINNER
 const savePossibleValues = async (columnName) => {
   try {
-    console.log('Sauvegarde des valeurs possibles pour', columnName, ':', editingPossibleValuesValue.value);
+    savingPossibleValues.value[columnName] = true
     
     const response = await axios.post(`/table/${props.tableName}/column/${columnName}/possible-values`, {
       possible_values: editingPossibleValuesValue.value
-    });
-    
-    console.log('Réponse du serveur:', response.data);
+    })
     
     if (response.data.success) {
-      // Mise à jour des valeurs possibles dans les données locales
-      const column = tableDetails.value.columns.find(c => c.column_name === columnName);
+      const column = tableDetails.value.columns.find(c => c.column_name === columnName)
       if (column) {
-        const oldValue = column.rangevalues;
-        column.possible_values = editingPossibleValuesValue.value;
-        console.log('Valeur mise à jour localement:', {
-          column: columnName,
-          old: oldValue,
-          new: column.rangevalues
-        });
+        column.possible_values = editingPossibleValuesValue.value
       }
-      
-      // Réinitialise l'état d'édition
-      cancelEdit('possibleValues', columnName);
+      cancelEdit('possibleValues', columnName)
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde des valeurs possibles');
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde des valeurs possibles')
     }
   } catch (error) {
-    console.error('Erreur détaillée:', error);
-    alert('Erreur lors de la sauvegarde des valeurs possibles');
+    console.error('Erreur lors de la sauvegarde des valeurs possibles:', error)
+    alert('Erreur lors de la sauvegarde des valeurs possibles')
+  } finally {
+    savingPossibleValues.value[columnName] = false
   }
-};
+}
 
-// Fonction pour sauvegarder le type de données
+// 🎯 FONCTION POUR SAUVEGARDER LE TYPE DE DONNÉES AVEC SPINNER
 const saveDataType = async (columnName) => {
   try {
-    const column = tableDetails.value.columns.find(c => c.column_name === columnName);
+    savingDataType.value[columnName] = true
+    
+    const column = tableDetails.value.columns.find(c => c.column_name === columnName)
     const response = await axios.post(`/table/${props.tableName}/column/${columnName}/properties`, {
       column_name: columnName,
       data_type: editingDataTypeValue.value,
       is_nullable: column.is_nullable,
       is_primary_key: column.is_primary_key,
       is_foreign_key: column.is_foreign_key
-    });
+    })
     
     if (response.data.success) {
-      // Mise à jour du type de données dans les données locales
       if (column) {
-        column.data_type = editingDataTypeValue.value;
+        column.data_type = editingDataTypeValue.value
       }
-      
-      // Réinitialise l'état d'édition
-      cancelEdit('dataType', columnName);
+      cancelEdit('dataType', columnName)
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde du type de données');
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde du type de données')
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du type de données:', error);
-    alert('Erreur lors de la sauvegarde du type de données');
+    console.error('Erreur lors de la mise à jour du type de données:', error)
+    alert('Erreur lors de la sauvegarde du type de données')
+  } finally {
+    savingDataType.value[columnName] = false
   }
-};
+}
 
-// Fonction pour basculer la nullabilité d'une colonne
+// 🎯 FONCTION POUR BASCULER LA NULLABILITÉ AVEC SPINNER
 const updateNullable = async (column, isNullable) => {
   try {
-    // Convertir la valeur string en boolean si nécessaire
+    updatingNullable.value[column.column_name] = true
+    
     if (typeof isNullable === 'string') {
-      isNullable = isNullable === 'true';
+      isNullable = isNullable === 'true'
     }
     
-    // Ne rien faire si la valeur n'a pas changé
     if (column.is_nullable === isNullable) {
-      return;
+      return
     }
     
-    // Copier les propriétés actuelles de la colonne
     const columnProperties = {
       column_name: column.column_name,
       data_type: column.data_type,
-      is_nullable: isNullable, // Nouvelle valeur
+      is_nullable: isNullable,
       is_primary_key: column.is_primary_key,
       is_foreign_key: column.is_foreign_key
-    };
+    }
     
-    // Appel à l'API pour mettre à jour les propriétés
     const response = await axios.post(
       `/table/${props.tableName}/column/${column.column_name}/properties`,
       columnProperties
-    );
+    )
     
     if (response.data.success) {
-      // Mettre à jour localement la propriété is_nullable
-      column.is_nullable = isNullable;
-      
-      // alert('Nullabilité modifiée avec succès');
+      column.is_nullable = isNullable
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la modification de la nullabilité');
+      throw new Error(response.data.error || 'Erreur lors de la modification de la nullabilité')
     }
   } catch (error) {
-    console.error('Erreur lors de la modification de la nullabilité:', error);
-    alert('Erreur lors de la modification de la nullabilité');
-    
-    // Recharger les données pour revenir à l'état initial en cas d'erreur
-    await reloadTableData();
+    console.error('Erreur lors de la modification de la nullabilité:', error)
+    alert('Erreur lors de la modification de la nullabilité')
+    await reloadTableData()
+  } finally {
+    updatingNullable.value[column.column_name] = false
   }
-};
+}
+
+// 🎯 FONCTION POUR METTRE À JOUR LA VERSION AVEC SPINNER
+const updateColumnRelease = async (column, releaseId) => {
+  try {
+    updatingRelease.value[column.column_name] = true
+    
+    const finalReleaseId = releaseId === '' ? null : parseInt(releaseId)
+    
+    const response = await axios.post(`/table/${props.tableName}/column/${column.column_name}/release`, {
+      release_id: finalReleaseId
+    })
+    
+    if (response.data.success) {
+      column.release_id = finalReleaseId
+      const selectedRelease = availableReleases.value.find(r => r.id === finalReleaseId)
+      column.release_version = selectedRelease ? selectedRelease.version_number : ''
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la mise à jour')
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la version:', error)
+    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    await reloadTableData()
+  } finally {
+    updatingRelease.value[column.column_name] = false
+  }
+}
 
 // Fonction pour afficher les audit logs
 const showAuditLogs = async (columnName) => {
-  showAuditModal.value = true;
-  loadingAuditLogs.value = true;
-  currentColumn.value = columnName;
+  showAuditModal.value = true
+  loadingAuditLogs.value = true
+  currentColumn.value = columnName
   
   try {
-    const response = await axios.get(`/table/${props.tableName}/column/${columnName}/audit-logs`);
-    auditLogs.value = response.data;
-    
-    // Analyser les noms de colonnes pour le débogage
-    const uniqueColumnNames = [...new Set(response.data.map(log => log.column_name))];
-    console.log('Unique column_name values in logs:', uniqueColumnNames);
-    
+    const response = await axios.get(`/table/${props.tableName}/column/${columnName}/audit-logs`)
+    auditLogs.value = response.data
   } catch (error) {
-    console.error('Erreur lors du chargement des logs d\'audit:', error);
-    alert('Erreur lors du chargement de l\'historique des modifications');
+    console.error('Erreur lors du chargement des logs d\'audit:', error)
+    alert('Erreur lors du chargement de l\'historique des modifications')
   } finally {
-    loadingAuditLogs.value = false;
+    loadingAuditLogs.value = false
   }
-};
+}
 
 // Fonction pour fermer le modal
 const closeAuditModal = () => {
-  showAuditModal.value = false;
-  auditLogs.value = [];
-  currentColumn.value = '';
-};
+  showAuditModal.value = false
+  auditLogs.value = []
+  currentColumn.value = ''
+}
 
 // Fonction pour formater la date
 const formatDate = (date) => {
@@ -1115,91 +1307,62 @@ const formatDate = (date) => {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  });
-};
+  })
+}
 
 // Fonction pour obtenir le nom descriptif de la propriété modifiée
 const getPropertyName = (columnNameWithSuffix) => {
-  if (!columnNameWithSuffix) return 'Unknown';
+  if (!columnNameWithSuffix) return 'Unknown'
   
-  // Gestion des propriétés de table
-  if (columnNameWithSuffix === 'table_description') return 'Table Description';
-  if (columnNameWithSuffix === 'table_language') return 'Table Language';
-  
-  // Vérifier les suffixes spécifiques pour les propriétés de colonne
-  if (columnNameWithSuffix.endsWith('_description')) return 'Description';
-  
-  // Mettre à jour cette condition pour inclure votre nouveau format
+  if (columnNameWithSuffix === 'table_description') return 'Table Description'
+  if (columnNameWithSuffix === 'table_language') return 'Table Language'
+  if (columnNameWithSuffix.endsWith('_description')) return 'Description'
   if (columnNameWithSuffix.endsWith('_rangevalues') || 
-      columnNameWithSuffix.endsWith('_rangevalues') || 
-      columnNameWithSuffix.endsWith('_possible_values')) {
-    return 'Range Values';
-  }
+      columnNameWithSuffix.endsWith('_possible_values')) return 'Range Values'
+  if (columnNameWithSuffix.endsWith('_type')) return 'Data Type'
+  if (columnNameWithSuffix.endsWith('_nullable')) return 'Nullable'
+  if (columnNameWithSuffix.endsWith('_key')) return 'Key Type'
+  if (columnNameWithSuffix.endsWith('_release')) return 'Release'
   
-  if (columnNameWithSuffix.endsWith('_type')) return 'Data Type';
-  if (columnNameWithSuffix.endsWith('_nullable')) return 'Nullable';
-  if (columnNameWithSuffix.endsWith('_key')) return 'Key Type';
-  if (columnNameWithSuffix.endsWith('_release')) return 'Release';
-  
-  // Si c'est une modification du nom de colonne ou autre
   if (columnNameWithSuffix.includes('_')) {
-    const parts = columnNameWithSuffix.split('_');
-    const lastPart = parts[parts.length - 1];
-    if (['name', 'update_name'].includes(lastPart)) return 'Column Name';
+    const parts = columnNameWithSuffix.split('_')
+    const lastPart = parts[parts.length - 1]
+    if (['name', 'update_name'].includes(lastPart)) return 'Column Name'
   }
   
-  // Par défaut, retourner le nom tel quel
-  return columnNameWithSuffix;
-};
+  return columnNameWithSuffix
+}
 
 // Fonction pour obtenir une classe CSS selon le type de propriété
 const getPropertyClass = (columnNameWithSuffix) => {
-  if (!columnNameWithSuffix) return '';
+  if (!columnNameWithSuffix) return ''
   
-  // Couleurs différentes selon le type de propriété
-  if (columnNameWithSuffix.endsWith('_description')) return 'text-purple-700';
-  if (columnNameWithSuffix.endsWith('_rangevalues')) return 'text-green-700';
-  if (columnNameWithSuffix.endsWith('_type')) return 'text-blue-700';
-  if (columnNameWithSuffix.endsWith('_nullable')) return 'text-red-700';
-  if (columnNameWithSuffix.endsWith('_key')) return 'text-yellow-700';
-  if (columnNameWithSuffix.endsWith('_release')) return 'text-indigo-700';
+  if (columnNameWithSuffix.endsWith('_description')) return 'text-purple-700'
+  if (columnNameWithSuffix.endsWith('_rangevalues')) return 'text-green-700'
+  if (columnNameWithSuffix.endsWith('_type')) return 'text-blue-700'
+  if (columnNameWithSuffix.endsWith('_nullable')) return 'text-red-700'
+  if (columnNameWithSuffix.endsWith('_key')) return 'text-yellow-700'
+  if (columnNameWithSuffix.endsWith('_release')) return 'text-indigo-700'
   
-  // Par défaut
-  return 'text-gray-900';
-};
+  return 'text-gray-900'
+}
 
 // Fonction pour formater les valeurs des logs
 const formatLogValue = (value) => {
-  if (!value) return '-';
+  if (!value) return '-'
   try {
-    // Si c'est une chaîne JSON, on essaie de la parser et de la formater
-    const parsed = JSON.parse(value);
-    return JSON.stringify(parsed, null, 2);
+    const parsed = JSON.parse(value)
+    return JSON.stringify(parsed, null, 2)
   } catch {
-    // Si ce n'est pas du JSON, on retourne la valeur telle quelle
-    return value;
+    return value
   }
-};
-
-// États pour le modal d'ajout de colonne
-const showAddColumnModal = ref(false);
-const addingColumn = ref(false);
-const newColumn = ref({
-  column_name: '',
-  data_type: '',
-  is_nullable: false,
-  key_type: 'none', // 'none', 'PK', ou 'FK'
-  description: '',
-  possible_values: '',
-  release: '',
-});
+}
 
 // Fonction pour ajouter une nouvelle colonne
 const addNewColumn = async () => {
   try {
-    addingColumn.value = true;
+    addingColumn.value = true
     
-    // Préparer les données à envoyer
     const columnData = {
       column_name: newColumn.value.column_name,
       data_type: newColumn.value.data_type,
@@ -1209,18 +1372,12 @@ const addNewColumn = async () => {
       description: newColumn.value.description,
       possible_values: newColumn.value.possible_values,
       release: newColumn.value.release
-    };
+    }
     
-    console.log('Ajout d\'une nouvelle colonne:', columnData);
-    
-    // Appel à l'API
-    const response = await axios.post(`/table/${props.tableName}/column/add`, columnData);
+    const response = await axios.post(`/table/${props.tableName}/column/add`, columnData)
     
     if (response.data.success) {
-      // Fermer le modal
-      showAddColumnModal.value = false;
-      
-      // Réinitialiser le formulaire
+      showAddColumnModal.value = false
       newColumn.value = {
         column_name: '',
         data_type: '',
@@ -1229,52 +1386,25 @@ const addNewColumn = async () => {
         description: '',
         possible_values: '',
         release: ''
-      };
-      
-      // Recharger les données de la table pour afficher la nouvelle colonne
-      reloadTableData();
-      
-      // Notification de succès
-      alert('Colonne ajoutée avec succès');
+      }
+      reloadTableData()
+      alert('Colonne ajoutée avec succès')
     } else {
-      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la colonne');
+      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la colonne')
     }
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la colonne:', error);
-    alert('Erreur lors de l\'ajout de la colonne: ' + (error.response?.data?.error || error.message));
+    console.error('Erreur lors de l\'ajout de la colonne:', error)
+    alert('Erreur lors de l\'ajout de la colonne: ' + (error.response?.data?.error || error.message))
   } finally {
-    addingColumn.value = false;
+    addingColumn.value = false
   }
-};
-
-// Fonction pour recharger les données de la table
-const reloadTableData = async () => {
-  try {
-    const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`);
-    tableDetails.value = response.data;
-  } catch (err) {
-    console.error('Erreur lors du rechargement des données:', err);
-  }
-};
-
-// États pour le modal d'ajout de relation
-const showAddRelationModal = ref(false);
-const addingRelation = ref(false);
-const newRelation = ref({
-  constraint_name: '',
-  column_name: '',
-  referenced_table: '',
-  referenced_column: '',
-  delete_rule: 'NO ACTION',
-  update_rule: 'NO ACTION'
-});
+}
 
 // Fonction pour ajouter une nouvelle relation
 const addNewRelation = async () => {
   try {
-    addingRelation.value = true;
+    addingRelation.value = true
     
-    // Préparer les données à envoyer
     const relationData = {
       constraint_name: newRelation.value.constraint_name,
       column_name: newRelation.value.column_name,
@@ -1282,18 +1412,12 @@ const addNewRelation = async () => {
       referenced_column: newRelation.value.referenced_column,
       delete_rule: newRelation.value.delete_rule,
       update_rule: newRelation.value.update_rule
-    };
+    }
     
-    console.log('Ajout d\'une nouvelle relation:', relationData);
-    
-    // Appel à l'API
-    const response = await axios.post(`/table/${props.tableName}/relation/add`, relationData);
+    const response = await axios.post(`/table/${props.tableName}/relation/add`, relationData)
     
     if (response.data.success) {
-      // Fermer le modal
-      showAddRelationModal.value = false;
-      
-      // Réinitialiser le formulaire
+      showAddRelationModal.value = false
       newRelation.value = {
         constraint_name: '',
         column_name: '',
@@ -1301,87 +1425,37 @@ const addNewRelation = async () => {
         referenced_column: '',
         delete_rule: 'NO ACTION',
         update_rule: 'NO ACTION'
-      };
-      
-      // Recharger les données de la table pour afficher la nouvelle relation
-      reloadTableData();
-      
-      // Notification de succès
-      alert('Relation ajoutée avec succès');
+      }
+      reloadTableData()
+      alert('Relation ajoutée avec succès')
     } else {
-      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la relation');
+      throw new Error(response.data.error || 'Erreur lors de l\'ajout de la relation')
     }
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la relation:', error);
-    alert('Erreur lors de l\'ajout de la relation: ' + (error.response?.data?.error || error.message));
+    console.error('Erreur lors de l\'ajout de la relation:', error)
+    alert('Erreur lors de l\'ajout de la relation: ' + (error.response?.data?.error || error.message))
   } finally {
-    addingRelation.value = false;
+    addingRelation.value = false
   }
-};
+}
 
-// Variables d'état pour les versions
-const availableReleases = ref([]);
+// Fonction pour recharger les données de la table
+const reloadTableData = async () => {
+  try {
+    const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`)
+    tableDetails.value = response.data
+  } catch (err) {
+    console.error('Erreur lors du rechargement des données:', err)
+  }
+}
 
 // Fonction pour charger les versions disponibles
 const loadAvailableReleases = async () => {
   try {
-    const response = await axios.get('/api/releases/all');
-    availableReleases.value = response.data;
+    const response = await axios.get('/api/releases/all')
+    availableReleases.value = response.data
   } catch (error) {
-    console.error('Erreur lors du chargement des versions:', error);
+    console.error('Erreur lors du chargement des versions:', error)
   }
-};
-
-// Fonction améliorée pour mettre à jour la version d'une colonne
-const updateColumnRelease = async (column, releaseId) => {
-  try {
-    console.log('Début de updateColumnRelease avec audit', {
-      column: column,
-      releaseId: releaseId
-    });
-    
-    // Si releaseId est une chaîne vide, la convertir en null
-    const finalReleaseId = releaseId === '' ? null : parseInt(releaseId);
-    
-    console.log('Envoi de la requête pour mettre à jour la version avec audit', {
-      release_id: finalReleaseId,
-      column_name: column.column_name
-    });
-    
-    // Appel direct à l'endpoint du TableController qui gère l'audit
-    const response = await axios.post(`/table/${props.tableName}/column/${column.column_name}/release`, {
-      release_id: finalReleaseId
-    });
-    
-    console.log('Réponse de l\'API avec audit', response.data);
-    
-    if (response.data.success) {
-      // Mettre à jour localement
-      column.release_id = finalReleaseId;
-      
-      // Mettre à jour le nom de la version pour l'affichage
-      const selectedRelease = availableReleases.value.find(r => r.id === finalReleaseId);
-      column.release_version = selectedRelease ? selectedRelease.version_number : '';
-      
-      console.log('Version mise à jour localement avec audit', {
-        column: column,
-        release_id: finalReleaseId,
-        release_version: column.release_version
-      });
-    } else {
-      throw new Error(response.data.error || 'Erreur lors de la mise à jour');
-    }
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour de la version avec audit:', error);
-    alert('Erreur: ' + (error.response?.data?.error || error.message));
-    
-    // Recharger les données en cas d'erreur
-    try {
-      await reloadTableData();
-    } catch (reloadError) {
-      console.error('Erreur lors du rechargement des données:', reloadError);
-    }
-  }
-};
-
+}
 </script>

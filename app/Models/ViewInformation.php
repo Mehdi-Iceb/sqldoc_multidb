@@ -25,8 +25,6 @@ class ViewInformation extends Model
         'last_change_date'
     ];
 
-    // Pas de timestamps automatiques pour cette table
-    public $timestamps = false;
 
     public function viewDescription()
     {
