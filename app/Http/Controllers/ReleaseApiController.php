@@ -12,17 +12,34 @@ use Inertia\Inertia;
 class ReleaseApiController extends Controller
 {
     /**
-     * Renvoie la liste des versions pour l'interface Vue.js
+     * Renvoie la liste des versions pour l'interface Vue.js (FILTRÉES PAR PROJET ACTUEL)
      */
     public function index()
     {
         try {
-            // Récupérer toutes les versions avec leur projet associé (non supprimé)
+            // Récupérer le projet actuel depuis la session
+            $currentProject = session('current_project');
+            
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'error' => 'Aucun projet sélectionné. Veuillez vous connecter à un projet.'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
+            
+            Log::info('Chargement des releases pour le projet actuel', [
+                'project_id' => $currentProjectId,
+                'project_name' => $currentProject['name'] ?? 'Unknown'
+            ]);
+
+            // Récupérer UNIQUEMENT les versions du projet actuel
             $releases = Release::with(['project' => function($query) {
-                    $query->whereNull('deleted_at'); // Exclure les projets supprimés
+                    $query->whereNull('deleted_at');
                 }])
+                ->where('project_id', $currentProjectId) // FILTRAGE PAR PROJET ACTUEL
                 ->whereHas('project', function($query) {
-                    $query->whereNull('deleted_at'); // Ne récupérer que les releases des projets actifs
+                    $query->whereNull('deleted_at');
                 })
                 ->orderBy('version_number', 'desc')
                 ->orderBy('created_at', 'desc')
@@ -34,31 +51,37 @@ class ReleaseApiController extends Controller
                         'project_id' => $release->project_id,
                         'project_name' => $release->project ? $release->project->name : 'Projet supprimé',
                         'description' => $release->description ?? '',
-                        'column_count' => 1,
+                        'column_count' => $this->getColumnCountForRelease($release->id),
                         'created_at' => $release->created_at->format('d/m/Y H:i'),
                         'updated_at' => $release->updated_at->format('d/m/Y H:i')
                     ];
                 });
 
-            // Obtenir les versions uniques pour le filtre
-            $uniqueVersions = Release::whereHas('project', function($query) {
+            // Obtenir les versions uniques POUR CE PROJET UNIQUEMENT
+            $uniqueVersions = Release::where('project_id', $currentProjectId)
+                ->whereHas('project', function($query) {
                     $query->whereNull('deleted_at');
                 })
                 ->distinct()
                 ->orderBy('version_number', 'desc')
                 ->pluck('version_number');
                 
-            // Récupérer tous les projets actifs (non supprimés)
-            $projects = Project::whereNull('deleted_at')
+            // Récupérer UNIQUEMENT le projet actuel pour la liste déroulante
+            $projects = Project::where('id', $currentProjectId)
+                ->whereNull('deleted_at')
                 ->select('id', 'name')
-                ->orderBy('name')
                 ->get();
 
             return response()->json([
                 'releases' => $releases,
                 'uniqueVersions' => $uniqueVersions,
-                'projects' => $projects
+                'projects' => $projects,
+                'currentProject' => [
+                    'id' => $currentProjectId,
+                    'name' => $currentProject['name'] ?? 'Unknown'
+                ]
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::index', [
                 'error' => $e->getMessage(),
@@ -70,17 +93,47 @@ class ReleaseApiController extends Controller
     }
 
     /**
-     * Renvoie la liste de toutes les versions disponibles (pour les listes déroulantes)
+     * Compte le nombre de colonnes associées à une release
+     */
+    private function getColumnCountForRelease($releaseId)
+    {
+        try {
+            return DB::table('table_structure')
+                ->where('release_id', $releaseId)
+                ->count();
+        } catch (\Exception $e) {
+            Log::warning('Erreur lors du comptage des colonnes pour la release', [
+                'release_id' => $releaseId,
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
+    }
+
+    /**
+     * Renvoie la liste de toutes les versions du projet actuel (pour les listes déroulantes)
      */
     public function getAllVersions()
     {
         try {
+            // Récupérer le projet actuel depuis la session
+            $currentProject = session('current_project');
+            
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'error' => 'Aucun projet sélectionné'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
+
             $versions = Release::select('id', 'version_number', 'project_id')
                 ->with(['project' => function($query) {
                     $query->select('id', 'name')->whereNull('deleted_at');
                 }])
+                ->where('project_id', $currentProjectId) // FILTRAGE PAR PROJET ACTUEL
                 ->whereHas('project', function($query) {
-                    $query->whereNull('deleted_at'); // Ne récupérer que les releases des projets actifs
+                    $query->whereNull('deleted_at');
                 })
                 ->orderBy('version_number', 'desc')
                 ->get()
@@ -89,13 +142,12 @@ class ReleaseApiController extends Controller
                         'id' => $release->id,
                         'version_number' => $release->version_number,
                         'project_name' => $release->project ? $release->project->name : null,
-                        'display_name' => $release->project 
-                            ? $release->version_number . ' (' . $release->project->name . ')'
-                            : $release->version_number
+                        'display_name' => $release->version_number // Pas besoin du nom du projet puisque c'est le même
                     ];
                 });
 
             return response()->json($versions);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::getAllVersions', [
                 'error' => $e->getMessage(),
@@ -107,29 +159,43 @@ class ReleaseApiController extends Controller
     }
 
     /**
-     * Enregistre une nouvelle version
+     * Enregistre une nouvelle version (POUR LE PROJET ACTUEL UNIQUEMENT)
      */
     public function store(Request $request)
     {
         try {
-            // Valider les données
+            // Récupérer le projet actuel depuis la session
+            $currentProject = session('current_project');
+            
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Aucun projet sélectionné. Veuillez vous connecter à un projet.'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
+
+            // Valider les données (sans project_id car il sera forcé au projet actuel)
             $validated = $request->validate([
-                'project_id' => 'required|exists:projects,id',
                 'version_number' => 'required|string|max:20',
                 'description' => 'nullable|string'
             ]);
 
-            // Vérifier que le projet n'est pas supprimé
-            $project = Project::find($validated['project_id']);
+            // FORCER le project_id au projet actuel
+            $validated['project_id'] = $currentProjectId;
+
+            // Vérifier que le projet actuel n'est pas supprimé
+            $project = Project::find($currentProjectId);
             if (!$project || $project->trashed()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Le projet sélectionné n\'existe pas ou a été supprimé.'
+                    'error' => 'Le projet actuel n\'existe pas ou a été supprimé.'
                 ], 400);
             }
 
             // Vérifier si ce projet a déjà une version identique
-            $existingRelease = Release::where('project_id', $validated['project_id'])
+            $existingRelease = Release::where('project_id', $currentProjectId)
                 ->where('version_number', $validated['version_number'])
                 ->first();
 
@@ -143,10 +209,18 @@ class ReleaseApiController extends Controller
             // Créer la nouvelle version
             $release = Release::create($validated);
 
+            Log::info('Nouvelle release créée', [
+                'release_id' => $release->id,
+                'version' => $release->version_number,
+                'project_id' => $currentProjectId,
+                'project_name' => $currentProject['name'] ?? 'Unknown'
+            ]);
+
             return response()->json([
                 'success' => true,
                 'release' => $release
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::store', [
                 'request' => $request->all(),
@@ -162,23 +236,36 @@ class ReleaseApiController extends Controller
     }
 
     /**
-     * Met à jour une version existante
+     * Met à jour une version existante (UNIQUEMENT SI ELLE APPARTIENT AU PROJET ACTUEL)
      */
     public function update(Request $request, $id)
     {
         try {
+            // Récupérer le projet actuel depuis la session
+            $currentProject = session('current_project');
+            
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Aucun projet sélectionné.'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
+
             // Valider les données
             $validated = $request->validate([
-                'project_id' => 'required|exists:projects,id',
                 'version_number' => 'required|string|max:20',
                 'description' => 'nullable|string'
             ]);
 
-            // Récupérer la version existante
-            $release = Release::findOrFail($id);
+            // Récupérer la version existante ET vérifier qu'elle appartient au projet actuel
+            $release = Release::where('id', $id)
+                ->where('project_id', $currentProjectId) // SÉCURITÉ : vérifier l'appartenance
+                ->firstOrFail();
 
             // Vérifier si la combinaison existe déjà (hors cette version)
-            $existingRelease = Release::where('project_id', $validated['project_id'])
+            $existingRelease = Release::where('project_id', $currentProjectId)
                 ->where('version_number', $validated['version_number'])
                 ->where('id', '!=', $id)
                 ->first();
@@ -197,6 +284,7 @@ class ReleaseApiController extends Controller
                 'success' => true,
                 'release' => $release
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::update', [
                 'id' => $id,
@@ -213,13 +301,27 @@ class ReleaseApiController extends Controller
     }
 
     /**
-     * Supprime une version
+     * Supprime une version (UNIQUEMENT SI ELLE APPARTIENT AU PROJET ACTUEL)
      */
     public function destroy($id)
     {
         try {
-            // Récupérer la version
-            $release = Release::findOrFail($id);
+            // Récupérer le projet actuel depuis la session
+            $currentProject = session('current_project');
+            
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Aucun projet sélectionné.'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
+
+            // Récupérer la version ET vérifier qu'elle appartient au projet actuel
+            $release = Release::where('id', $id)
+                ->where('project_id', $currentProjectId) // SÉCURITÉ : vérifier l'appartenance
+                ->firstOrFail();
 
             // Vérifier si des tables/colonnes utilisent cette version
             $usageCount = DB::table('table_structure')
@@ -239,6 +341,7 @@ class ReleaseApiController extends Controller
             return response()->json([
                 'success' => true
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::destroy', [
                 'id' => $id,
@@ -254,15 +357,25 @@ class ReleaseApiController extends Controller
     }
 
     /**
-     * Associe une version à une colonne spécifique
+     * Associe une version à une colonne spécifique (DANS LE PROJET ACTUEL)
      */
     public function assignReleaseToColumn(Request $request)
     {
         try {
-
             Log::info('Début de assignReleaseToColumn', [
-            'request_all' => $request->all()
+                'request_all' => $request->all()
             ]);
+
+            // Récupérer le projet actuel
+            $currentProject = session('current_project');
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Aucun projet sélectionné.'
+                ], 400);
+            }
+            
+            $currentProjectId = $currentProject['id'];
 
             // Valider les données
             $validated = $request->validate([
@@ -271,9 +384,17 @@ class ReleaseApiController extends Controller
                 'column_name' => 'required|string'
             ]);
 
-            Log::info('Données validées', [
-            'validated' => $validated
-            ]);
+            // VÉRIFIER que la release appartient au projet actuel
+            $release = Release::where('id', $validated['release_id'])
+                ->where('project_id', $currentProjectId)
+                ->first();
+                
+            if (!$release) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Cette version n\'appartient pas au projet actuel.'
+                ], 403);
+            }
 
             // Récupérer la structure de la table
             $column = DB::table('table_structure')
@@ -282,47 +403,24 @@ class ReleaseApiController extends Controller
                 ->first();
 
             if (!$column) {
-            Log::error('Colonne non trouvée', [
-                'table_id' => $validated['table_id'],
-                'column_name' => $validated['column_name']
-            ]);
-            return response()->json([
-                'success' => false,
-                'error' => 'Colonne non trouvée'
-            ], 404);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Colonne non trouvée'
+                ], 404);
             }
-
-            Log::info('Colonne trouvée', [
-                'column' => $column
-            ]);
 
             // Mettre à jour la colonne avec l'ID de version
             $updateResult = DB::table('table_structure')
                 ->where('id', $column->id)
                 ->update(['release_id' => $validated['release_id']]);
 
-            Log::info('Résultat de la mise à jour', [
-                'updateResult' => $updateResult,
-                'column_id' => $column->id,
-                'release_id' => $validated['release_id']
-            ]);
-
-            // Vérifier après la mise à jour
-            $updatedColumn = DB::table('table_structure')
-                ->where('id', $column->id)
-                ->first();
-
-            Log::info('État de la colonne après mise à jour', [
-                'release_id' => $updatedColumn->release_id
-            ]);
-
             return response()->json([
                 'success' => true,
                 'update_result' => $updateResult,
                 'column_id' => $column->id,
-                'new_release_id' => $validated['release_id'],
-                'updated_column' => $updatedColumn
+                'new_release_id' => $validated['release_id']
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::assignReleaseToColumn', [
                 'request' => $request->all(),
@@ -370,6 +468,7 @@ class ReleaseApiController extends Controller
             return response()->json([
                 'success' => true
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Erreur dans ReleaseApiController::removeReleaseFromColumn', [
                 'request' => $request->all(),

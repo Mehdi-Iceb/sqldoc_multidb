@@ -6,14 +6,29 @@
         <h2 class="text-xl font-semibold text-gray-800">
           <span class="text-gray-500 font-normal">Releases :</span> 
           Release management
+          <span v-if="currentProject" class="text-blue-600 font-medium">
+            - {{ currentProject.name }}
+          </span>
         </h2>
       </div>
     </template>
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <!-- Message si aucun projet sélectionné -->
+        <div v-if="!currentProject" class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-sm">
+          <div class="flex items-center">
+            <svg class="h-5 w-5 text-yellow-400 mr-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <div class="text-yellow-700">
+              Aucun projet sélectionné. Veuillez vous connecter à un projet pour gérer ses versions.
+            </div>
+          </div>
+        </div>
+
         <!-- Loading state -->
-        <div v-if="loading" class="bg-white rounded-lg shadow-sm p-6">
+        <div v-else-if="loading" class="bg-white rounded-lg shadow-sm p-6">
           <div class="animate-pulse space-y-4">
             <div class="h-4 bg-gray-200 rounded w-1/4"></div>
             <div class="space-y-3">
@@ -45,7 +60,7 @@
                   <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
-                  Available releases
+                  Available releases for {{ currentProject?.name }}
                 </h3>
                 <div class="flex space-x-2">
                   <div class="relative">
@@ -68,15 +83,6 @@
                       {{ version }}
                     </option>
                   </select>
-                  <select 
-                    v-model="filterProject" 
-                    class="px-3 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All projects</option>
-                    <option v-for="project in projects" :key="project.id" :value="project.id">
-                      {{ project.name }}
-                    </option>
-                  </select>
                   <PrimaryButton @click="showAddReleaseModal = true">
                     Add a release
                   </PrimaryButton>
@@ -91,13 +97,10 @@
                       Release
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Associated column
+                      Associated columns
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created at
@@ -111,17 +114,29 @@
                   <tr v-for="release in filteredReleases" 
                       :key="release.id"
                       class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                      {{ release.version_number }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ release.project_name || 'N/A' }}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-8 w-8">
+                          <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-blue-600">
+                            {{ release.version_number }}
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-700">
                       {{ release.description || '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {{ release.column_count || 0 }} columns
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {{ release.column_count || 0 }} columns
+                      </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {{ release.created_at }}
@@ -142,8 +157,14 @@
                     </td>
                   </tr>
                   <tr v-if="filteredReleases.length === 0">
-                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                      No release found
+                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                      <div class="flex flex-col items-center py-4">
+                        <svg class="h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        <p class="text-gray-500">No releases found for this project</p>
+                        <p class="text-sm text-gray-400 mt-1">Create your first release to get started</p>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -159,7 +180,10 @@
       <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900">
-            {{ editingReleaseId ? 'Modifier la version' : 'Ajouter une nouvelle version' }}
+            {{ editingReleaseId ? 'Edit release' : 'Add new release' }}
+            <span v-if="currentProject" class="text-sm text-gray-500 font-normal">
+              for {{ currentProject.name }}
+            </span>
           </h3>
           <button @click="closeReleaseModal" class="text-gray-400 hover:text-gray-500">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -179,24 +203,23 @@
                 type="text" 
                 required
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="ex: 1.0.0"
+                placeholder="e.g: 1.0.0, v2.1.3, Release-2024.1"
               >
+              <p class="mt-1 text-sm text-gray-500">Enter a unique version number for this project</p>
             </div>
             
-            <!-- Projet associé -->
-            <div>
-              <label for="project_id" class="block text-sm font-medium text-gray-700">Project</label>
-              <select 
-                id="project_id" 
-                v-model="newRelease.project_id"
-                required
-                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              >
-                <option value="">Select a project</option>
-                <option v-for="project in projects" :key="project.id" :value="project.id">
-                  {{ project.name }}
-                </option>
-              </select>
+            <!-- Projet (info seulement, pas de sélection) -->
+            <div v-if="currentProject">
+              <label class="block text-sm font-medium text-gray-700">Project</label>
+              <div class="mt-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-700">
+                <div class="flex items-center">
+                  <svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h.01M7 10h.01M7 13h.01"/>
+                  </svg>
+                  {{ currentProject.name }}
+                </div>
+              </div>
+              <p class="mt-1 text-sm text-gray-500">This release will be created for the current project</p>
             </div>
             
             <!-- Description -->
@@ -207,14 +230,14 @@
                 v-model="newRelease.description" 
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Description optionnelle de cette version"
+                placeholder="Optional description of this release (new features, bug fixes, etc.)"
               ></textarea>
             </div>
             
-            <!-- Date de création (optionnelle) -->
+            <!-- Date de création (affichage en mode édition) -->
             <div v-if="editingReleaseId">
               <label class="block text-sm font-medium text-gray-700">Creation date</label>
-              <div class="mt-1 text-sm text-gray-500">{{ newRelease.created_at || 'Non disponible' }}</div>
+              <div class="mt-1 text-sm text-gray-500">{{ newRelease.created_at || 'Not available' }}</div>
             </div>
           </div>
           
@@ -231,7 +254,7 @@
               class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               :disabled="savingRelease"
             >
-              {{ savingRelease ? 'Enregistrement...' : (editingReleaseId ? 'Update' : 'Add') }}
+              {{ savingRelease ? 'Saving...' : (editingReleaseId ? 'Update' : 'Create') }}
             </button>
           </div>
         </form>
@@ -246,11 +269,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <h3 class="text-lg font-medium text-gray-900 mb-2 text-center">
-            Delete the version
+            Delete release
           </h3>
           <p class="text-sm text-gray-500 text-center mb-6">
-            Are you sure to delete the release <span class="font-semibold">{{ releaseToDelete?.version_number }}</span> from project <span class="font-semibold">{{ releaseToDelete?.project_name }}</span> ?<br>
-            This action is irreversible.
+            Are you sure you want to delete the release <span class="font-semibold text-gray-900">{{ releaseToDelete?.version_number }}</span>?<br>
+            <span v-if="releaseToDelete?.column_count > 0" class="text-red-600 font-medium">
+              This release is associated with {{ releaseToDelete.column_count }} columns.
+            </span><br>
+            This action cannot be undone.
           </p>
           
           <div class="flex justify-center space-x-4 w-full">
@@ -258,14 +284,14 @@
               @click="showDeleteConfirmModal = false"
               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
-              Annuler
+              Cancel
             </button>
             <button 
               @click="deleteRelease"
               class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               :disabled="deletingRelease"
             >
-              {{ deletingRelease ? 'Suppression...' : 'Delete' }}
+              {{ deletingRelease ? 'Deleting...' : 'Delete' }}
             </button>
           </div>
         </div>
@@ -278,19 +304,17 @@
 import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
-import SecondaryButton from '@/Components/SecondaryButton.vue'
-  
+
 // États
 const loading = ref(true);
 const error = ref(null);
 const releases = ref([]);
 const uniqueVersions = ref([]);
-const projects = ref([]);
+const currentProject = ref(null); // Projet actuel depuis la session
 
-// États de filtrage
+// États de filtrage (suppression du filtre par projet)
 const searchQuery = ref('');
 const filterVersion = ref('');
-const filterProject = ref('');
 
 // États pour le modal d'ajout/édition
 const showAddReleaseModal = ref(false);
@@ -298,7 +322,6 @@ const savingRelease = ref(false);
 const editingReleaseId = ref(null);
 const newRelease = ref({
   version_number: '',
-  project_id: '',
   description: '',
   created_at: null
 });
@@ -311,7 +334,6 @@ const releaseToDelete = ref(null);
 // Chargement des données
 onMounted(async () => {
   try {
-    // Charger les versions
     await loadReleases();
   } catch (err) {
     console.error('Erreur lors du chargement des données:', err);
@@ -327,10 +349,11 @@ const loadReleases = async () => {
     console.log('Tentative de chargement des releases...');
     const response = await axios.get('/api/releases');
     console.log('Réponse reçue:', response.data);
+    
     if (response.data && typeof response.data === 'object') {
       releases.value = response.data.releases || [];
       uniqueVersions.value = response.data.uniqueVersions || [];
-      projects.value = response.data.projects || [];
+      currentProject.value = response.data.currentProject || null;
     } else {
       throw new Error('Format de réponse inattendu');
     }
@@ -340,18 +363,16 @@ const loadReleases = async () => {
   }
 };
 
-// Filtrage des versions
+// Filtrage des versions (simplifié, plus de filtre par projet)
 const filteredReleases = computed(() => {
   return releases.value.filter(release => {
     const matchesSearch = searchQuery.value === '' || 
       release.version_number.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (release.project_name && release.project_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
       (release.description && release.description.toLowerCase().includes(searchQuery.value.toLowerCase()));
     
     const matchesVersion = filterVersion.value === '' || release.version_number === filterVersion.value;
-    const matchesProject = filterProject.value === '' || release.project_id === parseInt(filterProject.value);
     
-    return matchesSearch && matchesVersion && matchesProject;
+    return matchesSearch && matchesVersion;
   });
 });
 
@@ -360,7 +381,6 @@ const editRelease = (release) => {
   editingReleaseId.value = release.id;
   newRelease.value = {
     version_number: release.version_number,
-    project_id: release.project_id,
     description: release.description || '',
     created_at: release.created_at
   };
@@ -373,7 +393,6 @@ const closeReleaseModal = () => {
   editingReleaseId.value = null;
   newRelease.value = {
     version_number: '',
-    project_id: '',
     description: '',
     created_at: null
   };
@@ -401,13 +420,13 @@ const saveRelease = async () => {
       closeReleaseModal();
       
       // Notification de succès
-      alert(editingReleaseId.value ? 'Version mise à jour avec succès' : 'Version ajoutée avec succès');
+      alert(editingReleaseId.value ? 'Release updated successfully' : 'Release created successfully');
     } else {
       throw new Error(response.data.error || 'Erreur lors de l\'opération');
     }
   } catch (error) {
     console.error('Erreur lors de la sauvegarde:', error);
-    alert('Erreur: ' + (error.response?.data?.error || error.message));
+    alert('Error: ' + (error.response?.data?.error || error.message));
   } finally {
     savingRelease.value = false;
   }
@@ -435,13 +454,13 @@ const deleteRelease = async () => {
       releaseToDelete.value = null;
       
       // Notification de succès
-      alert('Version supprimée avec succès');
+      alert('Release deleted successfully');
     } else {
       throw new Error(response.data.error || 'Erreur lors de la suppression');
     }
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);
-    alert('Erreur: ' + (error.response?.data?.error || error.message));
+    alert('Error: ' + (error.response?.data?.error || error.message));
   } finally {
     deletingRelease.value = false;
   }
