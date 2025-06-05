@@ -8,7 +8,7 @@
     </div> -->
     <div class="py-4 text-white">
       <Link class="ml-6 text-lg font-bold text-gray-200" :href="route('projects.index')">
-        SQL-INFO 2025 
+        {{ appName }} 
       </Link>
 
       <ul class="mt-6">
@@ -252,6 +252,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import NavLink from '@/Components/NavLink.vue'
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
+import { usePage } from '@inertiajs/vue3'
+
+const page = usePage()
+console.log('Page props:', page.props)
+
+const appName = page.props.appName
 
 // États pour les sections dépliables
 const isOpen = ref({

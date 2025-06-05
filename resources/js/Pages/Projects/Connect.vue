@@ -70,12 +70,23 @@ const updateAuthMode = (value) => {
                             <Link
                                 :href="route('projects.index')"
                                 class="inline-flex items-center px-3 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                                :class="{ 'pointer-events-none opacity-50': form.processing }"
                             >
                                 Retour aux projets
                             </Link>
                         </div>
                         
-                        <form @submit.prevent="submit" class="max-w-lg">
+                        <!-- Overlay de chargement -->
+                        <div v-if="form.processing" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
+                                <!-- Spinner -->
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+                                <p class="text-gray-700 font-medium">Loading data...</p>
+                                <p class="text-gray-500 text-sm mt-1">Wait while loading</p>
+                            </div>
+                        </div>
+                        
+                        <form @submit.prevent="submit" class="max-w-lg" :class="{ 'opacity-50 pointer-events-none': form.processing }">
                             <div class="mb-4">
                                 <InputLabel for="server" value="Serveur" />
                                 <TextInput
@@ -85,6 +96,7 @@ const updateAuthMode = (value) => {
                                     v-model="form.server"
                                     required
                                     placeholder="localhost ou adresse IP"
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.server" />
                             </div>
@@ -97,6 +109,7 @@ const updateAuthMode = (value) => {
                                     class="mt-1 block w-full"
                                     v-model="form.database"
                                     required
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.database" />
                             </div>
@@ -109,6 +122,7 @@ const updateAuthMode = (value) => {
                                     class="mt-1 block w-full"
                                     v-model="form.port"
                                     required
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.port" />
                             </div>
@@ -124,6 +138,7 @@ const updateAuthMode = (value) => {
                                             name="authMode"
                                             :checked="authMode === 'windows'"
                                             @change="updateAuthMode('windows')"
+                                            :disabled="form.processing"
                                             class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                         />
                                         <label for="windows-auth" class="ml-2 block text-sm text-gray-900">
@@ -138,6 +153,7 @@ const updateAuthMode = (value) => {
                                             name="authMode"
                                             :checked="authMode === 'sql'"
                                             @change="updateAuthMode('sql')"
+                                            :disabled="form.processing"
                                             class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                         />
                                         <label for="sql-auth" class="ml-2 block text-sm text-gray-900">
@@ -156,6 +172,7 @@ const updateAuthMode = (value) => {
                                     class="mt-1 block w-full"
                                     v-model="form.username"
                                     required
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.username" />
                             </div>
@@ -168,6 +185,7 @@ const updateAuthMode = (value) => {
                                     class="mt-1 block w-full"
                                     v-model="form.password"
                                     required
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.password" />
                             </div>
@@ -179,13 +197,25 @@ const updateAuthMode = (value) => {
                                     class="mt-1 block w-full"
                                     v-model="form.description"
                                     rows="4"
+                                    :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.description" />
                             </div>
 
                             <div class="flex items-center justify-end mt-6">
-                                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                                    Se connecter
+                                <PrimaryButton 
+                                    :class="{ 'opacity-25': form.processing }" 
+                                    :disabled="form.processing"
+                                    class="relative"
+                                >
+                                    <span v-if="!form.processing">Se connecter</span>
+                                    <span v-else class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Connexion...
+                                    </span>
                                 </PrimaryButton>
                             </div>
                         </form>

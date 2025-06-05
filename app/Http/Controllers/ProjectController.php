@@ -32,7 +32,7 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'db_type' => 'required|in:sqlserver,mysql,postgres',
+            'db_type' => 'required|in:sqlserver,mysql,pgsql', // Changé 'postgres' en 'pgsql'
             'description' => 'nullable|string|max:1000'
             //'release' => 'nullable|string|max:10' 
         ]);
@@ -48,7 +48,7 @@ class ProjectController extends Controller
             'dbTypes' => [
                 'mysql' => 'MySQL',
                 'sqlserver' => 'SQL Server',
-                'pgsql' => 'PostgreSQL'
+                'pgsql' => 'PostgreSQL' // Changé 'pgsql' au lieu de 'postgres'
             ]
         ]);
     }
@@ -62,6 +62,9 @@ class ProjectController extends Controller
 
     public function handleConnect(Request $request, Project $project)
     {
+        //forcage augmentation temps de chargement des datas.
+        set_time_limit(5600);
+
         try {
             $validated = $request->validate([
                 'server' => 'required',
@@ -74,7 +77,7 @@ class ProjectController extends Controller
             ]);
 
             // Conversion du type pour le driver Laravel
-            $driver = $project->db_type === 'sqlserver' ? 'sqlsrv' : $project->db_type;
+            $driver = $this->getDriverFromDbType($project->db_type);
 
             $config = [
                 'driver' => $driver,
@@ -93,13 +96,21 @@ class ProjectController extends Controller
                 $config['port'] = $validated['port'];
                 $config['username'] = $validated['username'] ?? '';
                 $config['password'] = $validated['password'] ?? '';
+                
+                // Configuration spécifique pour PostgreSQL
+                if ($project->db_type === 'pgsql') {
+                    $config['charset'] = 'utf8';
+                    $config['prefix'] = '';
+                    $config['prefix_indexes'] = true;
+                    $config['schema'] = 'public';
+                    $config['sslmode'] = 'prefer';
+                }
             }
 
             // Test de connexion
             $connectionName = "project_{$project->id}";
             Config::set("database.connections.{$connectionName}", $config);
             DB::connection($connectionName)->getPdo();
-
 
             //Enregistrement des informations de la base de données dans db_description
             try {
@@ -109,6 +120,7 @@ class ProjectController extends Controller
                     'project_id' => $project->id,
                     'description' => $validated['description'] ?? null,
                 ]);
+                
                 // EXTRACTION ET SAUVEGARDE DE LA STRUCTURE COMPLÈTE
                 try {
                     // Appeler le service qui va extraire et sauvegarder toutes les informations
@@ -120,12 +132,6 @@ class ProjectController extends Controller
                         'project_id' => $project->id,
                         'database' => $validated['database']
                     ]);
-
-                    
-                    Log::info('Comptages après extraction:', [
-                        'tables' => $tablesCount,
-                        'views' => $viewsCount,
-                    ]);
                     
                 } catch (\Exception $structureException) {
                     // On continue même si l'extraction échoue
@@ -134,8 +140,10 @@ class ProjectController extends Controller
                         'trace' => $structureException->getTraceAsString()
                     ]);
                 }
+                
                 Log::info('Session current_db_id définie à: ' . $dbDescription->id);
                 session(['current_db_id' => $dbDescription->id]);
+                
             } catch (\Exception $e) {
                 Log::warning('Impossible d\'enregistrer dans db_description', [
                     'error' => $e->getMessage(),
@@ -184,6 +192,23 @@ class ProjectController extends Controller
         }
     }
 
+    /**
+     * Méthode helper pour convertir le type de base de données en driver Laravel
+     */
+    private function getDriverFromDbType($dbType)
+    {
+        switch ($dbType) {
+            case 'sqlserver':
+                return 'sqlsrv';
+            case 'mysql':
+                return 'mysql';
+            case 'pgsql':
+                return 'pgsql';
+            default:
+                return $dbType;
+        }
+    }
+
     public function open($id)
     {
         try {
@@ -214,7 +239,7 @@ class ProjectController extends Controller
                 }
             } else {
                 $connectionInfo = [
-                    'driver' => $project->db_type === 'sqlserver' ? 'sqlsrv' : $project->db_type,
+                    'driver' => $this->getDriverFromDbType($project->db_type),
                     'host' => 'localhost',
                     'database' => $dbDescription->dbname,
                     'username' => '',
@@ -223,7 +248,7 @@ class ProjectController extends Controller
             }
             
             if (!isset($connectionInfo['driver'])) {
-                $connectionInfo['driver'] = $project->db_type === 'sqlserver' ? 'sqlsrv' : $project->db_type;
+                $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
             }
             
             // Mettre à jour la session
@@ -532,7 +557,7 @@ class ProjectController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'db_type' => 'required|in:sqlserver,mysql,postgres'
+                'db_type' => 'required|in:sqlserver,mysql,pgsql' // Changé 'postgres' en 'pgsql'
             ]);
 
             $project->update($validated);

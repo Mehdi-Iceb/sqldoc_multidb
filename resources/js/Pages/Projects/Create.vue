@@ -15,8 +15,7 @@ defineProps({
 const form = useForm({
     name: '',
     db_type: '',
-    description: '', // Nouveau champ
-    //release: ''      // Nouveau champ
+    description: '', 
 });
 
 const submit = () => {

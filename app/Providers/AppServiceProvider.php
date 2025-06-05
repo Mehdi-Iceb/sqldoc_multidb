@@ -26,7 +26,8 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share([
             'permissions' => function () {
                 return session('permissions', []);
-            }
+            },
+            'appName' => config('app.name'),
         ]);
 
         Carbon::serializeUsing(function ($carbon) {

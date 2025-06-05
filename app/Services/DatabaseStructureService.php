@@ -30,6 +30,7 @@ class DatabaseStructureService
      * @param int $dbId ID de l'entrée dans db_description
      * @return bool
      */
+    
 
     private function formatDataType($column)
     {
@@ -685,11 +686,11 @@ class DatabaseStructureService
                     ", [$table->table_name]);
                     
                     // Supprimer les anciennes relations pour cette table
-                    TableRelations::where('id_table', $tableDescription->id)->delete();
+                    TableRelation::where('id_table', $tableDescription->id)->delete();
                     
                     // Sauvegarder les nouvelles relations
                     foreach ($foreignKeys as $fk) {
-                        TableRelations::create([
+                        TableRelation::create([
                             'id_table' => $tableDescription->id,
                             'constraints' => $fk->constraint_name,
                             'column' => $fk->column_name,
@@ -930,6 +931,254 @@ class DatabaseStructureService
             ]);
         }
     }
+
+    /**
+     * Extrait et sauvegarde les vues Postgres
+     */
+
+    private function extractAndSavePostgreSqlViews($connectionName, $dbId)
+    {
+        try {
+            // Vérifier que nous sommes bien connectés à PostgreSQL
+            $driver = DB::connection($connectionName)->getDriverName();
+            if ($driver !== 'pgsql') {
+                Log::info('Fonction PostgreSQL appelée sur une connexion non-PostgreSQL', [
+                    'driver' => $driver,
+                    'connectionName' => $connectionName,
+                    'expected' => 'pgsql'
+                ]);
+                return;
+            }
+
+            Log::info('Début extraction des vues PostgreSQL', [
+                'connectionName' => $connectionName,
+                'dbId' => $dbId
+            ]);
+
+            // Récupérer la liste des vues PostgreSQL (UNIQUEMENT les vues utilisateur)
+            $views = DB::connection($connectionName)->select("
+                SELECT 
+                    v.table_name AS view_name,
+                    v.table_schema AS schema_name,
+                    v.view_definition AS definition
+                FROM 
+                    information_schema.views v
+                WHERE 
+                    v.table_schema = 'public'
+                    AND v.table_name NOT LIKE 'pg_%'
+                    AND v.table_name NOT LIKE 'sql_%'
+                    AND v.table_name NOT LIKE '_pg_%'
+                ORDER BY 
+                    v.table_name
+            ");
+            
+            Log::info('Vues PostgreSQL trouvées: ' . count($views), [
+                'views' => collect($views)->pluck('view_name')->toArray()
+            ]);
+            
+            if (count($views) === 0) {
+                Log::info('Aucune vue utilisateur trouvée dans le schéma public');
+                return;
+            }
+
+            foreach ($views as $view) {
+                try {
+                    Log::info('Traitement de la vue: ' . $view->view_name);
+
+                    // Créer une entrée dans view_description
+                    $viewDescription = ViewDescription::updateOrCreate(
+                        [
+                            'dbid' => $dbId,
+                            'viewname' => $view->view_name
+                        ],
+                        [
+                            'description' => null // Initialiser avec une description vide
+                        ]
+                    );
+                    
+                    Log::info('ViewDescription créée/mise à jour', [
+                        'id' => $viewDescription->id,
+                        'viewname' => $view->view_name
+                    ]);
+
+                    // Récupérer les colonnes de la vue PostgreSQL
+                    $columns = DB::connection($connectionName)->select("
+                        SELECT 
+                            c.column_name,
+                            c.data_type,
+                            c.character_maximum_length AS max_length,
+                            c.numeric_precision AS precision,
+                            c.numeric_scale AS scale,
+                            CASE WHEN c.is_nullable = 'YES' THEN true ELSE false END AS is_nullable,
+                            c.ordinal_position,
+                            c.column_default,
+                            CASE 
+                                WHEN c.data_type = 'USER-DEFINED' THEN c.udt_name
+                                ELSE c.data_type
+                            END AS actual_data_type
+                        FROM 
+                            information_schema.columns c
+                        WHERE 
+                            c.table_schema = 'public' 
+                            AND c.table_name = ?
+                        ORDER BY 
+                            c.ordinal_position
+                    ", [$view->view_name]);
+                    
+                    Log::info('Colonnes trouvées pour la vue ' . $view->view_name . ': ' . count($columns));
+
+                    // Supprimer les anciennes informations pour cette vue
+                    ViewInformation::where('id_view', $viewDescription->id)->delete();
+                    ViewColumn::where('id_view', $viewDescription->id)->delete();
+                    
+                    // Sauvegarder les informations de la vue
+                    ViewInformation::create([
+                        'id_view' => $viewDescription->id,
+                        'schema_name' => $view->schema_name ?? 'public',
+                        'definition' => $view->definition ?? null
+                    ]);
+                    
+                    // Sauvegarder les colonnes
+                    foreach ($columns as $column) {
+                        $dataType = $this->formatPostgreSqlDataType($column);
+                        
+                        ViewColumn::create([
+                            'id_view' => $viewDescription->id,
+                            'name' => $column->column_name,
+                            'type' => $dataType,
+                            'nullable' => $column->is_nullable ? 1 : 0,
+                            'description' => null // Initialiser avec une description vide
+                        ]);
+                    }
+                    
+                    Log::info('Vue PostgreSQL extraite et sauvegardée avec succès: ' . $view->view_name);
+                    
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors de l\'extraction de la vue PostgreSQL', [
+                        'view' => $view->view_name ?? 'unknown',
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    // Continue avec la vue suivante
+                    continue;
+                }
+            }
+            
+            Log::info('Extraction des vues PostgreSQL terminée');
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans extractAndSavePostgreSqlViews', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'connectionName' => $connectionName,
+                'dbId' => $dbId
+            ]);
+        }
+    }
+
+/**
+ * Formate le type de données PostgreSQL pour l'affichage
+ */
+private function formatPostgreSqlDataType($column)
+{
+    $type = $column->actual_data_type ?? $column->data_type ?? 'unknown';
+    
+    // Gestion des types PostgreSQL spécifiques
+    switch (strtolower($type)) {
+        case 'character varying':
+            return $column->max_length ? "varchar({$column->max_length})" : 'varchar';
+        case 'character':
+            return $column->max_length ? "char({$column->max_length})" : 'char';
+        case 'text':
+            return 'text';
+        case 'integer':
+            return 'integer';
+        case 'bigint':
+            return 'bigint';
+        case 'smallint':
+            return 'smallint';
+        case 'numeric':
+            if (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
+                return "numeric({$column->precision},{$column->scale})";
+            } elseif (isset($column->precision) && $column->precision) {
+                return "numeric({$column->precision})";
+            }
+            return 'numeric';
+        case 'decimal':
+            if (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
+                return "decimal({$column->precision},{$column->scale})";
+            } elseif (isset($column->precision) && $column->precision) {
+                return "decimal({$column->precision})";
+            }
+            return 'decimal';
+        case 'real':
+            return 'real';
+        case 'double precision':
+            return 'double precision';
+        case 'boolean':
+            return 'boolean';
+        case 'date':
+            return 'date';
+        case 'time without time zone':
+            return 'time';
+        case 'time with time zone':
+            return 'timetz';
+        case 'timestamp without time zone':
+            return 'timestamp';
+        case 'timestamp with time zone':
+            return 'timestamptz';
+        case 'interval':
+            return 'interval';
+        case 'uuid':
+            return 'uuid';
+        case 'json':
+            return 'json';
+        case 'jsonb':
+            return 'jsonb';
+        case 'xml':
+            return 'xml';
+        case 'bytea':
+            return 'bytea';
+        case 'inet':
+            return 'inet';
+        case 'cidr':
+            return 'cidr';
+        case 'macaddr':
+            return 'macaddr';
+        case 'point':
+            return 'point';
+        case 'line':
+            return 'line';
+        case 'lseg':
+            return 'lseg';
+        case 'box':
+            return 'box';
+        case 'path':
+            return 'path';
+        case 'polygon':
+            return 'polygon';
+        case 'circle':
+            return 'circle';
+        case 'money':
+            return 'money';
+        case 'serial':
+            return 'serial';
+        case 'bigserial':
+            return 'bigserial';
+        case 'smallserial':
+            return 'smallserial';
+        default:
+            // Pour les types personnalisés ou non reconnus
+            if (isset($column->max_length) && $column->max_length) {
+                return "{$type}({$column->max_length})";
+            } elseif (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
+                return "{$type}({$column->precision},{$column->scale})";
+            } elseif (isset($column->precision) && $column->precision) {
+                return "{$type}({$column->precision})";
+            }
+            return $type;
+    }
+}
     
     /**
      * Extrait et sauvegarde les fonctions de la base de données
