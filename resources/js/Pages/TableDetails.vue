@@ -106,7 +106,7 @@
                 v-model="form.description"
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Description optionnelle (usage, environnement, contenu...)"
+                placeholder="Optional description (use, environment, content...)"
                 :disabled="saving"
               ></textarea>
             </div>
@@ -378,8 +378,8 @@
                           @change="updateNullable(column, $event.target.value === 'true')"
                           :disabled="updatingNullable[column.column_name]"
                         >
-                          <option value="true">Oui</option>
-                          <option value="false">Non</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
                         </select>
                         <!-- Mini spinner pour nullable -->
                         <div v-if="updatingNullable[column.column_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
@@ -522,7 +522,7 @@
                           ]"
                           :disabled="updatingRelease[column.column_name]"
                         >
-                          <option value="">-- Aucune version --</option>
+                          <option value="">-- No version --</option>
                           <option v-for="release in availableReleases" :key="release.id" :value="release.id">
                             {{ release.display_name }}
                           </option>
@@ -747,7 +747,7 @@
                       :disabled="addingRelation"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
-                      Annuler
+                      cancelEdit
                     </button>
                     <button 
                       type="submit"
