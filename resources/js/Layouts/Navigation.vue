@@ -82,7 +82,7 @@
         <input
           type="text"
           v-model="searchQuery"
-          placeholder="Rechercher..."
+          placeholder="Search..."
           class="w-full px-3 py-2 text-sm text-gray-900 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
       </div>
@@ -285,7 +285,7 @@ const filters = [
   { type: 'tables', label: 'Tables' },
   { type: 'views', label: 'Vues' },
   { type: 'functions', label: 'Fonctions' },
-  { type: 'procedures', label: 'Procédures' },
+  { type: 'procedures', label: 'Procedures' },
   { type: 'triggers', label: 'Triggers' }
 ];
 
