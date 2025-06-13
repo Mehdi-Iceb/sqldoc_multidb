@@ -46,7 +46,7 @@ Route::get('/projects', function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin');
     Route::post('/admin/users', [AdminController::class, 'createUser']);
-    Route::put('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
+    Route::post('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
     Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
 
     Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects']);

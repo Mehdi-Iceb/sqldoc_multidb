@@ -252,7 +252,7 @@ const createUser = async () => {
   
   const updateUserRole = async (user) => {
     try {
-      await axios.put(`/admin/users/${user.id}/role`, {
+      await axios.post(`/admin/users/${user.id}/role`, {
         role_id: user.role_id
       })
       
