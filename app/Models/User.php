@@ -94,4 +94,84 @@ class User extends Authenticatable
     }
 
 
+    /**
+     * Relation avec les accès aux projets accordés
+     */
+    public function projectAccesses()
+    {
+        return $this->hasMany(UserProjectAccess::class);
+    }
+
+    /**
+     * Relation avec les projets accessibles (via les accès accordés)
+     */
+    public function accessibleProjects()
+    {
+        return $this->belongsToMany(Project::class, 'user_project_accesses')
+                    ->withPivot('access_level')
+                    ->withTimestamps();
+    }
+
+    public function canAccessProject($projectId, $minimumLevel = 'read')
+    {
+        // Le propriétaire du projet a tous les droits
+        if ($this->projects()->where('id', $projectId)->exists()) {
+            return true;
+        }
+
+        // Les admins ont accès à tous les projets
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        // Vérifier les accès accordés
+        $access = $this->projectAccesses()->where('project_id', $projectId)->first();
+        
+        if (!$access) {
+            return false;
+        }
+
+        return $access->hasMinimumAccess($minimumLevel);
+    }
+
+    /**
+     * Obtenir le niveau d'accès pour un projet
+     */
+    public function getProjectAccessLevel($projectId)
+    {
+        // Le propriétaire du projet a les droits admin
+        if ($this->projects()->where('id', $projectId)->exists()) {
+            return 'admin';
+        }
+
+        // Les admins ont accès admin à tous les projets
+        if ($this->isAdmin()) {
+            return 'admin';
+        }
+
+        // Vérifier les accès accordés
+        $access = $this->projectAccesses()->where('project_id', $projectId)->first();
+        
+        return $access ? $access->access_level : null;
+    }
+
+    /**
+     * Obtenir tous les projets accessibles par l'utilisateur
+     */
+    public function getAllAccessibleProjects()
+    {
+        // Si admin, retourner tous les projets
+        if ($this->isAdmin()) {
+            return Project::whereNull('deleted_at')->get();
+        }
+
+        // Sinon, retourner les projets possédés + les projets avec accès accordé
+        $ownedProjects = $this->projects()->whereNull('deleted_at')->get();
+        $accessibleProjects = $this->accessibleProjects()->whereNull('deleted_at')->get();
+
+        // Fusionner et supprimer les doublons
+        return $ownedProjects->merge($accessibleProjects)->unique('id');
+    }
+
+    
 }

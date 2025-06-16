@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Project;
+use App\Models\DbDescription;
+use App\Models\UserProjectAccess;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +18,10 @@ class AdminController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Index', [
-            'users' => User::with('role')->get(),
+            'users' => User::with(['role', 'projectAccesses.project'])->get(),
             'roles' => Role::with('permissions')->get(),
-            'permissions' => Permission::all()
+            'permissions' => Permission::all(),
+            'projects' => Project::with('user')->whereNull('deleted_at')->get()
         ]);
     }
 
@@ -37,7 +41,11 @@ class AdminController extends Controller
             'role_id' => $validated['role_id']
         ]);
 
-        return back()->with('success', 'Utilisateur créé avec succès');
+        return response()->json([
+            'success' => true,
+            'message' => 'Utilisateur créé avec succès',
+            'user' => $user
+        ]);
     }
 
     public function updateUserRole(Request $request, User $user)
@@ -48,7 +56,10 @@ class AdminController extends Controller
 
         $user->update(['role_id' => $validated['role_id']]);
 
-        return back()->with('success', 'Rôle mis à jour avec succès');
+        return response()->json([
+            'success' => true,
+            'message' => 'Rôle mis à jour avec succès'
+        ]);
     }
 
     public function updateRolePermissions(Request $request, Role $role)
@@ -75,10 +86,12 @@ class AdminController extends Controller
         }
     }
 
-    public function getDeletedProjects()
+    /**
+     * Accorder l'accès à un projet pour un utilisateur
+     */
+    public function grantProjectAccess(Request $request)
     {
         try {
-            // Vérifier si l'utilisateur est admin
             if (!$this->isUserAdmin()) {
                 return response()->json([
                     'success' => false,
@@ -86,9 +99,206 @@ class AdminController extends Controller
                 ], 403);
             }
 
-            // Récupérer tous les projets supprimés (de tous les utilisateurs)
+            $validated = $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'project_id' => 'required|exists:projects,id',
+                'access_level' => 'required|in:read,write,admin'
+            ]);
+
+            // Vérifier si l'accès existe déjà
+            $existingAccess = UserProjectAccess::where('user_id', $validated['user_id'])
+                ->where('project_id', $validated['project_id'])
+                ->first();
+
+            if ($existingAccess) {
+                // Mettre à jour le niveau d'accès
+                $existingAccess->update(['access_level' => $validated['access_level']]);
+                $message = 'Niveau d\'accès mis à jour avec succès';
+            } else {
+                // Créer un nouvel accès
+                UserProjectAccess::create($validated);
+                $message = 'Accès accordé avec succès';
+            }
+
+            Log::info('Admin - Accès projet accordé/modifié', [
+                'user_id' => $validated['user_id'],
+                'project_id' => $validated['project_id'],
+                'access_level' => $validated['access_level'],
+                'admin_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans AdminController::grantProjectAccess', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de l\'attribution de l\'accès: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Révoquer l'accès à un projet pour un utilisateur
+     */
+    public function revokeProjectAccess(Request $request)
+    {
+        try {
+            if (!$this->isUserAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé.'
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'project_id' => 'required|exists:projects,id'
+            ]);
+
+            $deleted = UserProjectAccess::where('user_id', $validated['user_id'])
+                ->where('project_id', $validated['project_id'])
+                ->delete();
+
+            if ($deleted) {
+                Log::info('Admin - Accès projet révoqué', [
+                    'user_id' => $validated['user_id'],
+                    'project_id' => $validated['project_id'],
+                    'admin_id' => auth()->id()
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Accès révoqué avec succès'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Aucun accès trouvé à révoquer'
+                ], 404);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans AdminController::revokeProjectAccess', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la révocation de l\'accès: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtenir les accès aux projets pour un utilisateur
+     */
+    public function getUserProjectAccesses($userId)
+    {
+        try {
+            if (!$this->isUserAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé.'
+                ], 403);
+            }
+
+            $user = User::with(['projectAccesses.project'])->findOrFail($userId);
+            
+            $accesses = $user->projectAccesses->map(function ($access) {
+                return [
+                    'id' => $access->id,
+                    'project_id' => $access->project_id,
+                    'project_name' => $access->project->name,
+                    'project_owner' => $access->project->user->name,
+                    'access_level' => $access->access_level,
+                    'granted_at' => $access->created_at->format('d/m/Y H:i')
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'accesses' => $accesses
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans AdminController::getUserProjectAccesses', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des accès: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtenir tous les projets disponibles pour attribution
+     */
+    public function getAvailableProjects()
+    {
+        try {
+            if (!$this->isUserAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé.'
+                ], 403);
+            }
+
+            $projects = Project::with('user')
+                ->whereNull('deleted_at')
+                ->select('id', 'name', 'description', 'db_type', 'user_id')
+                ->get()
+                ->map(function ($project) {
+                    return [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'description' => $project->description,
+                        'db_type' => $project->db_type,
+                        'owner_name' => $project->user->name,
+                        'display_name' => $project->name . ' (' . $project->user->name . ')'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'projects' => $projects
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans AdminController::getAvailableProjects', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des projets: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDeletedProjects()
+    {
+        try {
+            if (!$this->isUserAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Accès non autorisé. Privilèges administrateur requis.'
+                ], 403);
+            }
+
             $deletedProjects = Project::onlyTrashed()
-                ->with('user:id,name,email') // Inclure les infos utilisateur
+                ->with('user:id,name,email')
                 ->orderBy('deleted_at', 'desc')
                 ->get()
                 ->map(function ($project) {
@@ -130,9 +340,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Restaure un projet supprimé (admin uniquement)
-     */
     public function restoreProject($id)
     {
         try {
@@ -180,9 +387,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Suppression définitive d'un projet (admin uniquement)
-     */
     public function forceDeleteProject($id)
     {
         try {
@@ -195,7 +399,6 @@ class AdminController extends Controller
 
             $project = Project::withTrashed()->findOrFail($id);
             
-            // Vérifier s'il y a des dépendances critiques
             $dbDescriptionsCount = DbDescription::where('project_id', $project->id)->count();
             
             if ($dbDescriptionsCount > 0) {
@@ -235,9 +438,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Statistiques des projets pour les admins
-     */
     public function getProjectStats()
     {
         try {
@@ -290,9 +490,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * check if admin connecté
-     */
     private function isUserAdmin()
     {
         $user = auth()->user();
@@ -301,22 +498,18 @@ class AdminController extends Controller
             return false;
         }
 
-        
         if ($user->role && $user->role->name === 'admin') {
             return true;
         }
 
-        
         if (isset($user->role) && $user->role === 'admin') {
             return true;
         }
 
-       
         if ($user->role && $user->role->permissions()->where('name', 'manage_projects')->exists()) {
             return true;
         }
 
         return false;
     }
-
 }

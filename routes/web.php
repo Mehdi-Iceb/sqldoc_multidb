@@ -49,6 +49,18 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
     Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
 
+    // Nouvelles routes pour la gestion des accès aux projets
+    Route::get('/projects/available', [AdminController::class, 'getAvailableProjects'])->name('admin.projects.available');
+    Route::get('/users/{user}/project-accesses', [AdminController::class, 'getUserProjectAccesses'])->name('admin.users.project-accesses');
+    Route::post('/project-access/grant', [AdminController::class, 'grantProjectAccess'])->name('admin.project-access.grant');
+    Route::post('/project-access/revoke', [AdminController::class, 'revokeProjectAccess'])->name('admin.project-access.revoke');
+    
+    // Routes existantes pour les projets supprimés 
+    Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects'])->name('admin.projects.deleted');
+    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject'])->name('admin.projects.restore');
+    Route::delete('/projects/{id}/force-delete', [AdminController::class, 'forceDeleteProject'])->name('admin.projects.force-delete');
+    Route::get('/projects/stats', [AdminController::class, 'getProjectStats'])->name('admin.projects.stats');
+
     Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects']);
     Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject']);
     Route::delete('/projects/{id}/force', [AdminController::class, 'forceDeleteProject']);
