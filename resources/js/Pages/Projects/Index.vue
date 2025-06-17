@@ -135,55 +135,127 @@
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                     <!-- Projets actifs -->
                     <div v-if="!showDeleted">
-                        <div v-if="activeProjects.length === 0" class="text-center py-8">
-                            <h3 class="text-lg font-medium text-gray-900">Vous n'avez pas encore de projets</h3>
-                            <p class="mt-2 text-gray-600">Commencez par créer un nouveau projet en cliquant sur le bouton ci-dessus.</p>
-                        </div>
-                        
-                        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div 
-                                v-for="project in activeProjects" 
-                                :key="project.id"
-                                class="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                            >
-                                <div class="p-4 border-b bg-gray-50">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <h3 class="text-lg font-semibold text-gray-800">{{ project.name }}</h3>
-                                            <p class="text-sm text-gray-500 mt-1">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    {{ getBdTypeName(project.db_type) }}
-                                                </span>
-                                            </p>
+                    <div v-if="activeProjects.length === 0" class="text-center py-8">
+                        <h3 class="text-lg font-medium text-gray-900">You don't have any projects yet</h3>
+                        <p class="mt-2 text-gray-600">Start by creating a new project or ask an administrator to grant you access to existing projects.</p>
+                    </div>
+    
+                        <div v-else class="space-y-8">
+                            <!-- Projets dont vous êtes propriétaire -->
+                            <div v-if="ownedProjects.length > 0">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <svg class="h-5 w-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Your Projects ({{ ownedProjects.length }})
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div 
+                                        v-for="project in ownedProjects" 
+                                        :key="'owned-' + project.id"
+                                        class="border-2 border-yellow-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-yellow-50"
+                                    >
+                                        <div class="p-4 border-b bg-yellow-100">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex-1">
+                                                    <h4 class="text-lg font-semibold text-gray-800">{{ project.name }}</h4>
+                                                    <p class="text-sm text-gray-600 mt-1">{{ project.description || 'No description' }}</p>
+                                                    <div class="flex items-center space-x-2 mt-2">
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {{ getBdTypeName(project.db_type) }}
+                                                        </span>
+                                                        <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border', getAccessColor(project.access_level)]">
+                                                            {{ getAccessIcon(project.access_level) }} {{ getAccessText(project.access_level) }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <!-- Bouton delete seulement pour les propriétaires -->
+                                                <button
+                                                    @click="confirmDelete(project)"
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                                    title="Delete project"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="red">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <!-- Bouton delete -->
-                                        <button
-                                            @click="confirmDelete(project)"
-                                            class="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                            title="Supprimer le projet"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="red">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                        <div class="p-4">
+                                            <div class="flex justify-end">
+                                                <button
+                                                    @click="openProject(project)"
+                                                    :disabled="openingProject === project.id"
+                                                    class="inline-flex items-center px-3 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50"
+                                                >
+                                                    <span v-if="openingProject === project.id" class="flex items-center">
+                                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Opening...
+                                                    </span>
+                                                    <span v-else>Open</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="p-4">
-                                    <div class="flex justify-end space-x-2">
-                                        <button
-                                            @click="openProject(project)"
-                                            :disabled="openingProject === project.id"
-                                            class="inline-flex items-center px-3 py-2 bg-indigo-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50"
-                                        >
-                                            <span v-if="openingProject === project.id" class="flex items-center">
-                                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Opening...
-                                            </span>
-                                            <span v-else>Open</span>
-                                        </button>
+                            </div>
+
+                            <!-- Projets partagés avec vous -->
+                            <div v-if="sharedProjects.length > 0">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <svg class="h-5 w-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
+                                    </svg>
+                                    Shared with You ({{ sharedProjects.length }})
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div 
+                                        v-for="project in sharedProjects" 
+                                        :key="'shared-' + project.id"
+                                        class="border-2 border-blue-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-blue-50"
+                                    >
+                                        <div class="p-4 border-b bg-blue-100">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex-1">
+                                                    <h4 class="text-lg font-semibold text-gray-800">{{ project.name }}</h4>
+                                                    <p class="text-sm text-gray-600 mt-1">{{ project.description || 'No description' }}</p>
+                                                    <p class="text-xs text-gray-500 mt-1">Owner: {{ project.owner_name }}</p>
+                                                    <div class="flex items-center space-x-2 mt-2">
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                            {{ getBdTypeName(project.db_type) }}
+                                                        </span>
+                                                        <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border', getAccessColor(project.access_level)]">
+                                                            {{ getAccessIcon(project.access_level) }} {{ getAccessText(project.access_level) }}
+                                                        </span>
+                                                    </div>
+                                                    <p v-if="project.shared_at" class="text-xs text-gray-500 mt-1">
+                                                        Shared: {{ formatDate(project.shared_at) }}
+                                                    </p>
+                                                </div>
+                                                <!-- Pas de bouton delete pour les projets partagés -->
+                                            </div>
+                                        </div>
+                                        <div class="p-4">
+                                            <div class="flex justify-end">
+                                                <button
+                                                    @click="openProject(project)"
+                                                    :disabled="openingProject === project.id"
+                                                    class="inline-flex items-center px-3 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50"
+                                                >
+                                                    <span v-if="openingProject === project.id" class="flex items-center">
+                                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Opening...
+                                                    </span>
+                                                    <span v-else>Open</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -343,6 +415,58 @@ const activeProjects = computed(() => {
     return props.projects || [];
 });
 
+const ownedProjects = computed(() => {
+    return activeProjects.value.filter(project => project.is_owner);
+});
+
+const sharedProjects = computed(() => {
+    return activeProjects.value.filter(project => !project.is_owner);
+});
+
+const getAccessIcon = (accessLevel) => {
+    switch (accessLevel) {
+        case 'owner':
+        case 'admin':
+            return '👑'; // Couronne pour propriétaire/admin
+        case 'write':
+            return '✏️'; // Crayon pour écriture
+        case 'read':
+            return '👁️'; // Œil pour lecture seule
+        default:
+            return '❓';
+    }
+};
+
+// Fonction pour obtenir la couleur selon le niveau d'accès
+const getAccessColor = (accessLevel) => {
+    switch (accessLevel) {
+        case 'owner':
+        case 'admin':
+            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'write':
+            return 'bg-green-100 text-green-800 border-green-200';
+        case 'read':
+            return 'bg-blue-100 text-blue-800 border-blue-200';
+        default:
+            return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+};
+
+// Fonction pour obtenir le texte du niveau d'accès
+const getAccessText = (accessLevel) => {
+    switch (accessLevel) {
+        case 'owner':
+            return 'Owner';
+        case 'admin':
+            return 'Full Admin';
+        case 'write':
+            return 'Read/Write';
+        case 'read':
+            return 'Read Only';
+        default:
+            return 'Unknown';
+    }
+};
 
 
 // Surveiller les messages flash

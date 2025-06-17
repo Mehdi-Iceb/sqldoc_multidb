@@ -31,13 +31,22 @@ const form = useForm({
 
 // Surveiller les messages flash
 watch(() => page.props.flash, (flash) => {
+    console.log('Flash message reçu:', flash);
+    
     if (flash?.error) {
         showErrorToast(flash.error);
     }
     if (flash?.success) {
         showSuccessToast(flash.success);
     }
+    if (flash?.warning) {
+        showWarningToast(flash.warning);
+    }
+    if (flash?.info) {
+        showWarningToast(flash.info); // Afficher les infos comme des warnings
+    }
 }, { immediate: true, deep: true });
+
 
 const showAuthFields = computed(() => {
     return props.project.db_type !== 'sqlserver' || (props.project.db_type === 'sqlserver' && authMode.value === 'sql');
@@ -45,15 +54,36 @@ const showAuthFields = computed(() => {
 
 const submit = () => {
     form.post(route('projects.handle-connect', props.project.id), {
-        onSuccess: () => {
-            showSuccessToast('Connection successful!');
+        onSuccess: (page) => {
+            // Vérifier s'il y a un message de succès
+            if (page.props.flash?.success) {
+                showSuccessToast(page.props.flash.success);
+            } else {
+                showSuccessToast('Connection successful!');
+            }
         },
         onError: (errors) => {
-            if (errors.connection || errors.database || errors.general) {
-                showErrorToast(errors.connection || errors.database || errors.general);
+            console.log('Erreurs reçues:', errors);
+            
+            // Gérer les erreurs de validation spécifiques
+            if (errors.server) {
+                showErrorToast(`Server error: ${errors.server}`);
+            } else if (errors.database) {
+                showErrorToast(`Database error: ${errors.database}`);
+            } else if (errors.username) {
+                showErrorToast(`Username error: ${errors.username}`);
+            } else if (errors.password) {
+                showErrorToast(`Password error: ${errors.password}`);
+            } else if (errors.port) {
+                showErrorToast(`Port error: ${errors.port}`);
             } else {
-                showErrorToast('Connection failed. Please check your parameters.');
+                // Message d'erreur générique si aucune erreur spécifique
+                showErrorToast('Connection failed. Please check your parameters and try again.');
             }
+        },
+        onFinish: () => {
+            // Cette méthode est appelée après onSuccess ou onError
+            console.log('Requête terminée');
         }
     });
 };
@@ -120,10 +150,36 @@ const testConnection = async () => {
     
     showWarningToast('Testing connection...');
     
-    // Simuler un test de connexion (vous pouvez implémenter une vraie route de test)
-    setTimeout(() => {
-        showSuccessToast('Connection test completed. Click "Connect" to proceed.');
-    }, 2000);
+    try {
+        // Faire un test réel de connexion (vous pouvez créer une route spéciale pour ça)
+        const response = await fetch(route('projects.test-connection', props.project.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                server: form.server,
+                database: form.database,
+                port: form.port,
+                authMode: form.authMode,
+                username: form.username,
+                password: form.password
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccessToast('Connection test successful! You can now connect.');
+        } else {
+            showErrorToast(result.error || 'Connection test failed.');
+        }
+    } catch (error) {
+        console.error('Test connection error:', error);
+        showErrorToast('Unable to test connection. Please try connecting directly.');
+    }
 };
 
 const getToastClasses = computed(() => {
