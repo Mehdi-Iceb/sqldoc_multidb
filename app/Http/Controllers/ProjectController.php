@@ -62,9 +62,6 @@ class ProjectController extends Controller
 
     public function handleConnect(Request $request, Project $project)
     {
-        //forcage augmentation temps de chargement des datas.
-        set_time_limit(5600);
-
         try {
             $validated = $request->validate([
                 'server' => 'required',
@@ -107,12 +104,47 @@ class ProjectController extends Controller
                 }
             }
 
-            // Test de connexion
+            // Test de connexion avec gestion d'erreurs détaillée
             $connectionName = "project_{$project->id}";
             Config::set("database.connections.{$connectionName}", $config);
-            DB::connection($connectionName)->getPdo();
+            
+            try {
+                // Tenter la connexion
+                $pdo = DB::connection($connectionName)->getPdo();
+                
+                // Test supplémentaire : vérifier que la base de données existe vraiment
+                $testQuery = $this->getTestQuery($project->db_type, $validated['database']);
+                $result = DB::connection($connectionName)->select($testQuery);
+                
+                Log::info('Connexion réussie et base de données vérifiée', [
+                    'project_id' => $project->id,
+                    'database' => $validated['database'],
+                    'driver' => $driver
+                ]);
 
-            //Enregistrement des informations de la base de données dans db_description
+            } catch (\PDOException $e) {
+                // Analyser le type d'erreur PDO
+                $errorMessage = $this->analyzePDOException($e, $project->db_type, $validated);
+                
+                Log::error('Erreur de connexion PDO', [
+                    'project_id' => $project->id,
+                    'error_code' => $e->getCode(),
+                    'error_message' => $e->getMessage(),
+                    'analyzed_message' => $errorMessage
+                ]);
+                
+                return back()->with('error', $errorMessage);
+                
+            } catch (\Exception $e) {
+                Log::error('Erreur générale de connexion', [
+                    'project_id' => $project->id,
+                    'error' => $e->getMessage()
+                ]);
+                
+                return back()->with('error', 'Connection failed: ' . $e->getMessage());
+            }
+
+            // Enregistrement des informations de la base de données
             try {
                 $dbDescription = DbDescription::create([
                     'user_id' => auth()->id(),
@@ -123,7 +155,6 @@ class ProjectController extends Controller
                 
                 // EXTRACTION ET SAUVEGARDE DE LA STRUCTURE COMPLÈTE
                 try {
-                    // Appeler le service qui va extraire et sauvegarder toutes les informations
                     $databaseStructureService = new DatabaseStructureService();
                     $result = $databaseStructureService->extractAndSaveAllStructures($connectionName, $dbDescription->id);
                     
@@ -134,14 +165,13 @@ class ProjectController extends Controller
                     ]);
                     
                 } catch (\Exception $structureException) {
-                    // On continue même si l'extraction échoue
                     Log::error('Erreur lors de l\'extraction de la structure de la base de données', [
                         'error' => $structureException->getMessage(),
                         'trace' => $structureException->getTraceAsString()
                     ]);
+                    // Continue même si l'extraction échoue
                 }
                 
-                Log::info('Session current_db_id définie à: ' . $dbDescription->id);
                 session(['current_db_id' => $dbDescription->id]);
                 
             } catch (\Exception $e) {
@@ -160,7 +190,6 @@ class ProjectController extends Controller
                 ]
             ]);
             
-            // Log pour débogage
             Log::info('Connexion réussie', [
                 'project_id' => $project->id,
                 'db_type' => $project->db_type,
@@ -168,27 +197,157 @@ class ProjectController extends Controller
                 'database' => $validated['database']
             ]);
 
-            // Rediriger vers le tableau de bord du projet si c'est une requête normale
             if (!$request->wantsJson()) {
-                return redirect()->route('dashboard');
+                return redirect()->route('dashboard')->with('success', 'Connection successful to ' . $validated['database']);
             }
 
-            // Sinon, retourner une réponse JSON
             return response()->json([
                 'success' => true,
                 'redirect' => route('dashboard')
             ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Erreurs de validation
+            return back()->withErrors($e->errors())->withInput();
+            
         } catch (\Exception $e) {
-            Log::error('Erreur de connexion à la base de données', [
+            Log::error('Erreur générale dans handleConnect', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
+                'trace' => $e->getTraceAsString()
             ]);
             
             if (!$request->wantsJson()) {
-                return back()->with('error', 'Erreur de connexion: ' . $e->getMessage());
+                return back()->with('error', 'An unexpected error occurred: ' . $e->getMessage());
             }
             
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Analyser les exceptions PDO pour fournir des messages d'erreur clairs
+     */
+    private function analyzePDOException(\PDOException $e, $dbType, $validated)
+    {
+        $errorCode = $e->getCode();
+        $errorMessage = $e->getMessage();
+        
+        // Messages d'erreur selon le type de base de données
+        switch ($dbType) {
+            case 'mysql':
+                return $this->analyzeMySQLError($errorCode, $errorMessage, $validated);
+            case 'pgsql':
+                return $this->analyzePostgreSQLError($errorCode, $errorMessage, $validated);
+            case 'sqlserver':
+                return $this->analyzeSQLServerError($errorCode, $errorMessage, $validated);
+            default:
+                return "Database connection failed: " . $errorMessage;
+        }
+    }
+
+    /**
+     * Analyser les erreurs MySQL
+     */
+    private function analyzeMySQLError($errorCode, $errorMessage, $validated)
+    {
+        if (strpos($errorMessage, 'Unknown database') !== false) {
+            return "Database '{$validated['database']}' does not exist on the MySQL server. Please check the database name or create the database first.";
+        }
+        
+        if (strpos($errorMessage, 'Access denied') !== false) {
+            return "Access denied. Please check your username and password, or verify that the user has permissions to access the '{$validated['database']}' database.";
+        }
+        
+        if (strpos($errorMessage, 'Connection refused') !== false || strpos($errorMessage, 'Can\'t connect') !== false) {
+            return "Cannot connect to MySQL server at '{$validated['server']}:{$validated['port']}'. Please check that the server is running and accessible.";
+        }
+        
+        if (strpos($errorMessage, 'timeout') !== false) {
+            return "Connection timeout to MySQL server. The server may be overloaded or the network connection is slow.";
+        }
+        
+        return "MySQL connection failed: " . $errorMessage;
+    }
+
+    /**
+     * Analyser les erreurs PostgreSQL
+     */
+    private function analyzePostgreSQLError($errorCode, $errorMessage, $validated)
+    {
+        if (strpos($errorMessage, 'database') !== false && strpos($errorMessage, 'does not exist') !== false) {
+            return "Database '{$validated['database']}' does not exist on the PostgreSQL server. Please check the database name or create the database first.";
+        }
+        
+        if (strpos($errorMessage, 'password authentication failed') !== false) {
+            return "Password authentication failed for user '{$validated['username']}'. Please check your credentials.";
+        }
+        
+        if (strpos($errorMessage, 'role') !== false && strpos($errorMessage, 'does not exist') !== false) {
+            return "User '{$validated['username']}' does not exist on the PostgreSQL server. Please check the username.";
+        }
+        
+        if (strpos($errorMessage, 'Connection refused') !== false || strpos($errorMessage, 'could not connect') !== false) {
+            return "Cannot connect to PostgreSQL server at '{$validated['server']}:{$validated['port']}'. Please check that the server is running and accessible.";
+        }
+        
+        if (strpos($errorMessage, 'timeout') !== false) {
+            return "Connection timeout to PostgreSQL server. The server may be overloaded or the network connection is slow.";
+        }
+        
+        if (strpos($errorMessage, 'permission denied') !== false) {
+            return "Permission denied to access database '{$validated['database']}'. Please check that user '{$validated['username']}' has the necessary permissions.";
+        }
+        
+        return "PostgreSQL connection failed: " . $errorMessage;
+    }
+
+    /**
+     * Analyser les erreurs SQL Server
+     */
+    private function analyzeSQLServerError($errorCode, $errorMessage, $validated)
+    {
+        if (strpos($errorMessage, 'Cannot open database') !== false) {
+            return "Database '{$validated['database']}' cannot be opened or does not exist on the SQL Server. Please check the database name.";
+        }
+        
+        if (strpos($errorMessage, 'Login failed') !== false) {
+            return "Login failed for user '{$validated['username']}'. Please check your credentials and ensure the user has access to SQL Server.";
+        }
+        
+        if (strpos($errorMessage, 'server was not found') !== false || strpos($errorMessage, 'network path was not found') !== false) {
+            return "SQL Server '{$validated['server']}' was not found or is not accessible. Please check the server name and network connectivity.";
+        }
+        
+        if (strpos($errorMessage, 'timeout') !== false) {
+            return "Connection timeout to SQL Server. The server may be overloaded or the network connection is slow.";
+        }
+        
+        if (strpos($errorMessage, 'The user is not associated with a trusted SQL Server connection') !== false) {
+            return "Windows Authentication failed. Please check that your Windows account has access to SQL Server or use SQL Server Authentication.";
+        }
+        
+        if (strpos($errorMessage, 'permission denied') !== false) {
+            return "Permission denied to access database '{$validated['database']}'. Please check user permissions.";
+        }
+        
+        return "SQL Server connection failed: " . $errorMessage;
+    }
+
+    /**
+     * Obtenir une requête de test selon le type de base de données
+     */
+    private function getTestQuery($dbType, $databaseName)
+    {
+        switch ($dbType) {
+            case 'mysql':
+                return "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '" . addslashes($databaseName) . "'";
+            case 'pgsql':
+                return "SELECT datname FROM pg_database WHERE datname = '" . addslashes($databaseName) . "'";
+            case 'sqlserver':
+                return "SELECT name FROM sys.databases WHERE name = '" . addslashes($databaseName) . "'";
+            default:
+                return "SELECT 1";
         }
     }
 

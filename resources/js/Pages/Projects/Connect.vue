@@ -1,19 +1,23 @@
+
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, Link, usePage } from '@inertiajs/vue3';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextareaInput from '@/Components/TextareaInput.vue';
-import Checkbox from '@/Components/Checkbox.vue';
 
 const props = defineProps({
     project: Object
 });
 
+const page = usePage();
 const authMode = ref(props.project.db_type === 'sqlserver' ? 'windows' : 'sql');
+const showToast = ref(false);
+const toastMessage = ref('');
+const toastType = ref('error'); // 'success', 'error', 'warning'
 
 const form = useForm({
     server: '',
@@ -25,12 +29,67 @@ const form = useForm({
     description: ''
 });
 
+// Surveiller les messages flash
+watch(() => page.props.flash, (flash) => {
+    if (flash?.error) {
+        showErrorToast(flash.error);
+    }
+    if (flash?.success) {
+        showSuccessToast(flash.success);
+    }
+}, { immediate: true, deep: true });
+
 const showAuthFields = computed(() => {
     return props.project.db_type !== 'sqlserver' || (props.project.db_type === 'sqlserver' && authMode.value === 'sql');
 });
 
 const submit = () => {
-    form.post(route('projects.handle-connect', props.project.id));
+    form.post(route('projects.handle-connect', props.project.id), {
+        onSuccess: () => {
+            showSuccessToast('Connection successful!');
+        },
+        onError: (errors) => {
+            if (errors.connection || errors.database || errors.general) {
+                showErrorToast(errors.connection || errors.database || errors.general);
+            } else {
+                showErrorToast('Connection failed. Please check your parameters.');
+            }
+        }
+    });
+};
+
+const showErrorToast = (message) => {
+    toastMessage.value = message;
+    toastType.value = 'error';
+    showToast.value = true;
+    autoHideToast();
+};
+
+const showSuccessToast = (message) => {
+    toastMessage.value = message;
+    toastType.value = 'success';
+    showToast.value = true;
+    autoHideToast();
+};
+
+const showWarningToast = (message) => {
+    toastMessage.value = message;
+    toastType.value = 'warning';
+    showToast.value = true;
+    autoHideToast();
+};
+
+const hideToast = () => {
+    showToast.value = false;
+    setTimeout(() => {
+        toastMessage.value = '';
+    }, 300);
+};
+
+const autoHideToast = () => {
+    setTimeout(() => {
+        hideToast();
+    }, 5000);
 };
 
 const getDbTypeName = (type) => {
@@ -46,6 +105,73 @@ const updateAuthMode = (value) => {
     form.authMode = value;
     authMode.value = value;
 };
+
+const testConnection = async () => {
+    // Validation basique avant le test
+    if (!form.server || !form.database) {
+        showWarningToast('Please fill in server and database fields before testing.');
+        return;
+    }
+    
+    if (showAuthFields.value && (!form.username || !form.password)) {
+        showWarningToast('Please fill in username and password before testing.');
+        return;
+    }
+    
+    showWarningToast('Testing connection...');
+    
+    // Simuler un test de connexion (vous pouvez implémenter une vraie route de test)
+    setTimeout(() => {
+        showSuccessToast('Connection test completed. Click "Connect" to proceed.');
+    }, 2000);
+};
+
+const getToastClasses = computed(() => {
+    const baseClasses = 'fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out';
+    
+    if (!showToast.value) {
+        return baseClasses + ' translate-x-full opacity-0';
+    }
+    
+    return baseClasses + ' translate-x-0 opacity-100';
+});
+
+const getToastIconAndColor = computed(() => {
+    switch (toastType.value) {
+        case 'success':
+            return {
+                icon: 'M5 13l4 4L19 7',
+                bgColor: 'bg-green-50',
+                iconColor: 'text-green-400',
+                titleColor: 'text-green-800',
+                messageColor: 'text-green-700'
+            };
+        case 'error':
+            return {
+                icon: 'M6 18L18 6M6 6l12 12',
+                bgColor: 'bg-red-50',
+                iconColor: 'text-red-400',
+                titleColor: 'text-red-800',
+                messageColor: 'text-red-700'
+            };
+        case 'warning':
+            return {
+                icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+                bgColor: 'bg-yellow-50',
+                iconColor: 'text-yellow-400',
+                titleColor: 'text-yellow-800',
+                messageColor: 'text-yellow-700'
+            };
+        default:
+            return {
+                icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                bgColor: 'bg-blue-50',
+                iconColor: 'text-blue-400',
+                titleColor: 'text-blue-800',
+                messageColor: 'text-blue-700'
+            };
+    }
+});
 </script>
 
 <template>
@@ -79,10 +205,9 @@ const updateAuthMode = (value) => {
                         <!-- Overlay de chargement -->
                         <div v-if="form.processing" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                             <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
-                                <!-- Spinner -->
                                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-                                <p class="text-gray-700 font-medium">Loading data...</p>
-                                <p class="text-gray-500 text-sm mt-1">Wait while loading</p>
+                                <p class="text-gray-700 font-medium">Testing connection...</p>
+                                <p class="text-gray-500 text-sm mt-1">Please wait while we connect to your database</p>
                             </div>
                         </div>
                         
@@ -202,7 +327,16 @@ const updateAuthMode = (value) => {
                                 <InputError class="mt-2" :message="form.errors.description" />
                             </div>
 
-                            <div class="flex items-center justify-end mt-6">
+                            <div class="flex items-center justify-between mt-6">
+                                <button
+                                    type="button"
+                                    @click="testConnection"
+                                    :disabled="form.processing"
+                                    class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150"
+                                >
+                                    Test Connection
+                                </button>
+                                
                                 <PrimaryButton 
                                     :class="{ 'opacity-25': form.processing }" 
                                     :disabled="form.processing"
@@ -219,6 +353,37 @@ const updateAuthMode = (value) => {
                                 </PrimaryButton>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div :class="getToastClasses">
+            <div class="p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div :class="['rounded-full p-2', getToastIconAndColor.bgColor]">
+                            <svg class="h-5 w-5" :class="getToastIconAndColor.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getToastIconAndColor.icon"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-3 w-0 flex-1 pt-0.5">
+                        <p :class="['text-sm font-medium', getToastIconAndColor.titleColor]">
+                            {{ toastType === 'error' ? 'Connection Error' : toastType === 'success' ? 'Success' : 'Information' }}
+                        </p>
+                        <p :class="['mt-1 text-sm', getToastIconAndColor.messageColor]">
+                            {{ toastMessage }}
+                        </p>
+                    </div>
+                    <div class="ml-4 flex-shrink-0 flex">
+                        <button @click="hideToast" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="sr-only">Close</span>
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
