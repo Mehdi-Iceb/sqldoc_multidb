@@ -371,8 +371,11 @@ class ProjectController extends Controller
     public function open($id)
     {
         try {
-            // Récupérer le projet (en incluant les projets supprimés pour pouvoir les ouvrir si nécessaire)
+            Log::info('=== DÉBUT OUVERTURE PROJET ===', ['project_id' => $id]);
+            
+            // Récupérer le projet
             $project = Project::withTrashed()->findOrFail($id);
+            Log::info('Projet trouvé', ['project_name' => $project->name, 'db_type' => $project->db_type]);
             
             // Vérifier si le projet est supprimé
             if ($project->trashed()) {
@@ -382,13 +385,19 @@ class ProjectController extends Controller
             
             // Rechercher la description de BD
             $dbDescription = DbDescription::where('project_id', $project->id)->first();
+            Log::info('DbDescription', ['found' => $dbDescription ? 'oui' : 'non', 'dbname' => $dbDescription->dbname ?? 'N/A']);
             
+            // *** CAS : Projet jamais connecté à une base de données ***
             if (!$dbDescription) {
-                return redirect()->route('projects.index')
-                    ->with('error', 'Aucune base de données trouvée pour ce projet.');
+                Log::info('Projet jamais connecté à une base de données', ['project_id' => $project->id]);
+                
+                // Rediriger vers la page de connexion avec un message explicatif
+                return redirect()->route('projects.connect', $project->id)
+                    ->with('info', "Project '{$project->name}' needs to be connected to a database. Please provide the database connection details below.");
             }
             
-            // Définir les informations de connexion
+            // *** RETOUR AU CODE ORIGINAL POUR LA CONNEXION ***
+            // Définir les informations de connexion (CODE ORIGINAL)
             $connectionInfo = null;
             if (isset($project->connection_info) && !empty($project->connection_info)) {
                 if (is_string($project->connection_info)) {
@@ -410,37 +419,52 @@ class ProjectController extends Controller
                 $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
             }
             
-            // NOUVELLE VÉRIFICATION : Tester la connexion et le contenu de la base de données
+            Log::info('Informations de connexion préparées', [
+                'driver' => $connectionInfo['driver'],
+                'host' => $connectionInfo['host'],
+                'database' => $connectionInfo['database']
+            ]);
+            
+            // VÉRIFICATION DU CONTENU DE LA BASE DE DONNÉES (CODE ORIGINAL AMÉLIORÉ)
+            $messages = ['success' => "Project '{$project->name}' opened successfully."]; // Valeur par défaut
+            
             try {
+                Log::info('Début vérification contenu base de données');
+                
                 $connectionName = "project_temp_check_{$project->id}";
                 Config::set("database.connections.{$connectionName}", $connectionInfo);
                 
                 // Test de connexion
                 $pdo = DB::connection($connectionName)->getPdo();
+                Log::info('Connexion PDO réussie');
                 
                 // Vérifier le contenu de la base de données
                 $databaseStats = $this->checkDatabaseContent($connectionName, $project->db_type, $dbDescription->dbname);
+                Log::info('Statistiques de la base de données', $databaseStats);
                 
                 // Nettoyer la connexion temporaire
                 DB::disconnect($connectionName);
                 Config::forget("database.connections.{$connectionName}");
+                Log::info('Connexion temporaire nettoyée');
                 
                 // Analyser les statistiques et préparer les messages
                 $messages = $this->analyzeDatabaseStats($databaseStats, $project->name);
+                Log::info('Messages générés', $messages);
                 
             } catch (\Exception $e) {
-                Log::warning('Impossible de vérifier le contenu de la base de données lors de l\'ouverture', [
+                Log::error('Erreur lors de la vérification du contenu de la base de données', [
                     'project_id' => $project->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
                 
                 // En cas d'erreur de connexion, on continue quand même mais avec un avertissement
                 $messages = [
-                    'warning' => 'Unable to verify database content. The database may be inaccessible.'
+                    'warning' => "Project '{$project->name}' opened, but unable to verify database content. The database may be inaccessible."
                 ];
             }
             
-            // Mettre à jour la session
+            // Mettre à jour la session (CODE ORIGINAL)
             session([
                 'current_project' => [
                     'id' => $project->id,
@@ -451,27 +475,142 @@ class ProjectController extends Controller
                 'current_db_id' => $dbDescription->id
             ]);
             
-            // Rediriger avec les messages appropriés
+            Log::info('Session mise à jour');
+            
+            // Rediriger avec les messages appropriés (CODE ORIGINAL)
             $redirectResponse = redirect()->route('dashboard');
             
             if (isset($messages['error'])) {
+                Log::info('Redirection avec erreur', ['message' => $messages['error']]);
                 return $redirectResponse->with('error', $messages['error']);
             } elseif (isset($messages['warning'])) {
+                Log::info('Redirection avec warning', ['message' => $messages['warning']]);
                 return $redirectResponse->with('warning', $messages['warning']);
             } elseif (isset($messages['info'])) {
+                Log::info('Redirection avec info', ['message' => $messages['info']]);
                 return $redirectResponse->with('info', $messages['info']);
             } else {
-                return $redirectResponse->with('success', 'Projet "' . $project->name . '" ouvert avec succès.');
+                Log::info('Redirection avec succès', ['message' => $messages['success'] ?? 'Message par défaut']);
+                return $redirectResponse->with('success', $messages['success'] ?? "Project '{$project->name}' opened successfully.");
             }
                     
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'ouverture du projet', [
+            Log::error('=== ERREUR LORS DE L\'OUVERTURE DU PROJET ===', [
                 'project_id' => $id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()->route('projects.index')
-                ->with('error', 'Impossible d\'ouvrir le projet: ' . $e->getMessage());
+                ->with('error', 'Unable to open project: ' . $e->getMessage());
+        }
+    }
+
+    private function prepareConnectionInfo($project, $dbDescription)
+    {
+        $connectionInfo = null;
+        
+        if (isset($project->connection_info) && !empty($project->connection_info)) {
+            if (is_string($project->connection_info)) {
+                $connectionInfo = json_decode($project->connection_info, true);
+            } else {
+                $connectionInfo = $project->connection_info;
+            }
+        } else {
+            // Utiliser les informations de base si pas de connection_info
+            $connectionInfo = [
+                'driver' => $this->getDriverFromDbType($project->db_type),
+                'host' => 'localhost',
+                'database' => $dbDescription->dbname,
+                'username' => '',
+                'password' => ''
+            ];
+        }
+        
+        if (!isset($connectionInfo['driver'])) {
+            $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
+        }
+        
+        return $connectionInfo;
+    }
+
+    private function checkDatabaseAndPrepareMessages($project, $dbDescription, $connectionInfo)
+    {
+        $messages = ['success' => "Project '{$project->name}' opened successfully."];
+        
+        try {
+            Log::info('Début vérification contenu base de données');
+            
+            $connectionName = "project_temp_check_{$project->id}";
+            Config::set("database.connections.{$connectionName}", $connectionInfo);
+            
+            // Test de connexion
+            $pdo = DB::connection($connectionName)->getPdo();
+            Log::info('Connexion PDO réussie');
+            
+            // Vérifier le contenu de la base de données
+            $databaseStats = $this->checkDatabaseContent($connectionName, $project->db_type, $dbDescription->dbname);
+            Log::info('Statistiques de la base de données', $databaseStats);
+            
+            // Nettoyer la connexion temporaire
+            DB::disconnect($connectionName);
+            Config::forget("database.connections.{$connectionName}");
+            Log::info('Connexion temporaire nettoyée');
+            
+            // Analyser les statistiques et préparer les messages
+            $messages = $this->analyzeDatabaseStats($databaseStats, $project->name);
+            Log::info('Messages générés', $messages);
+            
+        } catch (\PDOException $e) {
+            Log::error('Erreur PDO lors de la vérification du contenu', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+                'code' => $e->getCode()
+            ]);
+            
+            $errorMessage = $this->analyzePDOException($e, $project->db_type, [
+                'server' => $connectionInfo['host'],
+                'database' => $connectionInfo['database'],
+                'username' => $connectionInfo['username'] ?? '',
+                'port' => $connectionInfo['port'] ?? null
+            ]);
+            
+            $messages = [
+                'error' => "Cannot connect to database for project '{$project->name}': {$errorMessage}. Please check your connection settings."
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur générale lors de la vérification du contenu', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            $messages = [
+                'warning' => "Project '{$project->name}' opened, but unable to verify database content. Error: " . $e->getMessage()
+            ];
+        }
+        
+        return $messages;
+    }
+
+    private function redirectWithMessage($messages, $projectName)
+    {
+        if (isset($messages['error'])) {
+            Log::info('Redirection avec erreur', ['message' => $messages['error']]);
+            return redirect()->route('projects.index')->with('error', $messages['error']);
+        }
+        
+        $redirectResponse = redirect()->route('dashboard');
+        
+        if (isset($messages['warning'])) {
+            Log::info('Redirection avec warning', ['message' => $messages['warning']]);
+            return $redirectResponse->with('warning', $messages['warning']);
+        } elseif (isset($messages['info'])) {
+            Log::info('Redirection avec info', ['message' => $messages['info']]);
+            return $redirectResponse->with('info', $messages['info']);
+        } else {
+            Log::info('Redirection avec succès', ['message' => $messages['success']]);
+            return $redirectResponse->with('success', $messages['success']);
         }
     }
 
@@ -485,7 +624,8 @@ class ProjectController extends Controller
             'views_count' => 0,
             'total_records' => 0,
             'user_tables' => [],
-            'system_tables_only' => false
+            'system_tables_only' => false,
+            'connection_error' => false
         ];
         
         try {
@@ -499,11 +639,18 @@ class ProjectController extends Controller
                 case 'sqlserver':
                     $stats = $this->checkSQLServerContent($connectionName);
                     break;
+                default:
+                    Log::warning('Type de base de données non supporté pour la vérification de contenu', [
+                        'db_type' => $dbType
+                    ]);
+                    $stats['connection_error'] = true;
             }
         } catch (\Exception $e) {
             Log::warning('Erreur lors de la vérification du contenu de la BD', [
+                'db_type' => $dbType,
                 'error' => $e->getMessage()
             ]);
+            $stats['connection_error'] = true;
         }
         
         return $stats;
@@ -627,43 +774,58 @@ class ProjectController extends Controller
     {
         $messages = [];
         
-        // Base de données complètement vide
+        // Base de données complètement vide (aucune table, aucune vue)
         if ($stats['tables_count'] === 0 && $stats['views_count'] === 0) {
-            $messages['warning'] = "Project '{$projectName}' opened successfully, but the database appears to be empty. No tables or views were found. You may want to import data or create tables before proceeding.";
+            $messages['warning'] = "Project '{$projectName}' opened successfully, but the database is completely empty. No tables or views found. You need to create tables or import data to start working with this project.";
             return $messages;
         }
         
-        // Seulement des tables système ou aucune table utilisateur
+        // Seulement des vues, pas de tables utilisateur
         if ($stats['tables_count'] === 0 && $stats['views_count'] > 0) {
-            $messages['info'] = "Project '{$projectName}' opened successfully. The database contains {$stats['views_count']} view(s) but no user tables were found.";
+            $viewText = $stats['views_count'] === 1 ? 'view' : 'views';
+            $messages['info'] = "Project '{$projectName}' opened successfully. The database contains {$stats['views_count']} {$viewText} but no user tables. Consider creating tables or importing data.";
             return $messages;
         }
         
-        // Tables présentes mais aucune données
+        // Tables présentes mais vides (aucune donnée)
         if ($stats['tables_count'] > 0 && $stats['total_records'] === 0) {
-            $tableList = implode(', ', array_slice($stats['user_tables'], 0, 5));
-            if (count($stats['user_tables']) > 5) {
+            $tableText = $stats['tables_count'] === 1 ? 'table' : 'tables';
+            $tableList = implode(', ', array_slice($stats['user_tables'], 0, 3));
+            if (count($stats['user_tables']) > 3) {
                 $tableList .= '...';
             }
             
-            $messages['info'] = "Project '{$projectName}' opened successfully. Found {$stats['tables_count']} table(s) ({$tableList}) but they appear to be empty. Consider importing data to get started.";
+            $messages['warning'] = "Project '{$projectName}' opened successfully. Found {$stats['tables_count']} {$tableText} ({$tableList}) but they contain no data. Import data or add records to start analyzing your database.";
             return $messages;
         }
         
-        // Base de données avec du contenu
-        if ($stats['tables_count'] > 0 && $stats['total_records'] > 0) {
-            $summary = "{$stats['tables_count']} table(s)";
+        // Très peu de données (moins de 10 enregistrements au total)
+        if ($stats['tables_count'] > 0 && $stats['total_records'] > 0 && $stats['total_records'] < 10) {
+            $tableText = $stats['tables_count'] === 1 ? 'table' : 'tables';
+            $recordText = $stats['total_records'] === 1 ? 'record' : 'records';
+            
+            $messages['info'] = "Project '{$projectName}' opened successfully. Database contains {$stats['tables_count']} {$tableText} with only {$stats['total_records']} {$recordText}. Consider adding more data for better analysis.";
+            return $messages;
+        }
+        
+        // Base de données avec du contenu normal
+        if ($stats['tables_count'] > 0 && $stats['total_records'] >= 10) {
+            $tableText = $stats['tables_count'] === 1 ? 'table' : 'tables';
+            $summary = "{$stats['tables_count']} {$tableText}";
+            
             if ($stats['views_count'] > 0) {
-                $summary .= " and {$stats['views_count']} view(s)";
+                $viewText = $stats['views_count'] === 1 ? 'view' : 'views';
+                $summary .= " and {$stats['views_count']} {$viewText}";
             }
+            
             $summary .= " with approximately " . number_format($stats['total_records']) . " records";
             
-            $messages['success'] = "Project '{$projectName}' opened successfully. Database contains {$summary}.";
+            $messages['success'] = "Project '{$projectName}' opened successfully. Database contains {$summary}. Ready for analysis!";
             return $messages;
         }
         
-        // Cas par défaut
-        $messages['success'] = "Project '{$projectName}' opened successfully.";
+        // Cas par défaut (ne devrait pas arriver)
+        $messages['info'] = "Project '{$projectName}' opened successfully.";
         return $messages;
     }
 

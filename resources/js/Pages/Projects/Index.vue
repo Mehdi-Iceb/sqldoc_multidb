@@ -343,6 +343,8 @@ const activeProjects = computed(() => {
     return props.projects || [];
 });
 
+
+
 // Surveiller les messages flash
 watch(() => page.props.flash, (flash) => {
     if (flash) {
@@ -397,17 +399,76 @@ const openProject = async (project) => {
     openingProject.value = project.id;
     
     try {
-        // Utiliser Inertia pour naviguer vers la route d'ouverture
-        window.location.href = route('projects.open', project.id);
+        // Faire une requête Inertia pour ouvrir le projet
+        const response = await fetch(route('projects.open', project.id), {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Si c'est une redirection, suivre la redirection
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            // Sinon, naviguer vers le dashboard
+            window.location.href = route('dashboard');
+        }
     } catch (error) {
         console.error('Error opening project:', error);
         openingProject.value = null;
+        
+        // Afficher un message d'erreur spécifique
         flashMessage.value = { 
             type: 'error', 
-            message: 'Error opening project: ' + error.message 
+            message: 'Error opening project. Please check if the database is accessible and contains data.' 
         };
     }
 };
+
+// Fonction améliorée pour gérer tous les types de messages flash
+const handleFlashMessages = () => {
+    const flash = page.props.flash;
+    
+    if (flash) {
+        let message = null;
+        
+        if (flash.success) {
+            message = { type: 'success', message: flash.success };
+        } else if (flash.error) {
+            message = { type: 'error', message: flash.error };
+        } else if (flash.warning) {
+            message = { type: 'warning', message: flash.warning };
+        } else if (flash.info) {
+            message = { type: 'info', message: flash.info };
+        }
+        
+        if (message) {
+            flashMessage.value = message;
+            
+            // Auto-hide après 10 secondes pour les warnings et infos sur les données vides
+            if (message.type === 'warning' || message.type === 'info') {
+                setTimeout(() => {
+                    hideFlashMessage();
+                }, 10000); // 10 secondes pour laisser le temps de lire
+            } else if (message.type === 'success') {
+                setTimeout(() => {
+                    hideFlashMessage();
+                }, 5000); // 5 secondes pour les succès
+            }
+            // Les erreurs restent affichées jusqu'à ce que l'utilisateur les ferme
+        }
+    }
+};
+
+// Mettre à jour le watcher pour utiliser cette nouvelle fonction
+watch(() => page.props.flash, handleFlashMessages, { immediate: true, deep: true });
 
 // Charger les projets supprimés
 const loadDeletedProjects = async () => {
