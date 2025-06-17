@@ -10,6 +10,93 @@
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <!-- Messages Flash -->
+                <div v-if="flashMessage" class="mb-6">
+                    <!-- Message de succès -->
+                    <div v-if="flashMessage.type === 'success'" class="bg-green-50 border-l-4 border-green-400 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-green-700">{{ flashMessage.message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <button @click="hideFlashMessage" class="text-green-400 hover:text-green-600">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message d'avertissement -->
+                    <div v-else-if="flashMessage.type === 'warning'" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">{{ flashMessage.message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <button @click="hideFlashMessage" class="text-yellow-400 hover:text-yellow-600">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message d'information -->
+                    <div v-else-if="flashMessage.type === 'info'" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-700">{{ flashMessage.message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <button @click="hideFlashMessage" class="text-blue-400 hover:text-blue-600">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    <div v-else-if="flashMessage.type === 'error'" class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700">{{ flashMessage.message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <button @click="hideFlashMessage" class="text-red-400 hover:text-red-600">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-between items-center mb-6">
                     <!-- afficher les projets supprimés -->
                     <div class="flex items-center space-x-4">
@@ -83,12 +170,20 @@
                                 </div>
                                 <div class="p-4">
                                     <div class="flex justify-end space-x-2">
-                                        <Link
-                                            :href="route('projects.open', project.id)"
-                                            class="inline-flex items-center px-3 py-2 bg-indigo-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                                        <button
+                                            @click="openProject(project)"
+                                            :disabled="openingProject === project.id"
+                                            class="inline-flex items-center px-3 py-2 bg-indigo-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50"
                                         >
-                                            Open
-                                        </Link>
+                                            <span v-if="openingProject === project.id" class="flex items-center">
+                                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Opening...
+                                            </span>
+                                            <span v-else>Open</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -224,12 +319,14 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { ref, computed, onMounted } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { ref, computed, onMounted, watch } from 'vue';
 
 const props = defineProps({
     projects: Array
 });
+
+const page = usePage();
 
 // États
 const showDeleted = ref(false);
@@ -238,11 +335,40 @@ const showDeleteModal = ref(false);
 const showForceDeleteModal = ref(false);
 const selectedProject = ref(null);
 const deleting = ref(false);
+const openingProject = ref(null);
+const flashMessage = ref(null);
 
 // Projets actifs (non supprimés)
 const activeProjects = computed(() => {
     return props.projects || [];
 });
+
+// Surveiller les messages flash
+watch(() => page.props.flash, (flash) => {
+    if (flash) {
+        if (flash.success) {
+            flashMessage.value = { type: 'success', message: flash.success };
+        } else if (flash.error) {
+            flashMessage.value = { type: 'error', message: flash.error };
+        } else if (flash.warning) {
+            flashMessage.value = { type: 'warning', message: flash.warning };
+        } else if (flash.info) {
+            flashMessage.value = { type: 'info', message: flash.info };
+        }
+        
+        // Auto-hide après 8 secondes sauf pour les erreurs
+        if (flashMessage.value && flashMessage.value.type !== 'error') {
+            setTimeout(() => {
+                hideFlashMessage();
+            }, 8000);
+        }
+    }
+}, { immediate: true, deep: true });
+
+// Fonction pour cacher le message flash
+const hideFlashMessage = () => {
+    flashMessage.value = null;
+};
 
 // Fonction pour obtenir le nom formaté du type de base de données
 const getBdTypeName = (type) => {
@@ -264,6 +390,23 @@ const formatDate = (dateString) => {
         hour: '2-digit',
         minute: '2-digit'
     });
+};
+
+// Fonction pour ouvrir un projet avec indicateur de chargement
+const openProject = async (project) => {
+    openingProject.value = project.id;
+    
+    try {
+        // Utiliser Inertia pour naviguer vers la route d'ouverture
+        window.location.href = route('projects.open', project.id);
+    } catch (error) {
+        console.error('Error opening project:', error);
+        openingProject.value = null;
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Error opening project: ' + error.message 
+        };
+    }
 };
 
 // Charger les projets supprimés
@@ -288,12 +431,21 @@ const loadDeletedProjects = async () => {
         console.error('Error loading deleted projects:', error);
         
         if (error.response?.status === 403) {
-            alert('Unauthorized access. Administrator privileges required.');
+            flashMessage.value = { 
+                type: 'error', 
+                message: 'Unauthorized access. Administrator privileges required.' 
+            };
             showDeleted.value = false;
         } else if (error.response?.status === 404) {
-            alert('Route not found. Make sure you are an administrator.');
+            flashMessage.value = { 
+                type: 'error', 
+                message: 'Route not found. Make sure you are an administrator.' 
+            };
         } else {
-            alert('Error loading deleted projects');
+            flashMessage.value = { 
+                type: 'error', 
+                message: 'Error loading deleted projects' 
+            };
         }
     }
 };
@@ -315,7 +467,6 @@ const deleteProject = async () => {
     deleting.value = true;
     
     try {
-        
         const response = await axios.delete(`/projects/${selectedProject.value.id}/soft`, {
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
@@ -327,13 +478,20 @@ const deleteProject = async () => {
         if (response.data.success) {
             showDeleteModal.value = false;
             selectedProject.value = null;
+            flashMessage.value = { 
+                type: 'success', 
+                message: 'Project successfully deleted' 
+            };
             window.location.reload();
         } else {
             throw new Error(response.data.error || 'Error while deleting');
         }
     } catch (error) {
         console.error('Error while deleting:', error);
-        alert('Erreur: ' + (error.response?.data?.error || error.message));
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Error: ' + (error.response?.data?.error || error.message) 
+        };
     } finally {
         deleting.value = false;
     }
@@ -344,7 +502,6 @@ const forceDeleteProject = async () => {
     deleting.value = true;
     
     try {
-        
         const response = await axios.delete(`/projects/${selectedProject.value.id}/force`, {
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
@@ -357,13 +514,19 @@ const forceDeleteProject = async () => {
             showForceDeleteModal.value = false;
             selectedProject.value = null;
             await loadDeletedProjects();
-            alert('Project definitively deleted');
+            flashMessage.value = { 
+                type: 'success', 
+                message: 'Project definitively deleted' 
+            };
         } else {
             throw new Error(response.data.error || 'Error while definitive deletion');
         }
     } catch (error) {
         console.error('Error while definitive deletion:', error);
-        alert('Erreur: ' + (error.response?.data?.error || error.message));
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Error: ' + (error.response?.data?.error || error.message) 
+        };
     } finally {
         deleting.value = false;
     }
@@ -372,7 +535,6 @@ const forceDeleteProject = async () => {
 // Restaurer un projet
 const restoreProject = async (project) => {
     try {
-        
         const response = await axios.post(`/projects/${project.id}/restore`, {}, {
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
@@ -383,19 +545,32 @@ const restoreProject = async (project) => {
         
         if (response.data.success) {
             await loadDeletedProjects();
-            alert('Project successfully restored');
+            flashMessage.value = { 
+                type: 'success', 
+                message: 'Project successfully restored' 
+            };
         } else {
             throw new Error(response.data.error || 'Error while restoring');
         }
     } catch (error) {
         console.error('Error while restoring:', error);
-        alert('Error: ' + (error.response?.data?.error || error.message));
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Error: ' + (error.response?.data?.error || error.message) 
+        };
     }
 };
 
+// Computed pour vérifier si l'utilisateur est admin
 const isAdmin = computed(() => {
     return window.Laravel?.user?.role === 'admin' || 
-           usePage().props.auth.user.role === 'admin';
+           page.props.auth?.user?.role === 'admin';
 });
 
+// Montage du composant
+onMounted(() => {
+    // Initialisation si nécessaire
+    console.log('Projects component mounted');
+    console.log('Active projects:', activeProjects.value.length);
+});
 </script>

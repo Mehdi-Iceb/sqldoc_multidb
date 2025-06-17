@@ -153,7 +153,7 @@ class ProjectController extends Controller
                     'description' => $validated['description'] ?? null,
                 ]);
                 
-                // EXTRACTION ET SAUVEGARDE DE LA STRUCTURE COMPLÈTE
+                // EXTRACTION ET SAUVEGARDE DE LA STRUCTURE COMPLETE
                 try {
                     $databaseStructureService = new DatabaseStructureService();
                     $result = $databaseStructureService->extractAndSaveAllStructures($connectionName, $dbDescription->id);
@@ -410,6 +410,36 @@ class ProjectController extends Controller
                 $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
             }
             
+            // NOUVELLE VÉRIFICATION : Tester la connexion et le contenu de la base de données
+            try {
+                $connectionName = "project_temp_check_{$project->id}";
+                Config::set("database.connections.{$connectionName}", $connectionInfo);
+                
+                // Test de connexion
+                $pdo = DB::connection($connectionName)->getPdo();
+                
+                // Vérifier le contenu de la base de données
+                $databaseStats = $this->checkDatabaseContent($connectionName, $project->db_type, $dbDescription->dbname);
+                
+                // Nettoyer la connexion temporaire
+                DB::disconnect($connectionName);
+                Config::forget("database.connections.{$connectionName}");
+                
+                // Analyser les statistiques et préparer les messages
+                $messages = $this->analyzeDatabaseStats($databaseStats, $project->name);
+                
+            } catch (\Exception $e) {
+                Log::warning('Impossible de vérifier le contenu de la base de données lors de l\'ouverture', [
+                    'project_id' => $project->id,
+                    'error' => $e->getMessage()
+                ]);
+                
+                // En cas d'erreur de connexion, on continue quand même mais avec un avertissement
+                $messages = [
+                    'warning' => 'Unable to verify database content. The database may be inaccessible.'
+                ];
+            }
+            
             // Mettre à jour la session
             session([
                 'current_project' => [
@@ -421,9 +451,19 @@ class ProjectController extends Controller
                 'current_db_id' => $dbDescription->id
             ]);
             
-            return redirect()->route('dashboard')
-                ->with('success', 'Projet "' . $project->name . '" ouvert avec succès.');
-                
+            // Rediriger avec les messages appropriés
+            $redirectResponse = redirect()->route('dashboard');
+            
+            if (isset($messages['error'])) {
+                return $redirectResponse->with('error', $messages['error']);
+            } elseif (isset($messages['warning'])) {
+                return $redirectResponse->with('warning', $messages['warning']);
+            } elseif (isset($messages['info'])) {
+                return $redirectResponse->with('info', $messages['info']);
+            } else {
+                return $redirectResponse->with('success', 'Projet "' . $project->name . '" ouvert avec succès.');
+            }
+                    
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'ouverture du projet', [
                 'project_id' => $id,
@@ -434,6 +474,200 @@ class ProjectController extends Controller
                 ->with('error', 'Impossible d\'ouvrir le projet: ' . $e->getMessage());
         }
     }
+
+    /**
+    * Vérifier le contenu de la base de données
+    */
+    private function checkDatabaseContent($connectionName, $dbType, $databaseName)
+    {
+        $stats = [
+            'tables_count' => 0,
+            'views_count' => 0,
+            'total_records' => 0,
+            'user_tables' => [],
+            'system_tables_only' => false
+        ];
+        
+        try {
+            switch ($dbType) {
+                case 'mysql':
+                    $stats = $this->checkMySQLContent($connectionName, $databaseName);
+                    break;
+                case 'pgsql':
+                    $stats = $this->checkPostgreSQLContent($connectionName);
+                    break;
+                case 'sqlserver':
+                    $stats = $this->checkSQLServerContent($connectionName);
+                    break;
+            }
+        } catch (\Exception $e) {
+            Log::warning('Erreur lors de la vérification du contenu de la BD', [
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return $stats;
+    }
+
+    /**
+     * Vérifier le contenu MySQL
+     */
+    private function checkMySQLContent($connectionName, $databaseName)
+    {
+        $stats = ['tables_count' => 0, 'views_count' => 0, 'total_records' => 0, 'user_tables' => []];
+        
+        // Compter les tables utilisateur
+        $tables = DB::connection($connectionName)->select("
+            SELECT TABLE_NAME, TABLE_ROWS 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = ? 
+            AND TABLE_TYPE = 'BASE TABLE'
+            AND TABLE_NAME NOT LIKE 'mysql_%'
+            AND TABLE_NAME NOT LIKE 'sys_%'
+            AND TABLE_NAME NOT LIKE 'performance_schema%'
+            AND TABLE_NAME NOT LIKE 'information_schema%'
+        ", [$databaseName]);
+        
+        $stats['tables_count'] = count($tables);
+        
+        foreach ($tables as $table) {
+            $stats['user_tables'][] = $table->TABLE_NAME;
+            $stats['total_records'] += (int)$table->TABLE_ROWS;
+        }
+        
+        // Compter les vues
+        $views = DB::connection($connectionName)->select("
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.VIEWS 
+            WHERE TABLE_SCHEMA = ?
+        ", [$databaseName]);
+        
+        $stats['views_count'] = $views[0]->count ?? 0;
+        
+        return $stats;
+    }
+
+    /**
+     * Vérifier le contenu PostgreSQL
+     */
+    private function checkPostgreSQLContent($connectionName)
+    {
+        $stats = ['tables_count' => 0, 'views_count' => 0, 'total_records' => 0, 'user_tables' => []];
+        
+        // Compter les tables utilisateur
+        $tables = DB::connection($connectionName)->select("
+            SELECT 
+                schemaname, 
+                tablename,
+                (SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname = tablename) as row_estimate
+            FROM pg_tables 
+            WHERE schemaname = 'public'
+        ");
+        
+        $stats['tables_count'] = count($tables);
+        
+        foreach ($tables as $table) {
+            $stats['user_tables'][] = $table->tablename;
+            $stats['total_records'] += (int)($table->row_estimate ?? 0);
+        }
+        
+        // Compter les vues
+        $views = DB::connection($connectionName)->select("
+            SELECT COUNT(*) as count 
+            FROM information_schema.views 
+            WHERE table_schema = 'public'
+        ");
+        
+        $stats['views_count'] = $views[0]->count ?? 0;
+        
+        return $stats;
+    }
+
+    /**
+     * Vérifier le contenu SQL Server
+     */
+    private function checkSQLServerContent($connectionName)
+    {
+        $stats = ['tables_count' => 0, 'views_count' => 0, 'total_records' => 0, 'user_tables' => []];
+        
+        // Compter les tables utilisateur
+        $tables = DB::connection($connectionName)->select("
+            SELECT 
+                t.name as table_name,
+                ISNULL(p.rows, 0) as row_count
+            FROM sys.tables t
+            LEFT JOIN sys.partitions p ON t.object_id = p.object_id 
+            WHERE p.index_id IN (0,1)
+            AND t.is_ms_shipped = 0
+        ");
+        
+        $stats['tables_count'] = count($tables);
+        
+        foreach ($tables as $table) {
+            $stats['user_tables'][] = $table->table_name;
+            $stats['total_records'] += (int)$table->row_count;
+        }
+        
+        // Compter les vues
+        $views = DB::connection($connectionName)->select("
+            SELECT COUNT(*) as count 
+            FROM sys.views 
+            WHERE is_ms_shipped = 0
+        ");
+        
+        $stats['views_count'] = $views[0]->count ?? 0;
+        
+        return $stats;
+    }
+
+    /**
+     * Analyser les statistiques et générer les messages appropriés
+     */
+    private function analyzeDatabaseStats($stats, $projectName)
+    {
+        $messages = [];
+        
+        // Base de données complètement vide
+        if ($stats['tables_count'] === 0 && $stats['views_count'] === 0) {
+            $messages['warning'] = "Project '{$projectName}' opened successfully, but the database appears to be empty. No tables or views were found. You may want to import data or create tables before proceeding.";
+            return $messages;
+        }
+        
+        // Seulement des tables système ou aucune table utilisateur
+        if ($stats['tables_count'] === 0 && $stats['views_count'] > 0) {
+            $messages['info'] = "Project '{$projectName}' opened successfully. The database contains {$stats['views_count']} view(s) but no user tables were found.";
+            return $messages;
+        }
+        
+        // Tables présentes mais aucune données
+        if ($stats['tables_count'] > 0 && $stats['total_records'] === 0) {
+            $tableList = implode(', ', array_slice($stats['user_tables'], 0, 5));
+            if (count($stats['user_tables']) > 5) {
+                $tableList .= '...';
+            }
+            
+            $messages['info'] = "Project '{$projectName}' opened successfully. Found {$stats['tables_count']} table(s) ({$tableList}) but they appear to be empty. Consider importing data to get started.";
+            return $messages;
+        }
+        
+        // Base de données avec du contenu
+        if ($stats['tables_count'] > 0 && $stats['total_records'] > 0) {
+            $summary = "{$stats['tables_count']} table(s)";
+            if ($stats['views_count'] > 0) {
+                $summary .= " and {$stats['views_count']} view(s)";
+            }
+            $summary .= " with approximately " . number_format($stats['total_records']) . " records";
+            
+            $messages['success'] = "Project '{$projectName}' opened successfully. Database contains {$summary}.";
+            return $messages;
+        }
+        
+        // Cas par défaut
+        $messages['success'] = "Project '{$projectName}' opened successfully.";
+        return $messages;
+    }
+
+    
 
     public function disconnect(Request $request)
     {
