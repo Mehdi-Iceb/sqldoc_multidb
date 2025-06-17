@@ -50,10 +50,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
 
     // Nouvelles routes pour la gestion des accès aux projets
-    Route::get('/projects/available', [AdminController::class, 'getAvailableProjects'])->name('admin.projects.available');
-    Route::get('/users/{user}/project-accesses', [AdminController::class, 'getUserProjectAccesses'])->name('admin.users.project-accesses');
-    Route::post('/project-access/grant', [AdminController::class, 'grantProjectAccess'])->name('admin.project-access.grant');
-    Route::post('/project-access/revoke', [AdminController::class, 'revokeProjectAccess'])->name('admin.project-access.revoke');
+    Route::get('/admin/projects/available', [AdminController::class, 'getAvailableProjects'])->name('admin.projects.available');
+    Route::get('/admin/users/{user}/project-accesses', [AdminController::class, 'getUserProjectAccesses'])->name('admin.users.project-accesses');
+    Route::post('/admin/project-access/grant', [AdminController::class, 'grantProjectAccess'])->name('admin.project-access.grant');
+    Route::post('/admin/project-access/revoke', [AdminController::class, 'revokeProjectAccess'])->name('admin.project-access.revoke');
     
     // Routes existantes pour les projets supprimés 
     Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects'])->name('admin.projects.deleted');

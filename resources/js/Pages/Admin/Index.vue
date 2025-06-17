@@ -12,7 +12,6 @@
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-6">Roles and permissions management</h3>
             <div class="space-y-6">
-                <!-- Table des rôles et permissions -->
                 <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -61,7 +60,6 @@
             <h4 class="text-lg font-medium text-gray-900 mb-4">Create a user</h4>
             <form @submit.prevent="createUser" class="space-y-4">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <!-- Nom -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Name</label>
                     <input 
@@ -71,8 +69,6 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
-
-                <!-- Email -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email</label>
                     <input 
@@ -82,8 +78,6 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
-
-                <!-- Mot de passe -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Password</label>
                     <input 
@@ -93,8 +87,6 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
-
-                <!-- Rôle -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Role</label>
                     <select 
@@ -109,8 +101,6 @@
                     </select>
                 </div>
                 </div>
-
-                <!-- Bouton de soumission -->
                 <div class="flex justify-end">
                 <button 
                     type="submit"
@@ -125,8 +115,6 @@
           <!-- Gestion des utilisateurs et accès aux projets -->
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-6">User management and project access</h3>
-  
-            <!-- Liste des utilisateurs avec leur rôle -->
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
@@ -167,7 +155,6 @@
                     </select>
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-500">
-                    <!-- Affichage des accès aux projets -->
                     <div class="space-y-1">
                       <div v-if="user.project_accesses && user.project_accesses.length > 0" 
                            v-for="access in user.project_accesses" 
@@ -222,6 +209,12 @@
             </button>
           </div>
           
+          <!-- Debug: Afficher le nombre de projets disponibles -->
+          <div class="mb-2 text-sm text-gray-600">
+            Projects available: {{ availableProjects.length }}
+            <span v-if="loadingProjects" class="text-blue-600">(Loading...)</span>
+          </div>
+          
           <!-- Formulaire pour accorder un nouvel accès -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg">
             <h4 class="text-md font-medium text-gray-900 mb-3">Grant new project access</h4>
@@ -237,9 +230,13 @@
                   >
                     <option value="">Select a project</option>
                     <option v-for="project in availableProjects" :key="project.id" :value="project.id">
-                      {{ project.display_name }}
+                      {{ project.display_name || project.name }}
                     </option>
                   </select>
+                  <!-- Debug: Afficher les projets disponibles -->
+                  <div v-if="availableProjects.length === 0" class="mt-1 text-sm text-red-600">
+                    No projects available. Check console for errors.
+                  </div>
                 </div>
 
                 <!-- Niveau d'accès -->
@@ -260,7 +257,8 @@
               <div class="flex justify-end">
                 <button 
                   type="submit"
-                  class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700"
+                  :disabled="!newProjectAccess.project_id || loadingProjects"
+                  class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50"
                 >
                   Grant access
                 </button>
@@ -312,7 +310,7 @@ const props = defineProps({
   users: Array,
   roles: Array,
   permissions: Array,
-  projects: Array
+  projects: Array // Ajouté pour recevoir les projets depuis le controller
 })
 
 // États existants
@@ -328,6 +326,7 @@ const showProjectAccessModal = ref(false)
 const selectedUser = ref(null)
 const currentUserAccesses = ref([])
 const availableProjects = ref([])
+const loadingProjects = ref(false)
 const newProjectAccess = ref({
   project_id: '',
   access_level: 'read'
@@ -335,6 +334,20 @@ const newProjectAccess = ref({
 
 // Charger les projets disponibles au montage
 onMounted(async () => {
+  console.log('Component mounted')
+  console.log('Props projects:', props.projects)
+  
+  // Utiliser les projets des props d'abord si disponibles
+  if (props.projects && props.projects.length > 0) {
+    availableProjects.value = props.projects.map(project => ({
+      id: project.id,
+      name: project.name,
+      display_name: `${project.name} (${project.user?.name || 'Unknown owner'})`
+    }))
+    console.log('Projects loaded from props:', availableProjects.value)
+  }
+  
+  // Charger également via API pour avoir la liste complète
   await loadAvailableProjects()
 })
 
@@ -344,17 +357,13 @@ const createUser = async () => {
     const response = await axios.post('/admin/users', newUser.value)
     
     if (response.data.success) {
-      // Réinitialiser le formulaire
       newUser.value = {
         name: '',
         email: '',
         password: '',
         role_id: ''
       }
-
-      // Rafraîchir la page pour voir le nouvel utilisateur
       window.location.reload()
-      
       alert('User created successfully!')
     }
   } catch (error) {
@@ -385,7 +394,6 @@ const saveRolePermissions = async (role) => {
     await axios.put(`/admin/roles/${role.id}/permissions`, {
       permissions: role.permissions.map(p => p.id)
     })
-    
     alert('Permissions updated successfully!')
   } catch (error) {
     console.error('Error while updating permissions:', error)
@@ -398,7 +406,6 @@ const updateUserRole = async (user) => {
     await axios.post(`/admin/users/${user.id}/role`, {
       role_id: user.role_id
     })
-    
     alert('Role updated successfully!')
   } catch (error) {
     console.error('Error while updating role:', error)
@@ -409,18 +416,51 @@ const updateUserRole = async (user) => {
 // Nouvelles fonctions pour la gestion des accès aux projets
 const loadAvailableProjects = async () => {
   try {
+    loadingProjects.value = true
+    console.log('Loading projects from API...')
+    
     const response = await axios.get('/admin/projects/available')
+    console.log('API Response:', response.data)
+    
     if (response.data.success) {
-      availableProjects.value = response.data.projects
+      availableProjects.value = response.data.projects || []
+      console.log('Projects loaded successfully:', availableProjects.value)
+    } else {
+      console.error('API returned success=false:', response.data)
     }
   } catch (error) {
     console.error('Error loading projects:', error)
+    console.error('Error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url
+    })
+    
+    // Fallback: utiliser les projets des props
+    if (props.projects && props.projects.length > 0) {
+      availableProjects.value = props.projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        display_name: `${project.name} (${project.user?.name || 'Unknown owner'})`
+      }))
+      console.log('Using fallback projects from props:', availableProjects.value)
+    }
+  } finally {
+    loadingProjects.value = false
   }
 }
 
 const openProjectAccessModal = async (user) => {
+  console.log('Opening modal for user:', user)
   selectedUser.value = user
   showProjectAccessModal.value = true
+  
+  // Recharger les projets disponibles
+  if (availableProjects.value.length === 0) {
+    await loadAvailableProjects()
+  }
+  
   await loadUserProjectAccesses(user.id)
 }
 
@@ -436,9 +476,12 @@ const closeProjectAccessModal = () => {
 
 const loadUserProjectAccesses = async (userId) => {
   try {
+    console.log('Loading project accesses for user:', userId)
     const response = await axios.get(`/admin/users/${userId}/project-accesses`)
+    
     if (response.data.success) {
       currentUserAccesses.value = response.data.accesses
+      console.log('User accesses loaded:', currentUserAccesses.value)
     }
   } catch (error) {
     console.error('Error loading user project accesses:', error)
@@ -447,6 +490,12 @@ const loadUserProjectAccesses = async (userId) => {
 
 const grantProjectAccess = async () => {
   try {
+    console.log('Granting access:', {
+      user_id: selectedUser.value.id,
+      project_id: newProjectAccess.value.project_id,
+      access_level: newProjectAccess.value.access_level
+    })
+    
     const response = await axios.post('/admin/project-access/grant', {
       user_id: selectedUser.value.id,
       project_id: newProjectAccess.value.project_id,
@@ -455,17 +504,11 @@ const grantProjectAccess = async () => {
     
     if (response.data.success) {
       alert('Project access granted successfully!')
-      
-      // Recharger les accès de l'utilisateur
       await loadUserProjectAccesses(selectedUser.value.id)
-      
-      // Réinitialiser le formulaire
       newProjectAccess.value = {
         project_id: '',
         access_level: 'read'
       }
-      
-      // Rafraîchir la page pour voir les changements
       window.location.reload()
     }
   } catch (error) {
@@ -488,12 +531,10 @@ const revokeProjectAccess = async (userId, projectId) => {
     if (response.data.success) {
       alert('Project access revoked successfully!')
       
-      // Si le modal est ouvert, recharger les accès
       if (showProjectAccessModal.value && selectedUser.value?.id === userId) {
         await loadUserProjectAccesses(userId)
       }
       
-      // Rafraîchir la page pour voir les changements
       window.location.reload()
     }
   } catch (error) {
