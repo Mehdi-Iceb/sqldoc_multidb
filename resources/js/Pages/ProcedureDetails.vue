@@ -46,7 +46,7 @@
                     class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="saving"
                   >
-                    {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+                    {{ saving ? 'Recording...' : 'Save' }}
                   </button>
                 </div>
               </div>
@@ -55,7 +55,7 @@
                   v-model="form.description"
                   rows="3"
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Description de la procédure stockée (usage, paramètres, exemples...)"
+                  placeholder="Description of the stored procedure (usage, parameters, examples, ...)"
                 ></textarea>
               </div>
             </div>
@@ -69,7 +69,7 @@
                 <div>
                   <p class="text-sm text-gray-600">Schema</p>
                   <p class="mt-1 text-sm font-medium text-gray-900">
-                    {{ procedureDetails.schema || 'Non spécifié' }}
+                    {{ procedureDetails.schema || 'Not specified' }}
                   </p>
                 </div>
                 <div>
@@ -174,18 +174,18 @@
       
       if (response.data.success) {
         // Message de succès
-        alert('Description de la procédure stockée enregistrée avec succès')
+        alert('Description of the successfully registered stored procedure')
         
         // Mise à jour locale
         procedureDetails.value.description = form.value.description
       } else {
-        throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+        throw new Error(response.data.error || 'Error while saving')
       }
       
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error)
-      console.error('Détails:', error.response?.data)
-      alert('Erreur lors de la sauvegarde de la description')
+      console.error('Error while saving:', error)
+      console.error('Details:', error.response?.data)
+      alert('Error saving description')
     } finally {
       saving.value = false
     }
@@ -206,15 +206,15 @@
         
         if (response.data.success) {
         // Message de succès
-        alert('Description de la procédure stockée enregistrée avec succès')
+        alert('Description of the successfully registered stored procedure')
         } else {
-        throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+        throw new Error(response.data.error || 'Error while saving')
         }
         
     } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error)
-        console.error('Détails:', error.response?.data)
-        alert('Erreur lors de la sauvegarde de la description')
+        console.error('Error while saving:', error)
+        console.error('Details:', error.response?.data)
+        alert('Error saving description')
     } finally {
         saving.value = false
     }

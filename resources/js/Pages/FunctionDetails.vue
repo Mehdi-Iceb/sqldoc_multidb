@@ -11,7 +11,7 @@
               class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               :disabled="saving"
             >
-              {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+              {{ saving ? 'Saving...' : 'Save' }}
             </button>
           </div>
         </div>
@@ -20,7 +20,7 @@
             v-model="descriptionText"
             rows="3"
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="Description optionnelle (usage, entrées/sorties, règles métier...)"
+            placeholder="Optional description (usage, inputs/outputs, business rules, ...)"
           ></textarea>
         </div>
       </div>
@@ -137,7 +137,7 @@
                       ? 'bg-blue-100 text-blue-800' 
                       : 'bg-gray-100 text-gray-800'
                   ]">
-                    {{ param.is_output ? 'Oui' : 'Non' }}
+                    {{ param.is_output ? 'Yes' : 'No' }}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
@@ -167,7 +167,7 @@
                       <button
                         @click="saveParamDescription(param)"
                         class="p-1 text-green-600 hover:text-green-700"
-                        title="Sauvegarder"
+                        title="Save"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -208,7 +208,7 @@
         </div>
         <div class="p-6">
           <div class="bg-gray-900 p-4 rounded overflow-auto max-h-96">
-            <pre class="text-gray-200 text-sm whitespace-pre-wrap">{{ functionData.definition || 'Définition non disponible' }}</pre>
+            <pre class="text-gray-200 text-sm whitespace-pre-wrap">{{ functionData.definition || 'Definition not available' }}</pre>
           </div>
         </div>
       </div>
@@ -247,8 +247,8 @@
   // Onglets
   const activeTab = ref('parameters');
   const tabs = [
-    { id: 'parameters', name: 'Paramètres' },
-    { id: 'definition', name: 'Définition' }
+    { id: 'parameters', name: 'Parameters' },
+    { id: 'definition', name: 'Definition' }
   ];
   
   // Pour l'édition des descriptions de paramètres
