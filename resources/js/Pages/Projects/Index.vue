@@ -427,11 +427,11 @@ const getAccessIcon = (accessLevel) => {
     switch (accessLevel) {
         case 'owner':
         case 'admin':
-            return '👑'; // Couronne pour propriétaire/admin
+            return '👑'; // pour propriétaire/admin
         case 'write':
-            return '✏️'; // Crayon pour écriture
+            return '✏️'; // pour écriture
         case 'read':
-            return '👁️'; // Oeil pour lecture seule
+            return '👁️'; // pour lecture seule
         default:
             return '❓';
     }
