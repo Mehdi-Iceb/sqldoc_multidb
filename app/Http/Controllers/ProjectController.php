@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\DbDescription;
 use App\Services\DatabaseStructureService;
+use App\Models\UserProjectAccess;
 
 
 class ProjectController extends Controller
@@ -430,24 +431,31 @@ class ProjectController extends Controller
             
             // Récupérer le projet
             $project = Project::withTrashed()->findOrFail($id);
-            Log::info('Projet trouvé', ['project_name' => $project->name, 'db_type' => $project->db_type]);
+            Log::info('Projet trouvé', ['project_name' => $project->name, 'db_type' => $project->db_type, 'owner_id' => $project->user_id]);
             
             // Vérifier si le projet est supprimé
             if ($project->trashed()) {
                 return redirect()->route('projects.index')
                     ->with('error', 'Ce projet a été supprimé et ne peut pas être ouvert.');
             }
-
+            
+            // *** VÉRIFICATION DES PERMISSIONS D'ACCÈS ***
             $userCanAccess = $this->checkUserProjectAccess($project);
-        
+            
             if (!$userCanAccess['allowed']) {
                 return redirect()->route('projects.index')
                     ->with('error', $userCanAccess['message']);
             }
-        
-        // Récupérer le niveau d'accès pour l'affichage
-        $accessLevel = $userCanAccess['access_level'];
-        Log::info('Accès autorisé', ['access_level' => $accessLevel]);
+            
+            // Récupérer le niveau d'accès pour l'affichage
+            $accessLevel = $userCanAccess['access_level'];
+            $isOwner = $userCanAccess['is_owner'];
+            Log::info('Accès autorisé', [
+                'access_level' => $accessLevel, 
+                'is_owner' => $isOwner,
+                'user_id' => auth()->id(),
+                'project_owner_id' => $project->user_id
+            ]);
             
             // Rechercher la description de BD
             $dbDescription = DbDescription::where('project_id', $project->id)->first();
@@ -455,19 +463,30 @@ class ProjectController extends Controller
             
             // *** CAS : Projet jamais connecté à une base de données ***
             if (!$dbDescription) {
-                Log::info('Projet jamais connecté à une base de données', ['project_id' => $project->id]);
+                Log::info('Projet jamais connecté à une base de données', [
+                    'project_id' => $project->id, 
+                    'access_level' => $accessLevel,
+                    'is_owner' => $isOwner
+                ]);
                 
-                if ($accessLevel === 'read') {
-                return redirect()->route('projects.index')
-                    ->with('warning', "Project '{$project->name}' is not configured yet and you only have read access. Contact the project owner to configure the database connection.");
+                if ($isOwner) {
+                    // Le propriétaire peut configurer la connexion
+                    Log::info('Redirection vers connexion pour le propriétaire', ['project_id' => $project->id]);
+                    return redirect()->route('projects.connect', $project->id)
+                        ->with('info', "Project '{$project->name}' needs to be connected to a database. Please provide the database connection details below.");
+                } else {
+                    // Les utilisateurs avec accès partagé ne peuvent pas configurer
+                    Log::info('Accès refusé pour utilisateur non-propriétaire', [
+                        'project_id' => $project->id,
+                        'user_id' => auth()->id(),
+                        'owner_id' => $project->user_id
+                    ]);
+                    return redirect()->route('projects.index')
+                        ->with('warning', "Project '{$project->name}' is not configured yet. Only the project owner can set up the database connection. Please contact the project owner to configure this project.");
                 }
-                // Rediriger vers la page de connexion avec un message explicatif
-                return redirect()->route('projects.connect', $project->id)
-                    ->with('info', "Project '{$project->name}' needs to be connected to a database. Please provide the database connection details below.");
             }
             
-            // *** RETOUR AU CODE ORIGINAL POUR LA CONNEXION ***
-            // Définir les informations de connexion (CODE ORIGINAL)
+            // Définir les informations de connexion (CODE ORIGINAL INCHANGÉ)
             $connectionInfo = null;
             if (isset($project->connection_info) && !empty($project->connection_info)) {
                 if (is_string($project->connection_info)) {
@@ -495,7 +514,7 @@ class ProjectController extends Controller
                 'database' => $connectionInfo['database']
             ]);
             
-            // VÉRIFICATION DU CONTENU DE LA BASE DE DONNÉES (CODE ORIGINAL AMÉLIORÉ)
+            // VÉRIFICATION DU CONTENU DE LA BASE DE DONNÉES (CODE ORIGINAL INCHANGÉ)
             $messages = ['success' => "Project '{$project->name}' opened successfully."]; // Valeur par défaut
             
             try {
@@ -534,7 +553,7 @@ class ProjectController extends Controller
                 ];
             }
             
-            // Mettre à jour la session (CODE ORIGINAL)
+            // Mettre à jour la session avec les informations d'accès
             session([
                 'current_project' => [
                     'id' => $project->id,
@@ -542,14 +561,14 @@ class ProjectController extends Controller
                     'db_type' => $project->db_type,
                     'connection' => $connectionInfo,
                     'access_level' => $accessLevel,
-                    'is_owner' => $accessLevel === 'owner'
+                    'is_owner' => $isOwner
                 ],
                 'current_db_id' => $dbDescription->id
             ]);
             
             Log::info('Session mise à jour');
             
-            // Rediriger avec les messages appropriés (CODE ORIGINAL)
+            // Rediriger avec les messages appropriés (CODE ORIGINAL INCHANGÉ)
             $redirectResponse = redirect()->route('dashboard');
             
             if (isset($messages['error'])) {
@@ -611,32 +630,44 @@ class ProjectController extends Controller
     {
         $userId = auth()->id();
         
+        Log::info('Vérification accès utilisateur', [
+            'user_id' => $userId,
+            'project_id' => $project->id,
+            'project_owner_id' => $project->user_id
+        ]);
+        
         // Le propriétaire a toujours accès
-        if ($project->user_id === $userId) {
+        if ($project->user_id == $userId) {
+            Log::info('Utilisateur identifié comme propriétaire');
             return [
                 'allowed' => true,
                 'access_level' => 'owner',
+                'is_owner' => true,
                 'message' => 'Owner access'
             ];
         }
         
         // Vérifier les accès partagés
-        $projectAccess = \App\Models\UserProjectAccess::where('user_id', $userId)
+        $projectAccess = UserProjectAccess::where('user_id', $userId)
             ->where('project_id', $project->id)
             ->first();
         
         if ($projectAccess) {
+            Log::info('Accès partagé trouvé', ['access_level' => $projectAccess->access_level]);
             return [
                 'allowed' => true,
                 'access_level' => $projectAccess->access_level,
+                'is_owner' => false,
                 'message' => 'Shared access: ' . $projectAccess->access_level
             ];
         }
         
         // Aucun accès
+        Log::info('Aucun accès trouvé pour cet utilisateur');
         return [
             'allowed' => false,
             'access_level' => null,
+            'is_owner' => false,
             'message' => "You don't have permission to access this project. Contact the project owner or an administrator."
         ];
     }

@@ -144,7 +144,7 @@
                             <!-- Projets dont vous êtes propriétaire -->
                             <div v-if="ownedProjects.length > 0">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                    <svg class="h-5 w-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="h-5 w-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     Your Projects ({{ ownedProjects.length }})
@@ -153,9 +153,9 @@
                                     <div 
                                         v-for="project in ownedProjects" 
                                         :key="'owned-' + project.id"
-                                        class="border-2 border-yellow-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-yellow-50"
+                                        class="border-2 border-blue-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-blue-50"
                                     >
-                                        <div class="p-4 border-b bg-yellow-100">
+                                        <div class="p-4 border-b bg-blue-100">
                                             <div class="flex justify-between items-start">
                                                 <div class="flex-1">
                                                     <h4 class="text-lg font-semibold text-gray-800">{{ project.name }}</h4>
@@ -431,7 +431,7 @@ const getAccessIcon = (accessLevel) => {
         case 'write':
             return '✏️'; // Crayon pour écriture
         case 'read':
-            return '👁️'; // Œil pour lecture seule
+            return '👁️'; // Oeil pour lecture seule
         default:
             return '❓';
     }
