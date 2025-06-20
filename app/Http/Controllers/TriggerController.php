@@ -2,18 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Traits\HasProjectPermissions;
 use Illuminate\Http\Request;
 use App\Models\TriggerDescription;
 use App\Models\TriggerInformation;
 
 class TriggerController extends Controller
 {
+
+    use HasProjectPermissions;
+
     /**
      * Récupère les détails d'un trigger
      */
     public function apiDetails($triggerName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('API - Récupération des détails pour triggerName: ' . $triggerName . ', dbId: ' . $dbId);
@@ -65,6 +74,11 @@ class TriggerController extends Controller
     public function details($triggerName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour triggerName: ' . $triggerName . ', dbId: ' . $dbId);
@@ -176,6 +190,11 @@ class TriggerController extends Controller
     public function saveDescription(Request $request, $triggerName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update triggers.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string'
@@ -213,6 +232,11 @@ class TriggerController extends Controller
     public function saveAll(Request $request, $triggerName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update triggers.')) {
+            return $error;
+            }
+            
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string',

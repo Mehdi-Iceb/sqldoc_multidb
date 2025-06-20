@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Traits\HasProjectPermissions;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -15,74 +16,75 @@ use App\Models\UserProjectAccess;
 
 class ProjectController extends Controller
 {
+    use HasProjectPermissions;
 
     public function index()
-{
-    $userId = auth()->id();
-    
-    // Récupérer les projets appartenant à l'utilisateur
-    $ownedProjects = Project::where('user_id', $userId)
-        ->whereNull('deleted_at')
-        ->get()
-        ->map(function ($project) {
-            return [
-                'id' => $project->id,
-                'name' => $project->name,
-                'description' => $project->description,
-                'db_type' => $project->db_type,
-                'is_owner' => true,
-                'access_level' => 'admin', // Le propriétaire a tous les droits
-                'owner_name' => auth()->user()->name,
-                'created_at' => $project->created_at,
-                'updated_at' => $project->updated_at
-            ];
-        });
-    
-    // Récupérer les projets partagés avec l'utilisateur
-    $sharedProjects = collect();
-    
-    $userProjectAccesses = \App\Models\UserProjectAccess::where('user_id', $userId)
-        ->with(['project' => function($query) {
-            $query->whereNull('deleted_at')->with('user:id,name');
-        }])
-        ->get();
-    
-    foreach ($userProjectAccesses as $access) {
-        if ($access->project) { // Vérifier que le projet existe encore
-            $sharedProjects->push([
-                'id' => $access->project->id,
-                'name' => $access->project->name,
-                'description' => $access->project->description,
-                'db_type' => $access->project->db_type,
-                'is_owner' => false,
-                'access_level' => $access->access_level,
-                'owner_name' => $access->project->user->name,
-                'created_at' => $access->project->created_at,
-                'updated_at' => $access->project->updated_at,
-                'shared_at' => $access->created_at
-            ]);
+    {
+        $userId = auth()->id();
+        
+        // Récupérer les projets appartenant à l'utilisateur
+        $ownedProjects = Project::where('user_id', $userId)
+            ->whereNull('deleted_at')
+            ->get()
+            ->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'db_type' => $project->db_type,
+                    'is_owner' => true,
+                    'access_level' => 'admin', // Le propriétaire a tous les droits
+                    'owner_name' => auth()->user()->name,
+                    'created_at' => $project->created_at,
+                    'updated_at' => $project->updated_at
+                ];
+            });
+        
+        // Récupérer les projets partagés avec l'utilisateur
+        $sharedProjects = collect();
+        
+        $userProjectAccesses = \App\Models\UserProjectAccess::where('user_id', $userId)
+            ->with(['project' => function($query) {
+                $query->whereNull('deleted_at')->with('user:id,name');
+            }])
+            ->get();
+        
+        foreach ($userProjectAccesses as $access) {
+            if ($access->project) { // Vérifier que le projet existe encore
+                $sharedProjects->push([
+                    'id' => $access->project->id,
+                    'name' => $access->project->name,
+                    'description' => $access->project->description,
+                    'db_type' => $access->project->db_type,
+                    'is_owner' => false,
+                    'access_level' => $access->access_level,
+                    'owner_name' => $access->project->user->name,
+                    'created_at' => $access->project->created_at,
+                    'updated_at' => $access->project->updated_at,
+                    'shared_at' => $access->created_at
+                ]);
+            }
         }
+        
+        // Combiner les deux collections
+        $allProjects = $ownedProjects->concat($sharedProjects)->sortBy('name');
+        
+        Log::info('Projects récupérés pour l\'utilisateur', [
+            'user_id' => $userId,
+            'owned_count' => $ownedProjects->count(),
+            'shared_count' => $sharedProjects->count(),
+            'total_count' => $allProjects->count()
+        ]);
+        
+        return Inertia::render('Projects/Index', [
+            'projects' => $allProjects->values(), // Réindexer la collection
+            'stats' => [
+                'owned' => $ownedProjects->count(),
+                'shared' => $sharedProjects->count(),
+                'total' => $allProjects->count()
+            ]
+        ]);
     }
-    
-    // Combiner les deux collections
-    $allProjects = $ownedProjects->concat($sharedProjects)->sortBy('name');
-    
-    Log::info('Projects récupérés pour l\'utilisateur', [
-        'user_id' => $userId,
-        'owned_count' => $ownedProjects->count(),
-        'shared_count' => $sharedProjects->count(),
-        'total_count' => $allProjects->count()
-    ]);
-    
-    return Inertia::render('Projects/Index', [
-        'projects' => $allProjects->values(), // Réindexer la collection
-        'stats' => [
-            'owned' => $ownedProjects->count(),
-            'shared' => $sharedProjects->count(),
-            'total' => $allProjects->count()
-        ]
-    ]);
-}
 
     public function store(Request $request)
     {
@@ -111,6 +113,13 @@ class ProjectController extends Controller
 
     public function connect(Project $project)
     {
+        $userCanAccess = $this->checkUserProjectAccess($project);
+        
+        if (!$userCanAccess['allowed'] || !$userCanAccess['is_owner']) {
+            return redirect()->route('projects.index')
+                ->with('error', 'Only the project owner can configure database connections.');
+        }
+
         return Inertia::render('Projects/Connect', [
             'project' => $project
         ]);
@@ -118,6 +127,13 @@ class ProjectController extends Controller
 
     public function handleConnect(Request $request, Project $project)
     {
+
+        $userCanAccess = $this->checkUserProjectAccess($project);
+        
+        if (!$userCanAccess['allowed'] || !$userCanAccess['is_owner']) {
+            return back()->with('error', 'Only the project owner can configure database connections.');
+        }
+        
         try {
             $validated = $request->validate([
                 'server' => 'required',

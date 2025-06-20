@@ -11,37 +11,59 @@ use App\Models\Release;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use App\Http\Controllers\Traits\HasProjectPermissions;
 
 class TableController extends Controller
 {
+
+    use HasProjectPermissions;
     /**
      * Affiche les détails d'une table spécifique
      */
-    public function details($tableName)
+    public function details(Request $request, $tableName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
+            // Récupérer les permissions
+            $permissions = $this->getUserPermissions($request);
+            
+            // Vérifier si propriétaire
+            $isOwner = $this->isProjectOwner($request);
+            
+            // Vérifier niveau minimum
+            $canModifyStructure = $this->hasMinimumLevel($request, 'write');
+
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour tableName: ' . $tableName . ', dbId: ' . $dbId);
         
             if (!$dbId) {
+                $permissions = $this->getUserPermissions($request);
+            
                 if (request()->header('X-Inertia')) {
-                    // Si c'est une requête Inertia, renvoyer une réponse Inertia
                     return Inertia::render('TableDetails', [
                         'tableName' => $tableName,
                         'tableDetails' => [
                             'description' => '',
                             'columns' => [],
                             'indexes' => [],
-                            'relations' => []
+                            'relations' => [],
+                            'can_edit' => false,
+                            'can_add_columns' => false,
+                            'can_add_relations' => false
                         ],
+                        'permissions' => $permissions,
                         'error' => 'Aucune base de données sélectionnée'
                     ]);
                 } else {
-                    // Si c'est une requête AJAX normale, renvoyer une réponse JSON
-                    return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
-                }
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
             }
+        }
 
             // Récupérer la description de la table
             $tableDesc = TableDescription::where('dbid', $dbId)
@@ -66,7 +88,8 @@ class TableController extends Controller
                         'rangevalues' => $column->rangevalues,
                         'release_id' => $column->release_id, 
                         'release_version' => $column->release ? $column->release->version_number : null,
-                        'project_id' => $column->release ? $column->release->project_id : null
+                        'project_id' => $column->release ? $column->release->project_id : null,
+                        'can_edit' => $permissions['can_write'] ?? false
                         ];
                 });
 
@@ -112,25 +135,66 @@ class TableController extends Controller
                     ];
                 });
 
+                $permissions = $this->getUserPermissions($request);
+                $isOwner = $this->isProjectOwner($request);
+                $canModifyStructure = $this->hasMinimumLevel($request, 'write');
+
+                // Debug des permissions
+                Log::info('Permissions debug', [
+                    'permissions' => $permissions,
+                    'isOwner' => $isOwner,
+                    'canModifyStructure' => $canModifyStructure,
+                    'user_id' => auth()->id()
+                ]);
+
+                // Pour un owner, forcer les permissions à true
+                $canEdit = $isOwner || ($permissions['can_write'] ?? false);
+                $canAddColumns = $isOwner || ($permissions['can_write'] ?? false);
+                $canAddRelations = $isOwner || ($permissions['can_write'] ?? false);
+
+                // Mapper les colonnes avec les permissions
+                $columnsWithPermissions = $columns->map(function ($column) use ($canEdit) {
+                    $column['can_edit'] = $canEdit;
+                    return $column;
+                });
+
+                $tableData = [
+                    'description' => $tableDesc->description,
+                    'columns' => $columnsWithPermissions,
+                    'indexes' => $indexes,
+                    'relations' => $relations,
+                    'can_edit' => $canEdit,
+                    'can_add_columns' => $canAddColumns,
+                    'can_add_relations' => $canAddRelations,
+                    'is_owner' => $isOwner,
+                    // ✅ AJOUT: Debug info pour le frontend
+                    'permissions_debug' => [
+                        'raw_permissions' => $permissions,
+                        'is_owner' => $isOwner,
+                        'can_edit_computed' => $canEdit,
+                        'can_add_columns_computed' => $canAddColumns,
+                        'can_add_relations_computed' => $canAddRelations
+                    ]
+                ];
+
+                // ✅ Log final pour vérifier ce qui est envoyé
+                Log::info('Données envoyées au frontend', [
+                    'can_edit' => $tableData['can_edit'],
+                    'can_add_columns' => $tableData['can_add_columns'],
+                    'can_add_relations' => $tableData['can_add_relations'],
+                    'is_owner' => $tableData['is_owner']
+                ]);
+
                 if (request()->header('X-Inertia')) {
                     return Inertia::render('TableDetails', [
                         'tableName' => $tableName,
-                        'tableDetails' => [
-                            'description' => $tableDesc->description,
-                            'columns' => $columns,
-                            'indexes' => $indexes,
-                            'relations' => $relations
-                        ]
+                        'tableDetails' => $tableData,
+                        'permissions' => $permissions
                     ]);
                 } else {
-                    return response()->json([
-                        'description' => $tableDesc->description,
-                        'columns' => $columns,
-                        'indexes' => $indexes,
-                        'relations' => $relations
-                    ]);
+                    return response()->json($tableData);
                 }
-        
+                
             } catch (\Exception $e) {
                 Log::error('Erreur dans TableController::details', [
                     'error' => $e->getMessage(),
@@ -235,6 +299,11 @@ class TableController extends Controller
     public function saveStructure(Request $request, $tableName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to modify table structure.')) {
+                return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string',
@@ -338,6 +407,12 @@ class TableController extends Controller
                 }
             }
 
+            Log::info('Table structure updated', [
+                'user_id' => auth()->id(),
+                'table_name' => $tableName,
+                'permissions' => $request->get('user_project_permission')['level'] ?? 'none'
+            ]);
+
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
@@ -351,6 +426,11 @@ class TableController extends Controller
     public function updateColumnDescription(Request $request, $tableName, $columnName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column descriptions.')) {
+                return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string'
@@ -410,6 +490,11 @@ class TableController extends Controller
     public function updateColumnPossibleValues(Request $request, $tableName, $columnName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update possible values.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'possible_values' => 'nullable|string'
@@ -481,6 +566,11 @@ class TableController extends Controller
     public function updateColumnProperties(Request $request, $tableName, $columnName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column properties.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'column_name' => 'required|string',
@@ -600,6 +690,11 @@ class TableController extends Controller
     public function updateColumnRelease(Request $request, $tableName, $columnName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column release.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'release_id' => 'nullable|exists:release,id'
@@ -837,6 +932,10 @@ class TableController extends Controller
     public function addColumn(Request $request, $tableName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to add columns.')) {
+                return $error;
+            }
             // Valider les données
             $validated = $request->validate([
                 'column_name' => 'required|string|max:255',
@@ -932,6 +1031,11 @@ class TableController extends Controller
     public function addRelation(Request $request, $tableName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to add relations.')) {
+                return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'constraint_name' => 'required|string|max:255',
@@ -1046,21 +1150,21 @@ class TableController extends Controller
     }
 
     public function getTableId($tableName)
-{
-    try {
-        $dbId = session('current_db_id');
-        $tableDesc = TableDescription::where('dbid', $dbId)
-            ->where('tablename', $tableName)
-            ->first();
+    {
+        try {
+            $dbId = session('current_db_id');
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
 
-        if (!$tableDesc) {
-            return response()->json(['error' => 'Table non trouvée'], 404);
+            if (!$tableDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            return response()->json(['id' => $tableDesc->id]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur: ' . $e->getMessage()], 500);
         }
-
-        return response()->json(['id' => $tableDesc->id]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Erreur: ' . $e->getMessage()], 500);
     }
-}
 
 }

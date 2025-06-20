@@ -268,8 +268,6 @@ const isOpen = ref({
   triggers: true,
 });
 
-
-
 // État pour les données de la base de données
 const databaseStructure = ref(null);
 
@@ -542,7 +540,7 @@ onMounted(async () => {
     console.log("Triggers:", databaseStructure.value?.triggers);
     
     // Ouvrir la section tables par défaut
-    showingTables.value = true;
+    //showingTables.value = true;
   } catch (error) {
     console.error('Erreur lors du chargement de la structure:', error);
   }

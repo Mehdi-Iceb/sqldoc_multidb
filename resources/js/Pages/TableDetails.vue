@@ -83,13 +83,15 @@
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">Table description</h3>
+                <!--  Bouton conditionnel selon les permissions -->
                 <button 
+                  v-if="tableDetails.can_edit"
                   @click="saveTableStructure" 
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 relative"
                   :class="{ 'opacity-50 cursor-not-allowed': saving }"
                   :disabled="saving"
                 >
-                  <!-- 🎯 SPINNER 1: Bouton Save descriptions -->
+                  <!--  SPINNER 1: Bouton Save descriptions -->
                   <span v-if="!saving">Save descriptions</span>
                   <span v-else class="flex items-center">
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -99,6 +101,10 @@
                     Saving...
                   </span>
                 </button>
+                <!-- ✅ Message si pas de permissions -->
+                <span v-else class="text-sm text-gray-500 italic">
+                  Read-only access
+                </span>
               </div>
             </div>
             <div class="p-6">
@@ -106,8 +112,10 @@
                 v-model="form.description"
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                :class="{ 'opacity-50 cursor-not-allowed bg-gray-100': !tableDetails.can_edit }"
                 placeholder="Optional description (use, environment, content...)"
-                :disabled="saving"
+                :disabled="!tableDetails.can_edit || saving"
+                :readonly="!tableDetails.can_edit"
               ></textarea>
             </div>
           </div>
@@ -122,13 +130,13 @@
                   </svg>
                   Table structure
                 </h3>
-                <PrimaryButton @click="showAddColumnModal = true">
+                <PrimaryButton v-if="tableDetails.can_add_columns" @click="showAddColumnModal = true">
                   Add a column
                 </PrimaryButton>
               </div>
             </div>
 
-            <!-- 🎯 MODAL 1: Add Column avec spinner -->
+            <!--  MODAL 1: Add Column avec spinner -->
             <div v-if="showAddColumnModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
                 <!-- Overlay de chargement pour le modal -->
@@ -313,7 +321,7 @@
                       {{ column.column_name }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <!-- 🎯 SPINNER 2: Édition du type de données -->
+                      <!--  SPINNER 2: Édition du type de données -->
                       <div class="flex items-center space-x-2">
                         <span v-if="!editingDataType[column.column_name]" class="font-mono">
                           {{ formatDataType(column) }}
@@ -322,13 +330,14 @@
                           v-else
                           v-model="editingDataTypeValue"
                           type="text"
-                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 font-mono"
+                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                          :disabled="!tableDetails.can_edit"
                           @keyup.enter="saveDataType(column.column_name)"
                           @keyup.esc="cancelEdit('dataType', column.column_name)"
                           placeholder="Data type"
                         >
                         <button
-                          v-if="!editingDataType[column.column_name]"
+                          v-if="!editingDataType[column.column_name] && tableDetails.can_edit"
                           @click="startEdit('dataType', column.column_name, column.data_type)"
                           class="p-1 text-gray-400 hover:text-gray-600"
                           title="Modifier le type de données"
@@ -366,17 +375,17 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                      <!-- 🎯 SPINNER 3: Mise à jour Nullable avec overlay -->
+                      <!--  SPINNER 3: Mise à jour Nullable avec overlay -->
                       <div class="flex items-center space-x-2 relative">
                         <select 
+                        :value="column.is_nullable ? 'true' : 'false'"
+                        @change="updateNullable(column, $event.target.value === 'true')"
+                        :disabled="!tableDetails.can_edit || updatingNullable[column.column_name]"
                           :class="[
                             'block w-full pl-3 pr-10 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity',
                             column.is_nullable ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800',
                             updatingNullable[column.column_name] ? 'opacity-50' : ''
                           ]"
-                          :value="column.is_nullable ? 'true' : 'false'"
-                          @change="updateNullable(column, $event.target.value === 'true')"
-                          :disabled="updatingNullable[column.column_name]"
                         >
                           <option value="true">Yes</option>
                           <option value="false">No</option>
@@ -417,11 +426,12 @@
                           v-else
                           v-model="editingDescriptionValue"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                          :disabled="!tableDetails.can_edit"
                           @keydown.ctrl.enter="saveDescription(column.column_name)"
                           @keydown.esc="cancelEdit('description', column.column_name)"
                         ></textarea>
                         <button
-                          v-if="!editingDescription[column.column_name]"
+                          v-if="!editingDescription[column.column_name] && tableDetails.can_edit"
                           @click="startEdit('description', column.column_name, column.description)"
                           class="p-1 text-gray-400 hover:text-gray-600"
                           title="Modifier la description"
@@ -467,12 +477,13 @@
                           v-else
                           v-model="editingPossibleValuesValue"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                          :disabled="!tableDetails.can_edit"
                           @keyup.enter="savePossibleValues(column.column_name)"
                           @keyup.esc="cancelEdit('possibleValues', column.column_name)"
                           placeholder="exemple of possible value"
                         ></textarea>
                         <button
-                          v-if="!editingPossibleValues[column.column_name]"
+                          v-if="!editingPossibleValues[column.column_name] && tableDetails.can_edit"
                           @click="startEdit('possibleValues', column.column_name, column.possible_values)"
                           class="p-1 text-gray-400 hover:text-gray-600"
                           title="Modifier les valeurs possibles"
@@ -510,17 +521,18 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
-                      <!-- 🎯 SPINNER 4: Release dropdown avec spinner -->
+                      <!-- SPINNER 4: Release dropdown avec spinner -->
                       <div class="flex items-center space-x-2 relative">
                         <select 
                           :value="column.release_id || ''"
                           @change="updateColumnRelease(column, $event.target.value)"
-                          class="block w-full pl-3 pr-8 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity"
+                          :disabled="!tableDetails.can_edit || updatingRelease[column.column_name]"
                           :class="[
+                            'block w-full pl-3 pr-8 py-1 text-xs border-gray-300 rounded-md',
                             column.release_id ? 'bg-blue-50 text-blue-800' : '',
+                            !tableDetails.can_edit ? 'opacity-50 cursor-not-allowed' : '',
                             updatingRelease[column.column_name] ? 'opacity-50' : ''
                           ]"
-                          :disabled="updatingRelease[column.column_name]"
                         >
                           <option value="">-- No version --</option>
                           <option v-for="release in availableReleases" :key="release.id" :value="release.id">
@@ -624,13 +636,13 @@
                   </svg>
                   Relations
                 </h3>
-                <PrimaryButton @click="showAddRelationModal = true">
+                <PrimaryButton v-if="tableDetails.can_add_relations" @click="showAddRelationModal = true">
                   Add relation
                 </PrimaryButton>
               </div>
             </div>
 
-            <!-- 🎯 MODAL 2: Add Relation avec spinner -->
+            <!--  MODAL 2: Add Relation avec spinner -->
             <div v-if="showAddRelationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
                 <!-- Overlay de chargement pour le modal relation -->
@@ -902,7 +914,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+// ✅ Import corrigé avec computed
+import { ref, onMounted, watch, computed } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -918,7 +931,7 @@ const props = defineProps({
   }
 })
 
-// 🎯 VARIABLES D'ÉTAT POUR LES SPINNERS
+// Variables d'état pour les spinners
 const loadingProgress = ref(0)
 const savingDataType = ref({})
 const savingDescription = ref({})
@@ -926,23 +939,22 @@ const savingPossibleValues = ref({})
 const updatingNullable = ref({})
 const updatingRelease = ref({})
 
-// 🎯 SIMULATION DE PROGRESSION DE CHARGEMENT
+
+// Simulation de progression de chargement
 let progressInterval = null
 
 const simulateLoadingProgress = () => {
   loadingProgress.value = 0
   
-  // Nettoyer l'intervalle précédent s'il existe
   if (progressInterval) {
     clearInterval(progressInterval)
   }
   
   progressInterval = setInterval(() => {
     if (loadingProgress.value < 95) {
-      // Progression plus rapide au début, plus lente vers la fin
       const increment = loadingProgress.value < 50 ? 
-        Math.random() * 15 + 5 : // 5-20% au début
-        Math.random() * 8 + 2   // 2-10% vers la fin
+        Math.random() * 15 + 5 : 
+        Math.random() * 8 + 2   
       
       loadingProgress.value = Math.min(95, loadingProgress.value + increment)
     }
@@ -958,18 +970,44 @@ const stopLoadingProgress = () => {
 }
 
 // États principaux
-const loading = ref(true) // 🎯 IMPORTANT: Démarrer en loading=true
+const loading = ref(true)
 const error = ref(null)
 const saving = ref(false)
 const tableDetails = ref({
   description: '',
   columns: [],
   indexes: [],
-  relations: []
+  relations: [],
+  can_edit: false,
+  can_add_columns: false,
+  can_add_relations: false
 })
 const form = ref({
   description: ''
 })
+
+const canEdit = computed(() => {
+  console.log('🔍 [COMPUTED] canEdit:', tableDetails.value.can_edit)
+  return tableDetails.value.can_edit || false
+})
+
+const canAddColumns = computed(() => {
+  console.log('🔍 [COMPUTED] canAddColumns:', tableDetails.value.can_add_columns)
+  return tableDetails.value.can_add_columns || false
+})
+
+const canAddRelations = computed(() => {
+  console.log('🔍 [COMPUTED] canAddRelations:', tableDetails.value.can_add_relations)
+  return tableDetails.value.can_add_relations || false
+})
+
+// computed pour debugging
+const permissionsDebug = computed(() => ({
+  can_edit: tableDetails.value.can_edit,
+  can_add_columns: tableDetails.value.can_add_columns,
+  can_add_relations: tableDetails.value.can_add_relations,
+  is_owner: tableDetails.value.is_owner
+}))
 
 // États pour l'édition
 const editingDescription = ref({})
@@ -1011,95 +1049,111 @@ const newRelation = ref({
 
 const availableReleases = ref([])
 
-// 🎯 CHARGEMENT INITIAL AVEC SPINNER
+// ✅ CHARGEMENT INITIAL AVEC DEBUGGING AMÉLIORÉ
 onMounted(async () => {
   try {
-    console.log('🎯 Début du chargement pour:', props.tableName)
-    console.log('🎯 Loading state:', loading.value)
+    console.log('🔍 [TABLE] Début du chargement pour:', props.tableName)
+    console.log('🔍 [TABLE] Session info:', {
+      user: window.Laravel?.user,
+      dbId: window.Laravel?.session?.current_db_id
+    })
     
     // Démarrer la simulation de progression
     simulateLoadingProgress()
     
-    console.log('🎯 Simulation de progression démarrée')
+    console.log(' [TABLE] URL de requête:', `/table/${encodeURIComponent(props.tableName)}/details`)
     
     const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`)
-    console.log('🎯 Réponse reçue:', response.data)
+    console.log('🔍 [TABLE] Réponse complète du serveur:', response.data)
+    
+    // ✅ DEBUGGING DÉTAILLÉ
+    console.log('🔍 [TABLE] Permissions reçues:', {
+      can_edit: response.data.can_edit,
+      can_add_columns: response.data.can_add_columns,
+      can_add_relations: response.data.can_add_relations,
+      is_owner: response.data.is_owner,
+      permissions_debug: response.data.permissions_debug
+    })
     
     tableDetails.value = response.data
     form.value.description = response.data.description || ''
 
+    // Debug des permissions après assignation
+    console.log(' [TABLE] Permissions après assignation:', {
+      can_edit: tableDetails.value.can_edit,
+      can_add_columns: tableDetails.value.can_add_columns,
+      can_add_relations: tableDetails.value.can_add_relations,
+      is_owner: tableDetails.value.is_owner
+    })
+    
+    // check si les computed se mettent à jour
+    setTimeout(() => {
+      console.log('🔍 [TABLE] Computed values (après timeout):', {
+        canEdit: canEdit.value,
+        canAddColumns: canAddColumns.value,
+        canAddRelations: canAddRelations.value
+      })
+    }, 100)
+
+    // WATCHERS POUR SURVEILLER LES CHANGEMENTS
+    watch(() => tableDetails.value.can_edit, (newVal) => {
+      console.log('🔍 [WATCH] tableDetails.can_edit changed to:', newVal)
+    })
+
+    watch(canEdit, (newVal) => {
+      console.log('🔍 [WATCH] canEdit computed changed to:', newVal)
+    })
+
+    // COMPUTED POUR DÉBUGGER
+    const debugPermissions = computed(() => {
+      return {
+        tableDetails_can_edit: tableDetails.value.can_edit,
+        tableDetails_can_add_columns: tableDetails.value.can_add_columns,
+        tableDetails_can_add_relations: tableDetails.value.can_add_relations,
+        computed_canEdit: canEdit.value,
+        computed_canAddColumns: canAddColumns.value,
+        computed_canAddRelations: canAddRelations.value
+      }
+    })
+
     await loadAvailableReleases()
     
-    console.log('🎯 Données chargées avec succès')
+    console.log(' [TABLE] Données chargées avec succès')
+    console.log(' [TABLE] État final tableDetails:', tableDetails.value)
     
   } catch (err) {
-    console.error('🎯 Erreur complète:', err)
-    error.value = `Erreur: ${err.response?.data?.error || err.message}`
-  } finally {
-    console.log('🎯 Finalisation du chargement')
+    console.error('❌ [TABLE] Erreur complète:', err)
+    console.error('❌ [TABLE] Statut:', err.response?.status)
+    console.error('❌ [TABLE] Données erreur:', err.response?.data)
     
-    // Finaliser la progression et arrêter le loading
+    if (err.response?.status === 403) {
+      error.value = `Accès refusé: ${err.response?.data?.error || 'Permissions insuffisantes'}`
+    } else if (err.response?.status === 404) {
+      error.value = `Table "${props.tableName}" non trouvée`
+    } else {
+      error.value = `Erreur: ${err.response?.data?.error || err.message}`
+    }
+  } finally {
+    console.log('🔍 [TABLE] Finalisation du chargement')
+    
     stopLoadingProgress()
     
     setTimeout(() => {
-      console.log('🎯 Masquage du spinner')
+      console.log('🔍 [TABLE] Masquage du spinner')
       loading.value = false
-    }, 500) // Délai pour voir la progression à 100%
+    }, 500)
   }
 })
 
-// 🎯 FONCTIONS AVEC SPINNERS AMÉLIORÉES
-
-// Formatage du type de données
-const formatDataType = (column) => {
-  let type = column.data_type
-  
-  if (['varchar', 'nvarchar', 'char', 'nchar'].includes(type.toLowerCase())) {
-    if (column.max_length) {
-      type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`
-    }
-  } else if (['decimal', 'numeric'].includes(type.toLowerCase())) {
-    if (column.precision && column.scale !== undefined) {
-      type += `(${column.precision},${column.scale})`
-    }
-  }
-  
-  return type
-}
-
-// Fonction pour sauvegarder toute la structure
-const saveTableStructure = async () => {
-  try {
-    saving.value = true
-    
-    const tableData = {
-      description: form.value.description,
-      language: 'fr',
-      columns: tableDetails.value.columns.map(column => ({
-        column: column.column_name,
-        description: column.description || null,
-        rangevalues: column.possible_values || null
-      }))
-    }
-    
-    const response = await axios.post(`/table/${props.tableName}/save-structure`, tableData)
-    
-    if (response.data.success) {
-      alert('Descriptions et valeurs possibles enregistrées avec succès')
-    } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
-    }
-    
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error)
-    alert('Erreur lors de la sauvegarde des descriptions et valeurs possibles')
-  } finally {
-    saving.value = false
-  }
-}
-
 // Fonction générique pour démarrer l'édition
 const startEdit = (type, columnName, currentValue) => {
+  console.log('🔍 [EDIT] Tentative d\'édition:', { type, columnName, canEdit: canEdit.value })
+  
+  if (!canEdit.value) {
+    alert('Vous n\'avez pas les permissions pour modifier cette table')
+    return
+  }
+  
   if (type === 'description') {
     editingDescription.value = { [columnName]: true }
     editingDescriptionValue.value = currentValue || ''
@@ -1126,9 +1180,73 @@ const cancelEdit = (type, columnName) => {
   }
 }
 
-// 🎯 FONCTION POUR SAUVEGARDER LA DESCRIPTION AVEC SPINNER
+// Formatage du type de données
+const formatDataType = (column) => {
+  let type = column.data_type
+  
+  if (['varchar', 'nvarchar', 'char', 'nchar'].includes(type.toLowerCase())) {
+    if (column.max_length) {
+      type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`
+    }
+  } else if (['decimal', 'numeric'].includes(type.toLowerCase())) {
+    if (column.precision && column.scale !== undefined) {
+      type += `(${column.precision},${column.scale})`
+    }
+  }
+  
+  return type
+}
+
+// Fonction pour sauvegarder toute la structure
+const saveTableStructure = async () => {
+  try {
+    console.log('🔍 [SAVE] Tentative de sauvegarde, canEdit:', canEdit.value)
+    
+    if (!canEdit.value) {
+      alert('Vous n\'avez pas les permissions pour sauvegarder')
+      return
+    }
+    
+    saving.value = true
+    
+    const tableData = {
+      description: form.value.description,
+      language: 'fr',
+      columns: tableDetails.value.columns.map(column => ({
+        column: column.column_name,
+        description: column.description || null,
+        rangevalues: column.possible_values || null
+      }))
+    }
+    
+    console.log('🔍 [SAVE] Données à envoyer:', tableData)
+    
+    const response = await axios.post(`/table/${props.tableName}/save-structure`, tableData)
+    
+    if (response.data.success) {
+      alert('Descriptions et valeurs possibles enregistrées avec succès')
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+    
+  } catch (error) {
+    console.error('❌ [SAVE] Erreur lors de la sauvegarde:', error)
+    alert('Erreur lors de la sauvegarde: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+// Fonction pour sauvegarder la description avec spinner
 const saveDescription = async (columnName) => {
   try {
+    console.log('🔍 [DESC] Sauvegarde description:', { columnName, canEdit: canEdit.value })
+    
+    if (!canEdit.value) {
+      alert('Permissions insuffisantes')
+      return
+    }
+    
     savingDescription.value[columnName] = true
     
     const response = await axios.post(`/table/${props.tableName}/column/${columnName}/description`, {
@@ -1145,14 +1263,14 @@ const saveDescription = async (columnName) => {
       throw new Error(response.data.error || 'Erreur lors de la sauvegarde de la description')
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la description:', error)
-    alert('Erreur lors de la sauvegarde de la description')
+    console.error('❌ [DESC] Erreur:', error)
+    alert('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
   } finally {
     savingDescription.value[columnName] = false
   }
 }
 
-// 🎯 FONCTION POUR SAUVEGARDER LES VALEURS POSSIBLES AVEC SPINNER
+// Fonction pour sauvegarder les valeurs possibles avec spinner
 const savePossibleValues = async (columnName) => {
   try {
     savingPossibleValues.value[columnName] = true
@@ -1171,14 +1289,14 @@ const savePossibleValues = async (columnName) => {
       throw new Error(response.data.error || 'Erreur lors de la sauvegarde des valeurs possibles')
     }
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde des valeurs possibles:', error)
-    alert('Erreur lors de la sauvegarde des valeurs possibles')
+    console.error('❌ [VALUES] Erreur:', error)
+    alert('Erreur lors de la sauvegarde des valeurs possibles: ' + (error.response?.data?.error || error.message))
   } finally {
     savingPossibleValues.value[columnName] = false
   }
 }
 
-// 🎯 FONCTION POUR SAUVEGARDER LE TYPE DE DONNÉES AVEC SPINNER
+// Fonction pour sauvegarder le type de données avec spinner
 const saveDataType = async (columnName) => {
   try {
     savingDataType.value[columnName] = true
@@ -1201,16 +1319,23 @@ const saveDataType = async (columnName) => {
       throw new Error(response.data.error || 'Erreur lors de la sauvegarde du type de données')
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du type de données:', error)
-    alert('Erreur lors de la sauvegarde du type de données')
+    console.error('❌ [TYPE] Erreur:', error)
+    alert('Erreur lors de la sauvegarde du type de données: ' + (error.response?.data?.error || error.message))
   } finally {
     savingDataType.value[columnName] = false
   }
 }
 
-// 🎯 FONCTION POUR BASCULER LA NULLABILITÉ AVEC SPINNER
+// Fonction pour basculer la nullabilité avec spinner
 const updateNullable = async (column, isNullable) => {
   try {
+    console.log('🔍 [NULLABLE] Mise à jour:', { column: column.column_name, isNullable, canEdit: canEdit.value })
+    
+    if (!canEdit.value) {
+      alert('Permissions insuffisantes')
+      return
+    }
+    
     updatingNullable.value[column.column_name] = true
     
     if (typeof isNullable === 'string') {
@@ -1240,15 +1365,15 @@ const updateNullable = async (column, isNullable) => {
       throw new Error(response.data.error || 'Erreur lors de la modification de la nullabilité')
     }
   } catch (error) {
-    console.error('Erreur lors de la modification de la nullabilité:', error)
-    alert('Erreur lors de la modification de la nullabilité')
+    console.error('❌ [NULLABLE] Erreur:', error)
+    alert('Erreur lors de la modification de la nullabilité: ' + (error.response?.data?.error || error.message))
     await reloadTableData()
   } finally {
     updatingNullable.value[column.column_name] = false
   }
 }
 
-// 🎯 FONCTION POUR METTRE À JOUR LA VERSION AVEC SPINNER
+// Fonction pour mettre à jour la version avec spinner
 const updateColumnRelease = async (column, releaseId) => {
   try {
     updatingRelease.value[column.column_name] = true
@@ -1267,7 +1392,7 @@ const updateColumnRelease = async (column, releaseId) => {
       throw new Error(response.data.error || 'Erreur lors de la mise à jour')
     }
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la version:', error)
+    console.error('❌ [RELEASE] Erreur:', error)
     alert('Erreur: ' + (error.response?.data?.error || error.message))
     await reloadTableData()
   } finally {
@@ -1285,7 +1410,7 @@ const showAuditLogs = async (columnName) => {
     const response = await axios.get(`/table/${props.tableName}/column/${columnName}/audit-logs`)
     auditLogs.value = response.data
   } catch (error) {
-    console.error('Erreur lors du chargement des logs d\'audit:', error)
+    console.error('❌ [AUDIT] Erreur:', error)
     alert('Erreur lors du chargement de l\'historique des modifications')
   } finally {
     loadingAuditLogs.value = false
@@ -1361,6 +1486,11 @@ const formatLogValue = (value) => {
 // Fonction pour ajouter une nouvelle colonne
 const addNewColumn = async () => {
   try {
+    if (!canAddColumns.value) {
+      alert('Permissions insuffisantes pour ajouter une colonne')
+      return
+    }
+    
     addingColumn.value = true
     
     const columnData = {
@@ -1393,7 +1523,7 @@ const addNewColumn = async () => {
       throw new Error(response.data.error || 'Erreur lors de l\'ajout de la colonne')
     }
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la colonne:', error)
+    console.error('❌ [ADD_COL] Erreur:', error)
     alert('Erreur lors de l\'ajout de la colonne: ' + (error.response?.data?.error || error.message))
   } finally {
     addingColumn.value = false
@@ -1403,6 +1533,11 @@ const addNewColumn = async () => {
 // Fonction pour ajouter une nouvelle relation
 const addNewRelation = async () => {
   try {
+    if (!canAddRelations.value) {
+      alert('Permissions insuffisantes pour ajouter une relation')
+      return
+    }
+    
     addingRelation.value = true
     
     const relationData = {
@@ -1432,7 +1567,7 @@ const addNewRelation = async () => {
       throw new Error(response.data.error || 'Erreur lors de l\'ajout de la relation')
     }
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la relation:', error)
+    console.error('❌ [ADD_REL] Erreur:', error)
     alert('Erreur lors de l\'ajout de la relation: ' + (error.response?.data?.error || error.message))
   } finally {
     addingRelation.value = false
@@ -1444,8 +1579,9 @@ const reloadTableData = async () => {
   try {
     const response = await axios.get(`/table/${encodeURIComponent(props.tableName)}/details`)
     tableDetails.value = response.data
+    form.value.description = response.data.description || ''
   } catch (err) {
-    console.error('Erreur lors du rechargement des données:', err)
+    console.error('❌ [RELOAD] Erreur lors du rechargement des données:', err)
   }
 }
 
@@ -1455,7 +1591,7 @@ const loadAvailableReleases = async () => {
     const response = await axios.get('/api/releases/all')
     availableReleases.value = response.data
   } catch (error) {
-    console.error('Erreur lors du chargement des versions:', error)
+    console.error('❌ [RELEASES] Erreur lors du chargement des versions:', error)
   }
 }
 </script>

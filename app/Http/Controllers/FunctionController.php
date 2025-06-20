@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Traits\HasProjectPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\FunctionDescription;
@@ -12,12 +13,19 @@ use Inertia\Inertia;
 
 class FunctionController extends Controller
 {
+
+    use HasProjectPermissions;
     /**
      * Récupère les détails d'une fonction
      */
     public function apiDetails($functionName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('API - Récupération des détails pour functionName: ' . $functionName . ', dbId: ' . $dbId);
@@ -77,6 +85,11 @@ class FunctionController extends Controller
     public function details($functionName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour functionName: ' . $functionName . ', dbId: ' . $dbId);
@@ -179,6 +192,11 @@ class FunctionController extends Controller
     public function saveDescription(Request $request, $functionName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update functions.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string'
@@ -216,6 +234,11 @@ class FunctionController extends Controller
     public function saveParameterDescription(Request $request, $parameterId)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update functions.')) {
+            return $error;
+            }
+
             // Valider les données
             $validated = $request->validate([
                 'description' => 'nullable|string'

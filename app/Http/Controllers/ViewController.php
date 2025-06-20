@@ -4,20 +4,31 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // AJOUT DU USE MANQUANT
+use Illuminate\Support\Facades\Log;
 use App\Models\ViewDescription;
 use App\Models\ViewInformation;
 use App\Models\ViewColumn;
 use Inertia\Inertia;
+use App\Http\Controllers\Traits\HasProjectPermissions;
 
 class ViewController extends Controller
 {
+
+    use HasProjectPermissions;
+
     /**
      * Affiche les détails d'une vue spécifique
      */
     public function details($viewName)
     {
         try {
+
+            if ($error = $this->requirePermission($request, 'read')) {
+            return $error;
+            }
+
+            $permissions = $request->get('user_project_permission');
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour viewName: ' . $viewName . ', dbId: ' . $dbId);

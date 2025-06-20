@@ -535,7 +535,7 @@ onMounted(async () => {
     console.log("Triggers:", databaseStructure.value?.triggers);
     
     // Ouvrir la section tables par défaut
-    showingTables.value = true;
+    //showingTables.value = true;
   } catch (error) {
     console.error('Erreur lors du chargement de la structure:', error);
   }
