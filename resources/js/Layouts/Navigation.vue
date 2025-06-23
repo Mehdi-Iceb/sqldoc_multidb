@@ -119,8 +119,17 @@
               class="flex items-center text-gray-200 hover:text-white"
             >
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" 
-                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                <!-- Contour de la table -->
+                <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
+                <!-- En-tête (titre de table) -->
+                <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
+                <!-- Lignes horizontales (lignes de données) -->
+                <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
+                <line x1="2" y1="13" x2="22" y2="13" stroke-width="2"/>
+                <line x1="2" y1="17" x2="22" y2="17" stroke-width="2"/>
+                <!-- Lignes verticales (colonnes) -->
+                <line x1="8" y1="3" x2="8" y2="21" stroke-width="2"/>
+                <line x1="14" y1="3" x2="14" y2="21" stroke-width="2"/>
               </svg>
               {{ table.name }}
               <span v-if="table.matchReason && table.matchReason !== 'name'" class="ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded">
