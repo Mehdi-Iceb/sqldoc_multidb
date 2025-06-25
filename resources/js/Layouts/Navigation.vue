@@ -8,8 +8,11 @@
     </div> -->
     <div class="py-4 text-white">
       <Link class="ml-6 text-lg font-bold text-gray-200" :href="route('projects.index')">
-        {{ appName }} 
+        {{ appName }}
       </Link>
+      <span class="relative px-2 text-sm text-gray-300 mt-auto">
+        {{ appVersion }}
+      </span>
 
       <ul class="mt-6">
         <!-- <li class="relative px-6 py-3">
@@ -267,6 +270,7 @@ const page = usePage()
 console.log('Page props:', page.props)
 
 const appName = page.props.appName
+const appVersion = page.props.appVersion
 
 // États pour les sections dépliables
 const isOpen = ref({

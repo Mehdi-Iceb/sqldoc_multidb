@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
                 return session('permissions', []);
             },
             'appName' => config('app.name'),
+            'appVersion' => config('app.version'),
         ]);
 
         Carbon::serializeUsing(function ($carbon) {
