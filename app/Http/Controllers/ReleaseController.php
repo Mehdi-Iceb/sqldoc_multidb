@@ -18,7 +18,7 @@ class ReleaseController extends Controller
     {
         try {
             // Récupérer toutes les versions avec leur table structure associée
-            $releases = Release::with('tableStructure')
+            $releases = Release::with('tableStructures')
                 ->orderBy('version_number', 'desc')
                 ->get()
                 ->map(function ($release) {
@@ -61,7 +61,7 @@ class ReleaseController extends Controller
     public function show($id)
     {
         try {
-            $release = Release::with('tableStructure')->findOrFail($id);
+            $release = Release::with('tableStructures')->findOrFail($id);
 
             // Récupérer les informations liées à la table structure
             $tableStructure = $release->tableStructure;
@@ -172,7 +172,7 @@ class ReleaseController extends Controller
             ]);
 
             // Vérifier si cette colonne a déjà une version identique
-            $existingRelease = Release::where('id_table_structure', $validated['id_table_structure'])
+            $existingRelease = Release::where('id_table', $validated['id_table_structure'])
                 ->where('version_number', $validated['version_number'])
                 ->first();
 

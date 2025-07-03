@@ -30,7 +30,7 @@ class TableStructure  extends Model
         return $this->belongsTo(TableDescription::class, 'id_table', 'id');
     }
 
-    public function release()
+    public function releases()
     {
         return $this->belongsTo(Release::class, 'release_id', 'id');
     }
