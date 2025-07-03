@@ -30,6 +30,6 @@ class Release extends Model
 
     public function tableStructures()
     {
-        return $this->hasMany(TableStructure::class, 'release_id', 'id');
+        return $this->hasMany(TableStructure::class, 'id', 'release_id');
     }
 }

@@ -127,27 +127,49 @@ class ProjectController extends Controller
 
     public function handleConnect(Request $request, Project $project)
     {
+        Log::info('=== DÉBUT handleConnect ===', [
+            'project_id' => $project->id,
+            'user_id' => auth()->id()
+        ]);
 
         $userCanAccess = $this->checkUserProjectAccess($project);
         
         if (!$userCanAccess['allowed'] || !$userCanAccess['is_owner']) {
-            return back()->with('error', 'Only the project owner can configure database connections.');
+            return redirect()->back()->with('error', 'Only the project owner can configure database connections.');
         }
         
         try {
-            $validated = $request->validate([
-                'server' => 'required',
-                'database' => 'required',
-                'port' => $project->db_type !== 'sqlserver' ? 'required' : 'nullable',
-                'authMode' => $project->db_type === 'sqlserver' ? 'required|in:windows,sql' : 'nullable',
-                'username' => 'required_if:authMode,sql',
-                'password' => 'required_if:authMode,sql',
+            // Validation
+            $rules = [
+                'server' => 'required|string',
+                'database' => 'required|string',
                 'description' => 'nullable|string|max:1000',
+                'username' => 'nullable|string',
+                'password' => 'nullable|string',
+            ];
+
+            if ($project->db_type === 'sqlserver') {
+                $rules['authMode'] = 'required|in:windows,sql';
+                $rules['username'] = 'required_if:authMode,sql';
+                $rules['password'] = 'required_if:authMode,sql';
+            } else {
+                $rules['port'] = 'required|numeric|min:1|max:65535';
+                $rules['username'] = 'required|string';
+                $rules['password'] = 'required|string';
+            }
+
+            $validated = $request->validate($rules);
+
+            Log::info('Validation réussie pour handleConnect', [
+                'project_id' => $project->id,
+                'db_type' => $project->db_type,
+                'server' => $validated['server'],
+                'database' => $validated['database'],
+                'authMode' => $validated['authMode'] ?? 'N/A'
             ]);
 
-            // Conversion du type pour le driver Laravel
+            // Configuration de connexion
             $driver = $this->getDriverFromDbType($project->db_type);
-
             $config = [
                 'driver' => $driver,
                 'host' => $validated['server'],
@@ -156,17 +178,20 @@ class ProjectController extends Controller
 
             if ($project->db_type === 'sqlserver') {
                 if ($validated['authMode'] === 'windows') {
-                    $config['trusted_connection'] = true;
+                    $config['trust_connection'] = true;
+                    Log::info('Configuration SQL Server avec authentification Windows');
                 } else {
-                    $config['username'] = $validated['username'] ?? '';
-                    $config['password'] = $validated['password'] ?? '';
+                    $config['username'] = $validated['username'];
+                    $config['password'] = $validated['password'];
+                    Log::info('Configuration SQL Server avec authentification SQL', [
+                        'username' => $validated['username']
+                    ]);
                 }
             } else {
                 $config['port'] = $validated['port'];
-                $config['username'] = $validated['username'] ?? '';
-                $config['password'] = $validated['password'] ?? '';
+                $config['username'] = $validated['username'];
+                $config['password'] = $validated['password'];
                 
-                // Configuration spécifique pour PostgreSQL
                 if ($project->db_type === 'pgsql') {
                     $config['charset'] = 'utf8';
                     $config['prefix'] = '';
@@ -176,83 +201,144 @@ class ProjectController extends Controller
                 }
             }
 
-            // Test de connexion avec gestion d'erreurs détaillée
+            // Test de connexion
             $connectionName = "project_{$project->id}";
             Config::set("database.connections.{$connectionName}", $config);
+            
+            Log::info('Tentative de connexion à la base de données', [
+                'connection_name' => $connectionName,
+                'driver' => $driver
+            ]);
             
             try {
                 // Tenter la connexion
                 $pdo = DB::connection($connectionName)->getPdo();
+                Log::info('Connexion PDO établie avec succès');
                 
-                // Test supplémentaire : vérifier que la base de données existe vraiment
+                // Test de la base de données
                 $testQuery = $this->getTestQuery($project->db_type, $validated['database']);
                 $result = DB::connection($connectionName)->select($testQuery);
                 
-                Log::info('Connexion réussie et base de données vérifiée', [
-                    'project_id' => $project->id,
-                    'database' => $validated['database'],
-                    'driver' => $driver
-                ]);
+                if (empty($result)) {
+                    DB::disconnect($connectionName);
+                    config()->forget("database.connections.{$connectionName}");
+                    throw new \Exception("Database '{$validated['database']}' does not exist or is not accessible.");
+                }
+                
+                Log::info('Connexion réussie et base de données vérifiée');
 
             } catch (\PDOException $e) {
-                // Analyser le type d'erreur PDO
+                // Nettoyer la connexion
+                try {
+                    DB::disconnect($connectionName);
+                    config()->forget("database.connections.{$connectionName}");
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Erreur lors du nettoyage de la connexion', [
+                        'cleanup_error' => $cleanupException->getMessage()
+                    ]);
+                }
+                
                 $errorMessage = $this->analyzePDOException($e, $project->db_type, $validated);
                 
-                Log::error('Erreur de connexion PDO', [
+                Log::error('Erreur de connexion PDO dans handleConnect', [
                     'project_id' => $project->id,
                     'error_code' => $e->getCode(),
                     'error_message' => $e->getMessage(),
                     'analyzed_message' => $errorMessage
                 ]);
                 
-                return back()->with('error', $errorMessage);
+                Log::info('=== RETOUR AVEC ERREUR PDO ===');
                 
+                // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
+                return \Inertia\Inertia::render('Projects/Connect', [
+                    'project' => $project,
+                    'flash' => [
+                        'error' => $errorMessage
+                    ]
+                ])->withViewData([
+                    'flash' => [
+                        'error' => $errorMessage
+                    ]
+                ]);
+                    
             } catch (\Exception $e) {
-                Log::error('Erreur générale de connexion', [
+                // Nettoyer la connexion
+                try {
+                    DB::disconnect($connectionName);
+                    config()->forget("database.connections.{$connectionName}");
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Erreur lors du nettoyage de la connexion', [
+                        'cleanup_error' => $cleanupException->getMessage()
+                    ]);
+                }
+                
+                Log::error('Erreur générale de connexion dans handleConnect', [
                     'project_id' => $project->id,
                     'error' => $e->getMessage()
                 ]);
                 
-                return back()->with('error', 'Connection failed: ' . $e->getMessage());
+                $errorMessage = 'Connection failed: ' . $e->getMessage();
+                
+                Log::info('=== RETOUR AVEC ERREUR GÉNÉRALE ===');
+                
+                // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
+                return \Inertia\Inertia::render('Projects/Connect', [
+                    'project' => $project,
+                    'flash' => [
+                        'error' => $errorMessage
+                    ]
+                ])->withViewData([
+                    'flash' => [
+                        'error' => $errorMessage
+                    ]
+                ]);
             }
 
-            // Enregistrement des informations de la base de données
+            // *** SUCCÈS - CONTINUER LE TRAITEMENT ***
+            Log::info('=== CONNEXION RÉUSSIE - TRAITEMENT POST-CONNEXION ===');
+
+            // Sauvegarde de la base de données
             try {
-                $dbDescription = DbDescription::create([
-                    'user_id' => auth()->id(),
-                    'dbname' => $validated['database'],
-                    'project_id' => $project->id,
-                    'description' => $validated['description'] ?? null,
-                ]);
-                
-                // EXTRACTION ET SAUVEGARDE DE LA STRUCTURE COMPLETE
-                try {
-                    $databaseStructureService = new DatabaseStructureService();
-                    $result = $databaseStructureService->extractAndSaveAllStructures($connectionName, $dbDescription->id);
-                    
-                    Log::info('Structure de la base de données extraite et sauvegardée avec succès', [
-                        'success' => $result,
+                $dbDescription = DbDescription::updateOrCreate(
+                    [
                         'project_id' => $project->id,
-                        'database' => $validated['database']
-                    ]);
-                    
-                } catch (\Exception $structureException) {
-                    Log::error('Erreur lors de l\'extraction de la structure de la base de données', [
-                        'error' => $structureException->getMessage(),
-                        'trace' => $structureException->getTraceAsString()
-                    ]);
-                    // Continue même si l'extraction échoue
-                }
+                        'user_id' => auth()->id()
+                    ],
+                    [
+                        'dbname' => $validated['database'],
+                        'description' => $validated['description'] ?? null,
+                    ]
+                );
                 
                 session(['current_db_id' => $dbDescription->id]);
                 
+                // Extraction de la structure
+                try {
+                    $databaseStructureService = new DatabaseStructureService();
+                    $result = $databaseStructureService->extractAndSaveAllStructures($connectionName, $dbDescription->id);
+                    Log::info('Structure extraite avec succès');
+                } catch (\Exception $structureException) {
+                    Log::error('Erreur extraction structure', [
+                        'error' => $structureException->getMessage()
+                    ]);
+                }
+                
             } catch (\Exception $e) {
-                Log::warning('Impossible d\'enregistrer dans db_description', [
-                    'error' => $e->getMessage(),
+                Log::warning('Erreur sauvegarde DbDescription', [
+                    'error' => $e->getMessage()
                 ]);
             }
 
-            // Définir en tant que connexion active
+            // Sauvegarde des infos de connexion
+            try {
+                $project->update(['connection_info' => json_encode($config)]);
+            } catch (\Exception $e) {
+                Log::warning('Erreur sauvegarde connection_info', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // Session
             session([
                 'current_project' => [
                     'id' => $project->id,
@@ -262,25 +348,16 @@ class ProjectController extends Controller
                 ]
             ]);
             
-            Log::info('Connexion réussie', [
-                'project_id' => $project->id,
-                'db_type' => $project->db_type,
-                'driver' => $driver,
-                'database' => $validated['database']
-            ]);
-
-            if (!$request->wantsJson()) {
-                return redirect()->route('dashboard')->with('success', 'Connection successful to ' . $validated['database']);
-            }
-
-            return response()->json([
-                'success' => true,
-                'redirect' => route('dashboard')
-            ]);
+            Log::info('=== REDIRECTION VERS DASHBOARD ===');
+            return redirect()->route('dashboard')->with('success', 'Connection successful to ' . $validated['database']);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Erreurs de validation
-            return back()->withErrors($e->errors())->withInput();
+            Log::warning('Erreurs de validation dans handleConnect', [
+                'errors' => $e->errors()
+            ]);
+            
+            // Pour les erreurs de validation, utiliser la méthode standard
+            return redirect()->back()->withErrors($e->errors())->withInput();
             
         } catch (\Exception $e) {
             Log::error('Erreur générale dans handleConnect', [
@@ -289,11 +366,21 @@ class ProjectController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            if (!$request->wantsJson()) {
-                return back()->with('error', 'An unexpected error occurred: ' . $e->getMessage());
-            }
+            $errorMessage = 'An unexpected error occurred: ' . $e->getMessage();
             
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::info('=== RETOUR AVEC ERREUR EXCEPTION GÉNÉRALE ===');
+            
+            // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
+            return \Inertia\Inertia::render('Projects/Connect', [
+                'project' => $project,
+                'flash' => [
+                    'error' => $errorMessage
+                ]
+            ])->withViewData([
+                'flash' => [
+                    'error' => $errorMessage
+                ]
+            ]);
         }
     }
 
@@ -379,12 +466,25 @@ class ProjectController extends Controller
      */
     private function analyzeSQLServerError($errorCode, $errorMessage, $validated)
     {
+        // Problème spécifique avec l'authentification Windows 
+        if (strpos($errorMessage, 'Login failed for user') !== false && 
+            (strpos($errorMessage, 'HEADOFFICE\\') !== false || strpos($errorMessage, '\\') !== false)) {
+            
+            // Extraire le nom d'utilisateur Windows du message d'erreur
+            preg_match('/Login failed for user \'(.+?)\'/', $errorMessage, $matches);
+            $windowsUser = $matches[1] ?? 'Windows user';
+            
+            return "Windows Authentication failed for '{$windowsUser}'. This Windows account does not have login permissions on SQL Server. Please either: 1) Switch to 'SQL Server Authentication' and use a valid SQL Server login, or 2) Contact your database administrator to grant SQL Server access to your Windows account.";
+        }
+        
         if (strpos($errorMessage, 'Cannot open database') !== false) {
             return "Database '{$validated['database']}' cannot be opened or does not exist on the SQL Server. Please check the database name.";
         }
         
         if (strpos($errorMessage, 'Login failed') !== false) {
-            return "Login failed for user '{$validated['username']}'. Please check your credentials and ensure the user has access to SQL Server.";
+            // Pour l'authentification SQL Server
+            $username = $validated['username'] ?? 'unknown user';
+            return "Login failed for SQL Server user '{$username}'. Please check your username and password, and ensure this account has access to SQL Server.";
         }
         
         if (strpos($errorMessage, 'server was not found') !== false || strpos($errorMessage, 'network path was not found') !== false) {
@@ -1327,5 +1427,215 @@ class ProjectController extends Controller
             ], 500);
         }
     }
+
+    public function testConnection(Request $request, Project $project)
+    {
+        try {
+            Log::info('Début test de connexion', [
+                'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'request_data' => $request->except(['password']) // Exclure le mot de passe des logs
+            ]);
+
+            // Vérifier les permissions
+            $userCanAccess = $this->checkUserProjectAccess($project);
+            
+            if (!$userCanAccess['allowed'] || !$userCanAccess['is_owner']) {
+                Log::warning('Accès refusé pour test de connexion', [
+                    'project_id' => $project->id,
+                    'user_id' => auth()->id(),
+                    'access_check' => $userCanAccess
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Only the project owner can test database connections.'
+                ], 403);
+            }
+
+            // Validation des données
+            $rules = [
+                'server' => 'required|string',
+                'database' => 'required|string',
+                'username' => 'nullable|string',
+                'password' => 'nullable|string',
+            ];
+
+            // Ajouter la validation du port selon le type de DB
+            if ($project->db_type !== 'sqlserver') {
+                $rules['port'] = 'required|numeric|min:1|max:65535';
+            } else {
+                $rules['port'] = 'nullable|numeric|min:1|max:65535';
+                $rules['authMode'] = 'required|in:windows,sql';
+            }
+
+            $validated = $request->validate($rules);
+
+            Log::info('Validation réussie', [
+                'project_id' => $project->id,
+                'db_type' => $project->db_type,
+                'server' => $validated['server'],
+                'database' => $validated['database']
+            ]);
+
+            // Préparation de la configuration de connexion
+            $driver = $this->getDriverFromDbType($project->db_type);
+            
+            $config = [
+                'driver' => $driver,
+                'host' => $validated['server'],
+                'database' => $validated['database'],
+            ];
+
+            // Configuration selon le type de base de données
+            if ($project->db_type === 'sqlserver') {
+                if (isset($validated['authMode']) && $validated['authMode'] === 'windows') {
+                    $config['trusted_connection'] = true;
+                    Log::info('Configuration SQL Server avec authentification Windows');
+                } else {
+                    $config['username'] = $validated['username'] ?? '';
+                    $config['password'] = $validated['password'] ?? '';
+                    Log::info('Configuration SQL Server avec authentification SQL');
+                }
+            } else {
+                $config['port'] = $validated['port'];
+                $config['username'] = $validated['username'] ?? '';
+                $config['password'] = $validated['password'] ?? '';
+                
+                // Configuration spécifique pour PostgreSQL
+                if ($project->db_type === 'pgsql') {
+                    $config['charset'] = 'utf8';
+                    $config['prefix'] = '';
+                    $config['prefix_indexes'] = true;
+                    $config['schema'] = 'public';
+                    $config['sslmode'] = 'prefer';
+                    Log::info('Configuration PostgreSQL appliquée');
+                }
+                
+                Log::info('Configuration MySQL/PostgreSQL', [
+                    'driver' => $driver,
+                    'host' => $config['host'],
+                    'port' => $config['port'],
+                    'database' => $config['database']
+                ]);
+            }
+
+            // Test de connexion temporaire
+            $testConnectionName = "test_connection_" . uniqid();
+            
+            Log::info('Tentative de connexion', [
+                'connection_name' => $testConnectionName,
+                'driver' => $driver
+            ]);
+            
+            Config::set("database.connections.{$testConnectionName}", $config);
+            
+            try {
+                // Tenter la connexion
+                $pdo = DB::connection($testConnectionName)->getPdo();
+                Log::info('Connexion PDO établie avec succès');
+                
+                // Test supplémentaire : vérifier que la base de données existe
+                $testQuery = $this->getTestQuery($project->db_type, $validated['database']);
+                Log::info('Exécution de la requête de test', ['query' => $testQuery]);
+                
+                $result = DB::connection($testConnectionName)->select($testQuery);
+                Log::info('Requête de test exécutée avec succès', ['result_count' => count($result)]);
+                
+                // Vérifier que la base de données existe réellement
+                if (empty($result)) {
+                    throw new \Exception("Database '{$validated['database']}' does not exist or is not accessible.");
+                }
+                
+                // Nettoyer la connexion temporaire
+                DB::disconnect($testConnectionName);
+                Config::forget("database.connections.{$testConnectionName}");
+                
+                Log::info('Test de connexion réussi', [
+                    'project_id' => $project->id,
+                    'database' => $validated['database'],
+                    'driver' => $driver
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Connection test successful!'
+                ]);
+                
+            } catch (\PDOException $e) {
+                // Nettoyer la connexion en cas d'erreur
+                try {
+                    DB::disconnect($testConnectionName);
+                    Config::forget("database.connections.{$testConnectionName}");
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Erreur lors du nettoyage de la connexion', [
+                        'cleanup_error' => $cleanupException->getMessage()
+                    ]);
+                }
+                
+                // Analyser l'erreur PDO
+                $errorMessage = $this->analyzePDOException($e, $project->db_type, $validated);
+                
+                Log::warning('Test de connexion échoué (PDO)', [
+                    'project_id' => $project->id,
+                    'error_code' => $e->getCode(),
+                    'error_message' => $e->getMessage(),
+                    'analyzed_message' => $errorMessage
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => $errorMessage
+                ]);
+                
+            } catch (\Exception $e) {
+                // Nettoyer la connexion en cas d'erreur
+                try {
+                    DB::disconnect($testConnectionName);
+                    Config::forget("database.connections.{$testConnectionName}");
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Erreur lors du nettoyage de la connexion', [
+                        'cleanup_error' => $cleanupException->getMessage()
+                    ]);
+                }
+                
+                Log::error('Erreur générale lors du test de connexion', [
+                    'project_id' => $project->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Connection test failed: ' . $e->getMessage()
+                ]);
+            }
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Erreur de validation dans testConnection', [
+                'project_id' => $project->id,
+                'validation_errors' => $e->errors()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed: ' . collect($e->errors())->flatten()->first()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur générale dans testConnection', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'An unexpected error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    
 
 }

@@ -1766,25 +1766,30 @@ private function formatPostgreSqlDataType($column)
         try {
             // Récupérer la liste des triggers
             $triggers = DB::connection($connectionName)->select("
-                SELECT 
-                    t.name AS trigger_name,
-                    OBJECT_NAME(t.parent_id) AS table_name,
-                    t.is_instead_of_trigger,
-                    CASE 
-                        WHEN is_insert_trigger = 1 THEN 'INSERT'
-                        WHEN is_update_trigger = 1 THEN 'UPDATE'
-                        WHEN is_delete_trigger = 1 THEN 'DELETE'
-                        ELSE 'MULTIPLE'
-                    END AS trigger_event,
-                    t.is_disabled,
-                    t.create_date,
-                    OBJECT_DEFINITION(t.object_id) AS trigger_definition
-                FROM 
-                    sys.triggers t
-                WHERE 
-                    t.is_ms_shipped = 0
-                ORDER BY 
-                    t.name
+                select trg.name as trigger_name,
+                    schema_name(tab.schema_id) + '.' + tab.name as [table],
+                    case when is_instead_of_trigger = 1 then 'Instead of'
+                        else 'After' end as [activation],
+                    (case when objectproperty(trg.object_id, 'ExecIsUpdateTrigger') = 1
+                                then 'Update ' else '' end 
+                    + case when objectproperty(trg.object_id, 'ExecIsDeleteTrigger') = 1
+                                then 'Delete ' else '' end
+                    + case when objectproperty(trg.object_id, 'ExecIsInsertTrigger') = 1
+                                then 'Insert' else '' end
+                    ) as [event],
+                    case when trg.parent_class = 1 then 'Table trigger'
+                        when trg.parent_class = 0 then 'Database trigger' 
+                    end [class], 
+                    case when trg.[type] = 'TA' then 'Assembly (CLR) trigger'
+                        when trg.[type] = 'TR' then 'SQL trigger' 
+                        else '' end as [type],
+                    case when is_disabled = 1 then 'Disabled'
+                        else 'Active' end as [status],
+                    object_definition(trg.object_id) as [definition]
+                from sys.triggers trg
+                    left join sys.objects tab
+                        on trg.parent_id = tab.object_id
+                order by trg.name
             ");
             
             Log::info('Triggers SQL Server trouvés: ' . count($triggers));

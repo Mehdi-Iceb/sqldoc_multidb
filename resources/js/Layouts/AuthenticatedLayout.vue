@@ -34,7 +34,7 @@ onMounted(async () => {
   try {
     console.log('Chargement de la structure...');
     
-    // Vérifier d'abord si nous sommes sur une page qui nécessite une structure de DB
+    // Check si sur une page qui nécessite une structure de DB
     const currentPath = window.location.pathname;
     const pathsWithoutDb = ['/projects', '/projects/create'];
     const isOnProjectsPage = pathsWithoutDb.some(path => currentPath.startsWith(path));
@@ -63,7 +63,6 @@ onMounted(async () => {
     // Pour les autres pages, gérer l'erreur normalement mais sans crash
     if (error.response?.data?.error === 'Aucune base de données sélectionnée') {
       console.warn('Aucune base de données sélectionnée - redirection vers les projets recommandée');
-      // Optionnel : rediriger vers la page des projets
       // window.location.href = '/projects';
     } else {
       console.error('Erreur détaillée:', error.response?.data?.error);

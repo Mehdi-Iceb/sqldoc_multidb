@@ -53,19 +53,49 @@ const showAuthFields = computed(() => {
 });
 
 const submit = () => {
+    console.log('=== DÉBUT SUBMIT ===');
+    console.log('Form data:', {
+        server: form.server,
+        database: form.database,
+        port: form.port,
+        authMode: form.authMode,
+        username: form.username,
+        db_type: props.project.db_type
+    });
+
     form.post(route('projects.handle-connect', props.project.id), {
+        onStart: () => {
+            console.log('onStart: Début de la requête');
+        },
         onSuccess: (page) => {
-            // Vérifier s'il y a un message de succès
+            console.log('onSuccess appelé:', page);
+            console.log('Flash props:', page.props.flash);
+            
+            // IMPORTANT: Vérifier s'il y a des erreurs dans flash
+            if (page.props.flash?.error) {
+                console.log('Erreur détectée dans onSuccess:', page.props.flash.error);
+                showErrorToast(page.props.flash.error);
+                return; // NE PAS afficher le succès
+            }
+            
             if (page.props.flash?.success) {
+                console.log('Succès détecté:', page.props.flash.success);
                 showSuccessToast(page.props.flash.success);
             } else {
+                console.log('Succès par défaut');
                 showSuccessToast('Connection successful!');
             }
         },
         onError: (errors) => {
-            console.log('Erreurs reçues:', errors);
+            console.log('onError appelé:', errors);
             
-            // Gérer les erreurs de validation spécifiques
+            // Gestion des erreurs de validation et autres
+            if (typeof errors === 'string') {
+                showErrorToast(errors);
+                return;
+            }
+            
+            // Erreurs de validation spécifiques
             if (errors.server) {
                 showErrorToast(`Server error: ${errors.server}`);
             } else if (errors.database) {
@@ -76,14 +106,20 @@ const submit = () => {
                 showErrorToast(`Password error: ${errors.password}`);
             } else if (errors.port) {
                 showErrorToast(`Port error: ${errors.port}`);
+            } else if (errors.authMode) {
+                showErrorToast(`Authentication mode error: ${errors.authMode}`);
             } else {
-                // Message d'erreur générique si aucune erreur spécifique
-                showErrorToast('Connection failed. Please check your parameters and try again.');
+                // Prendre la première erreur disponible
+                const firstError = Object.values(errors)[0];
+                if (Array.isArray(firstError)) {
+                    showErrorToast(firstError[0]);
+                } else {
+                    showErrorToast(firstError || 'Connection failed. Please check your parameters and try again.');
+                }
             }
         },
         onFinish: () => {
-            // Cette méthode est appelée après onSuccess ou onError
-            console.log('Requête terminée');
+            console.log('onFinish: Requête terminée');
         }
     });
 };
@@ -151,14 +187,15 @@ const testConnection = async () => {
     showWarningToast('Testing connection...');
     
     try {
-        // Faire un test réel de connexion (vous pouvez créer une route spéciale pour ça)
         const response = await fetch(route('projects.test-connection', props.project.id), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                'Accept': 'application/json'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 server: form.server,
                 database: form.database,
@@ -169,6 +206,13 @@ const testConnection = async () => {
             })
         });
         
+        if (!response.ok) {
+            if (response.status === 419) {
+                throw new Error('CSRF token mismatch. Please refresh the page and try again.');
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -178,9 +222,16 @@ const testConnection = async () => {
         }
     } catch (error) {
         console.error('Test connection error:', error);
-        showErrorToast('Unable to test connection. Please try connecting directly.');
+        
+        if (error.message.includes('CSRF')) {
+            showErrorToast('Security token expired. Please refresh the page and try again.');
+        } else {
+            showErrorToast('Unable to test connection. Please try connecting directly.');
+        }
     }
 };
+
+
 
 const getToastClasses = computed(() => {
     const baseClasses = 'fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out';
