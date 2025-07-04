@@ -17,7 +17,7 @@ class ProcedureController extends Controller
     /**
      * Récupère les détails d'une procédure stockée
      */
-    public function apiDetails($procedureName)
+    public function apiDetails(Request $request, $procedureName)
 {
     try {
 
@@ -83,7 +83,7 @@ class ProcedureController extends Controller
 }
 
 // méthode pour le rendu Inertia
-    public function details($procedureName)
+    public function details(Request $request, $procedureName)
     {
         try {
 

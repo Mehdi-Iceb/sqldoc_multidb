@@ -6,6 +6,8 @@ use App\Http\Controllers\Traits\HasProjectPermissions;
 use Illuminate\Http\Request;
 use App\Models\TriggerDescription;
 use App\Models\TriggerInformation;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class TriggerController extends Controller
 {
@@ -15,7 +17,7 @@ class TriggerController extends Controller
     /**
      * Récupère les détails d'un trigger
      */
-    public function apiDetails($triggerName)
+    public function apiDetails(Request $request, $triggerName)
     {
         try {
 
@@ -71,7 +73,7 @@ class TriggerController extends Controller
     }
 
 // méthode pour le rendu Inertia
-    public function details($triggerName)
+    public function details(Request $request, $triggerName)
     {
         try {
 

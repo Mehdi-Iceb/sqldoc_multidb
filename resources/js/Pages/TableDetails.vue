@@ -382,7 +382,7 @@
                         @change="updateNullable(column, $event.target.value === 'true')"
                         :disabled="!tableDetails.can_edit || updatingNullable[column.column_name]"
                           :class="[
-                            'block w-full pl-3 pr-10 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity',
+                            'block w-full pl-2 pr-7 py-1 text-xs border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md transition-opacity',
                             column.is_nullable ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800',
                             updatingNullable[column.column_name] ? 'opacity-50' : ''
                           ]"
@@ -419,12 +419,15 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingDescription[column.column_name]">
+                        <span v-if="!editingDescription[column.column_name]"
+                          style="max-height: 128px; max-width: 320px; overflow: auto; white-space: pre-wrap; display: block;"
+                        >
                           {{ column.description || '-' }}
                         </span>
                         <textarea
                           v-else
                           v-model="editingDescriptionValue"
+                          style="max-height: 128px; overflow-y: auto; resize: vertical;"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                           :disabled="!tableDetails.can_edit"
                           @keydown.ctrl.enter="saveDescription(column.column_name)"
@@ -470,12 +473,15 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingPossibleValues[column.column_name]">
+                        <span v-if="!editingPossibleValues[column.column_name]"
+                          style="max-height: 128px; max-width: 320px; overflow: auto; white-space: pre-wrap; display: block;"
+                        >
                           {{ column.possible_values || '-' }}
                         </span>
                         <textarea
                           v-else
                           v-model="editingPossibleValuesValue"
+                          style="max-height: 128px; overflow-y: auto; resize: vertical;"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                           :disabled="!tableDetails.can_edit"
                           @keyup.enter="savePossibleValues(column.column_name)"
@@ -528,13 +534,13 @@
                           @change="updateColumnRelease(column, $event.target.value)"
                           :disabled="!tableDetails.can_edit || updatingRelease[column.column_name]"
                           :class="[
-                            'block w-full pl-3 pr-8 py-1 text-xs border-gray-300 rounded-md',
+                            'block w-full pl-2 pr-7 py-1 text-xs border-gray-300 rounded-md',
                             column.release_id ? 'bg-blue-50 text-blue-800' : '',
                             !tableDetails.can_edit ? 'opacity-50 cursor-not-allowed' : '',
                             updatingRelease[column.column_name] ? 'opacity-50' : ''
                           ]"
                         >
-                          <option value="">-- No version --</option>
+                          <option value=""> no  -</option>
                           <option v-for="release in availableReleases" :key="release.id" :value="release.id">
                             {{ release.display_name }}
                           </option>

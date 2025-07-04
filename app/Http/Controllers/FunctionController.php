@@ -18,7 +18,7 @@ class FunctionController extends Controller
     /**
      * Récupère les détails d'une fonction
      */
-    public function apiDetails($functionName)
+    public function apiDetails(Request $request, $functionName)
     {
         try {
 
@@ -82,7 +82,7 @@ class FunctionController extends Controller
     }
 
 // méthode pour le rendu Inertia
-    public function details($functionName)
+    public function details(Request $request, $functionName)
     {
         try {
 

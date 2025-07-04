@@ -255,7 +255,7 @@ class ReleaseApiController extends Controller
 
             // Valider les données
             $validated = $request->validate([
-                'version_number' => 'required|string|max:20',
+                'version_number' => 'required|string|max:10',
                 'description' => 'nullable|string'
             ]);
 

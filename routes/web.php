@@ -97,7 +97,7 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
 
     Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'details'])->name('procedure.details');
 
-    Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'getDetails'])->name('trigger.details');
+    Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'details'])->name('trigger.details');
 
     // Routes pour le contrôleur Release
     Route::prefix('releases')->name('releases.')->group(function () {

@@ -1682,30 +1682,92 @@ private function formatPostgreSqlDataType($column)
     private function extractAndSaveMySqlProcedures($connectionName, $dbId)
     {
         try {
-            // Récupérer le nom de la base de données
-            $database = DB::connection($connectionName)->getDatabaseName();
-            
-            // Récupérer la liste des procédures stockées
+            // Récupérer la liste des procédures stockées dans MySQL
             $procedures = DB::connection($connectionName)->select("
                 SELECT 
                     ROUTINE_NAME AS procedure_name,
                     ROUTINE_SCHEMA AS schema_name,
-                    ROUTINE_DEFINITION AS definition,
                     CREATED AS create_date,
-                    LAST_ALTERED AS modify_date
+                    LAST_ALTERED AS modify_date,
+                    ROUTINE_DEFINITION AS definition
                 FROM 
                     INFORMATION_SCHEMA.ROUTINES
                 WHERE 
-                    ROUTINE_SCHEMA = ? AND ROUTINE_TYPE = 'PROCEDURE'
+                    ROUTINE_TYPE = 'PROCEDURE'
+                    AND ROUTINE_SCHEMA = DATABASE()
                 ORDER BY 
-                    ROUTINE_NAME
-            ", [$database]);
-            
+                    ROUTINE_SCHEMA, ROUTINE_NAME
+            ");
+
             Log::info('Procédures MySQL trouvées: ' . count($procedures));
-            
-            // Implémentation pour MySQL (similaire à SQL Server)
-            // ...
-            
+
+            foreach ($procedures as $procedure) {
+                try {
+                    // Créer une entrée dans ps_description
+                    $psDescription = \App\Models\PsDescription::updateOrCreate(
+                        [
+                            'dbid' => $dbId,
+                            'psname' => $procedure->procedure_name
+                        ],
+                        [
+                            'language' => 'fr',
+                            'updated_at' => now()
+                        ]
+                    );
+
+                    // Récupérer les paramètres de la procédure
+                    $parameters = DB::connection($connectionName)->select("
+                        SELECT 
+                            PARAMETER_NAME AS parameter_name,
+                            DATA_TYPE AS data_type,
+                            CHARACTER_MAXIMUM_LENGTH AS max_length,
+                            NUMERIC_PRECISION AS precision,
+                            NUMERIC_SCALE AS scale,
+                            PARAMETER_MODE AS param_mode
+                        FROM 
+                            INFORMATION_SCHEMA.PARAMETERS
+                        WHERE 
+                            SPECIFIC_NAME = ?
+                            AND SPECIFIC_SCHEMA = DATABASE()
+                        ORDER BY 
+                            ORDINAL_POSITION
+                    ", [$procedure->procedure_name]);
+
+                    // Supprimer les anciennes informations
+                    \App\Models\PsInformation::where('id_ps', $psDescription->id)->delete();
+                    \App\Models\PsParameter::where('id_ps', $psDescription->id)->delete();
+
+                    // Sauvegarder les informations de la procédure
+                    \App\Models\PsInformation::create([
+                        'id_ps' => $psDescription->id,
+                        'schema' => $procedure->schema_name,
+                        'creation_date' => $procedure->create_date,
+                        'last_change_date' => $procedure->modify_date,
+                        'definition' => $procedure->definition
+                    ]);
+
+                    // Sauvegarder les paramètres
+                    foreach ($parameters as $param) {
+                        $dataType = $this->formatDataType($param);
+
+                        \App\Models\PsParameter::create([
+                            'id_ps' => $psDescription->id,
+                            'name' => $param->parameter_name,
+                            'type' => $dataType,
+                            'output' => strtoupper($param->param_mode) === 'OUT' ? 'OUTPUT' : 'INPUT',
+                            'definition' => null,
+                            'default_value' => null // MySQL ne stocke pas les valeurs par défaut dans INFORMATION_SCHEMA
+                        ]);
+                    }
+
+                    Log::info('Procédure MySQL extraite et sauvegardée: ' . $procedure->procedure_name);
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors de l\'extraction de la procédure', [
+                        'procedure' => $procedure->procedure_name,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             Log::error('Erreur dans extractAndSaveMySqlProcedures', [
                 'error' => $e->getMessage(),
@@ -1720,11 +1782,93 @@ private function formatPostgreSqlDataType($column)
     private function extractAndSavePostgreSqlProcedures($connectionName, $dbId)
     {
         try {
-            // Implémentation pour PostgreSQL
-            // ...
-            
+            // Récupérer la liste des procédures stockées dans PostgreSQL (procédures et fonctions)
+            $procedures = DB::connection($connectionName)->select("
+                SELECT 
+                    p.proname AS procedure_name,
+                    n.nspname AS schema_name,
+                    pg_get_functiondef(p.oid) AS definition,
+                    p.proconfig AS config,
+                    p.proacl AS acl,
+                    p.proowner,
+                    pg_catalog.pg_get_userbyid(p.proowner) AS owner,
+                    pg_catalog.obj_description(p.oid, 'pg_proc') AS comment,
+                    p.oid
+                FROM 
+                    pg_proc p
+                INNER JOIN 
+                    pg_namespace n ON n.oid = p.pronamespace
+                WHERE 
+                    n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    AND p.prokind IN ('p', 'f') -- p = procédure, f = fonction
+                ORDER BY 
+                    n.nspname, p.proname
+            ");
+
+            Log::info('Procédures PostgreSQL trouvées: ' . count($procedures));
+
+            foreach ($procedures as $procedure) {
+                try {
+                    // Créer une entrée dans ps_description
+                    $psDescription = \App\Models\PsDescription::updateOrCreate(
+                        [
+                            'dbid' => $dbId,
+                            'psname' => $procedure->procedure_name
+                        ],
+                        [
+                            'language' => 'fr',
+                            'updated_at' => now()
+                        ]
+                    );
+
+                    // Supprimer les anciennes informations
+                    \App\Models\PsInformation::where('id_ps', $psDescription->id)->delete();
+                    \App\Models\PsParameter::where('id_ps', $psDescription->id)->delete();
+
+                    // Sauvegarder les informations de la procédure
+                    \App\Models\PsInformation::create([
+                        'id_ps' => $psDescription->id,
+                        'schema' => $procedure->schema_name,
+                        'creation_date' => null, // Non disponible en natif
+                        'last_change_date' => null, // Non disponible non plus
+                        'definition' => $procedure->definition
+                    ]);
+
+                    // Récupérer les paramètres de la procédure via pg_catalog
+                    $parameters = DB::connection($connectionName)->select("
+                        SELECT 
+                            unnest(p.proargnames) AS parameter_name,
+                            unnest(p.proargmodes) AS mode,
+                            unnest(string_to_array(pg_catalog.format_type(unnest(p.proargtypes), NULL), ',')) AS data_type
+                        FROM 
+                            pg_proc p
+                        WHERE 
+                            p.oid = ?
+                    ", [$procedure->oid]);
+
+                    foreach ($parameters as $param) {
+                        $dataType = $this->formatDataType($param);
+
+                        \App\Models\PsParameter::create([
+                            'id_ps' => $psDescription->id,
+                            'name' => $param->parameter_name,
+                            'type' => $dataType,
+                            'output' => strtoupper($param->mode) === 'o' ? 'OUTPUT' : 'INPUT',
+                            'definition' => null,
+                            'default_value' => null // Valeurs par défaut pas accessibles facilement ici
+                        ]);
+                    }
+
+                    Log::info('Procédure PostgreSQL extraite et sauvegardée: ' . $procedure->procedure_name);
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors de l\'extraction de la procédure PostgreSQL', [
+                        'procedure' => $procedure->procedure_name,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgreSqlProcedures', [
+            Log::error('Erreur dans extractAndSavePostgresProcedures', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -1847,32 +1991,61 @@ private function formatPostgreSqlDataType($column)
     private function extractAndSaveMySqlTriggers($connectionName, $dbId)
     {
         try {
-            // Récupérer le nom de la base de données
-            $database = DB::connection($connectionName)->getDatabaseName();
-            
-            // Récupérer la liste des triggers
+            // Récupérer les triggers depuis INFORMATION_SCHEMA
             $triggers = DB::connection($connectionName)->select("
                 SELECT 
-                    TRIGGER_NAME AS trigger_name,
-                    EVENT_OBJECT_TABLE AS table_name,
-                    ACTION_TIMING AS trigger_type,
-                    EVENT_MANIPULATION AS trigger_event,
-                    0 AS is_disabled,
-                    CREATED AS create_date,
-                    ACTION_STATEMENT AS trigger_definition
-                FROM 
-                    INFORMATION_SCHEMA.TRIGGERS
-                WHERE 
-                    TRIGGER_SCHEMA = ?
-                ORDER BY 
-                    TRIGGER_NAME
-            ", [$database]);
-            
+                    TRIGGER_NAME as trigger_name,
+                    CONCAT(TRIGGER_SCHEMA, '.', EVENT_OBJECT_TABLE) AS table_name,
+                    ACTION_TIMING AS activation,
+                    EVENT_MANIPULATION AS event,
+                    'Table trigger' AS class,
+                    'SQL trigger' AS type,
+                    'Active' AS status, -- MySQL n'a pas de statut 'disabled' pour les triggers
+                    CREATED AS creation_date,
+                    ACTION_STATEMENT AS definition
+                FROM INFORMATION_SCHEMA.TRIGGERS
+                WHERE TRIGGER_SCHEMA = DATABASE()
+                ORDER BY TRIGGER_NAME
+            ");
+
             Log::info('Triggers MySQL trouvés: ' . count($triggers));
-            
-            // Implémentation pour MySQL (similaire à SQL Server)
-            // ...
-            
+
+            foreach ($triggers as $trigger) {
+                try {
+                    // Créer ou mettre à jour une entrée dans trigger_description
+                    $triggerDescription = \App\Models\TriggerDescription::updateOrCreate(
+                        [
+                            'dbid' => $dbId,
+                            'triggername' => $trigger->trigger_name
+                        ],
+                        [
+                            'language' => 'fr',
+                            'updated_at' => now()
+                        ]
+                    );
+
+                    // Supprimer les anciennes informations pour ce trigger
+                    \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
+
+                    // Sauvegarder les nouvelles informations
+                    \App\Models\TriggerInformation::create([
+                        'id_trigger' => $triggerDescription->id,
+                        'table' => $trigger->table_name,
+                        'type' => $trigger->activation,
+                        'event' => $trigger->event,
+                        'state' => 1, // Toujours actif en MySQL
+                        'creation_date' => $trigger->creation_date ?? now(),
+                        'definition' => $trigger->definition
+                    ]);
+
+                    Log::info('Trigger extrait et sauvegardé: ' . $trigger->trigger_name);
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors de l\'extraction du trigger', [
+                        'trigger' => $trigger->trigger_name,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             Log::error('Erreur dans extractAndSaveMySqlTriggers', [
                 'error' => $e->getMessage(),
@@ -1887,11 +2060,73 @@ private function formatPostgreSqlDataType($column)
     private function extractAndSavePostgreSqlTriggers($connectionName, $dbId)
     {
         try {
-            // Implémentation pour PostgreSQL
-            // ...
-            
+        $triggers = DB::connection($connectionName)->select("
+            SELECT
+                trg.tgname AS trigger_name,
+                nsp.nspname || '.' || cls.relname AS table,
+                CASE
+                    WHEN trg.tgtype & 2 <> 0 THEN 'BEFORE'
+                    WHEN trg.tgtype & 64 <> 0 THEN 'INSTEAD OF'
+                    ELSE 'AFTER'
+                END AS activation,
+                TRIM(
+                    CASE WHEN trg.tgtype & 4 <> 0 THEN 'INSERT ' ELSE '' END ||
+                    CASE WHEN trg.tgtype & 8 <> 0 THEN 'DELETE ' ELSE '' END ||
+                    CASE WHEN trg.tgtype & 16 <> 0 THEN 'UPDATE ' ELSE '' END ||
+                    CASE WHEN trg.tgtype & 32 <> 0 THEN 'TRUNCATE ' ELSE '' END
+                ) AS event,
+                'Table trigger' AS class,
+                'SQL trigger' AS type,
+                CASE WHEN trg.tgenabled = 'D' THEN 'Disabled' ELSE 'Active' END AS status,
+                pg_get_triggerdef(trg.oid, true) AS definition,
+                trg.tgcreated AS create_date
+            FROM pg_trigger trg
+            JOIN pg_class cls ON cls.oid = trg.tgrelid
+            JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace
+            WHERE NOT trg.tgisinternal
+            ORDER BY trg.tgname
+        ");
+
+        Log::info('Triggers PostgreSQL trouvés: ' . count($triggers));
+
+        foreach ($triggers as $trigger) {
+            try {
+                // Créer ou mettre à jour une entrée dans trigger_description
+                $triggerDescription = \App\Models\TriggerDescription::updateOrCreate(
+                    [
+                        'dbid' => $dbId,
+                        'triggername' => $trigger->trigger_name
+                    ],
+                    [
+                        'language' => 'fr',
+                        'updated_at' => now()
+                    ]
+                );
+
+                // Supprimer les anciennes informations pour ce trigger
+                \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
+
+                // Sauvegarder les nouvelles informations
+                \App\Models\TriggerInformation::create([
+                    'id_trigger' => $triggerDescription->id,
+                    'table' => $trigger->table,
+                    'type' => $trigger->activation,
+                    'event' => $trigger->event,
+                    'state' => ($trigger->status === 'Active') ? 1 : 0,
+                    'creation_date' => $trigger->create_date ?? now(),
+                    'definition' => $trigger->definition
+                ]);
+
+                Log::info('Trigger extrait et sauvegardé: ' . $trigger->trigger_name);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'extraction du trigger', [
+                    'trigger' => $trigger->trigger_name,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgreSqlTriggers', [
+            Log::error('Erreur dans extractAndSavePostgresTriggers', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

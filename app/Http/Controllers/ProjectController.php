@@ -127,6 +127,10 @@ class ProjectController extends Controller
 
     public function handleConnect(Request $request, Project $project)
     {
+
+        //forcage augmentation temps de chargement des datas
+        set_time_limit(5600);
+        
         Log::info('=== DÉBUT handleConnect ===', [
             'project_id' => $project->id,
             'user_id' => auth()->id()
