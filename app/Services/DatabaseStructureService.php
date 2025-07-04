@@ -224,7 +224,12 @@ class DatabaseStructureService
                         SELECT 
                             i.name AS index_name,
                             i.type_desc AS index_type,
-                            STRING_AGG(c.name, ', ') WITHIN GROUP (ORDER BY ic.key_ordinal) AS column_names,
+                            (
+                                SELECT STRING_AGG(c2.name, ', ') 
+                                FROM sys.index_columns ic2
+                                INNER JOIN sys.columns c2 ON ic2.object_id = c2.object_id AND ic2.column_id = c2.column_id
+                                WHERE ic2.object_id = i.object_id AND ic2.index_id = i.index_id
+                            ) AS column_names,
                             i.is_unique,
                             i.is_primary_key
                         FROM 
@@ -239,7 +244,7 @@ class DatabaseStructureService
                             t.name = ?
                             AND i.name IS NOT NULL
                         GROUP BY 
-                            i.name, i.type_desc, i.is_unique, i.is_primary_key
+                            i.name, i.type_desc, i.is_unique, i.is_primary_key, i.object_id, i.index_id
                         ORDER BY 
                             i.is_primary_key DESC, i.name
                     ", [$table->table_name]);
@@ -1953,7 +1958,8 @@ private function formatPostgreSqlDataType($column)
                     );
                     
                     // Déterminer le type de trigger
-                    $triggerType = $trigger->is_instead_of_trigger ? 'INSTEAD OF' : 'AFTER';
+                    //$triggerType = $trigger->is_instead_of_trigger ? 'INSTEAD OF' : 'AFTER';
+                    $triggerType = $trigger->activation;
                     
                     // Supprimer les anciennes informations pour ce trigger
                     \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
