@@ -155,7 +155,7 @@ Route::middleware('auth')->prefix('api')->group(function () {
         Route::get('/table/{tableName}/details', [TableController::class, 'apiDetails'])->name('api.table.details');
         Route::get('/table-id/{tableName}', [TableController::class, 'getTableId']);
         Route::get('/view/{viewName}/details', [ViewController::class, 'details'])->name('api.view.details');
-        Route::get('/function/{functionName}/details', [FunctionController::class, 'details'])->name('api.function.details');
+        Route::get('/function/{functionName}/details', [FunctionController::class, 'apiDetails'])->name('api.function.details');
         Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'details'])->name('api.procedure.details');
         Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'details'])->name('api.trigger.details');
         Route::get('/releases', [ReleaseApiController::class, 'index'])->name('api.releases.index');

@@ -30,32 +30,39 @@ class DatabaseStructureService
      * @param int $dbId ID de l'entrée dans db_description
      * @return bool
      */
-    
 
     private function formatDataType($column)
     {
-         if (!isset($column->data_type)) {
-             return 'unknown';
-         }
-         
-         $type = $column->data_type;
-         
-         if (in_array(strtolower($type), ['varchar', 'nvarchar', 'char', 'nchar', 'binary', 'varbinary'])) {
-             if (isset($column->max_length)) {
-                 // Pour nvarchar/nchar, la longueur est en caractères, pas en octets
-                 $maxLength = in_array(strtolower($type), ['nvarchar', 'nchar']) 
-                     ? $column->max_length / 2 
-                     : $column->max_length;
-                 
-                 $type .= "(" . ($maxLength == -1 ? 'MAX' : $maxLength) . ")";
-             }
-         } else if (in_array(strtolower($type), ['decimal', 'numeric'])) {
-             if (isset($column->precision) && isset($column->scale)) {
-                 $type .= "({$column->precision},{$column->scale})";
-             }
-         }
-         
-         return $type;
+        if (!isset($column->data_type)) {
+            return 'unknown';
+        }
+
+        $type = $column->data_type;
+
+        if (in_array(strtolower($type), ['varchar', 'nvarchar', 'char', 'nchar', 'binary', 'varbinary'])) {
+            if (isset($column->max_length)) {
+                // Pour nvarchar/nchar, la longueur est en caractères, pas en octets
+                $maxLength = in_array(strtolower($type), ['nvarchar', 'nchar'])
+                    ? $column->max_length / 2
+                    : $column->max_length;
+
+                $type .= "(" . ($maxLength == -1 ? 'MAX' : $maxLength) . ")";
+            }
+        } else if (in_array(strtolower($type), ['decimal', 'numeric'])) {
+            if (isset($column->precision) && isset($column->scale)) {
+                $type .= "({$column->precision},{$column->scale})";
+            }
+        }
+
+        return $type;
+    }
+
+    // Assurez-vous d'avoir une méthode similaire pour MySQL si nécessaire
+    private function formatMySqlDataType($column)
+    {
+        // Implémentation spécifique à MySQL si différente de formatDataType
+        // Pour l'exemple, je vais juste appeler la fonction générique
+        return $this->formatDataType($column);
     }
 
     public function extractAndSaveAllStructures($connectionName, $dbId)
@@ -67,21 +74,21 @@ class DatabaseStructureService
 
             // 1. Extraire et sauvegarder les tables
             $this->extractAndSaveTables($connectionName, $dbId, $databaseType);
-            
+
             // 2. Extraire et sauvegarder les vues
             $this->extractAndSaveViews($connectionName, $dbId, $databaseType);
-            
+
             // 3. Extraire et sauvegarder les fonctions
             $this->extractAndSaveFunctions($connectionName, $dbId, $databaseType);
-            
+
             // 4. Extraire et sauvegarder les procédures stockées
             $this->extractAndSaveProcedures($connectionName, $dbId, $databaseType);
-            
+
             // 5. Extraire et sauvegarder les triggers
             $this->extractAndSaveTriggers($connectionName, $dbId, $databaseType);
-            
+
             Log::info("Extraction de la structure terminée avec succès pour la base de données ID: {$dbId}");
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Erreur dans extractAndSaveAllStructures', [
@@ -91,7 +98,7 @@ class DatabaseStructureService
             throw $e;
         }
     }
-    
+
     /**
      * Extrait et sauvegarde les tables de la base de données
      */
@@ -99,7 +106,7 @@ class DatabaseStructureService
     {
         try {
             Log::info('Début extraction des tables...');
-            
+
             if ($databaseType === 'sqlsrv') {
                 $this->extractAndSaveSqlServerTables($connectionName, $dbId);
             } elseif ($databaseType === 'mysql') {
@@ -109,7 +116,7 @@ class DatabaseStructureService
             } else {
                 Log::warning('Type de base de données non supporté pour l\'extraction des tables', ['type' => $databaseType]);
             }
-            
+
             Log::info('Fin extraction des tables');
         } catch (\Exception $e) {
             Log::error('Erreur dans extractAndSaveTables', [
@@ -118,7 +125,7 @@ class DatabaseStructureService
             ]);
         }
     }
-    
+
     /**
      * Extrait et sauvegarde les tables de SQL Server
      */
@@ -127,375 +134,420 @@ class DatabaseStructureService
         try {
             // Récupérer la liste des tables
             $tables = DB::connection($connectionName)->select("
-                SELECT 
+                SELECT
                     t.name AS table_name,
                     s.name AS schema_name,
                     ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description,
                     CONVERT(VARCHAR(50), SCHEMA_NAME(t.schema_id) + '.' + t.name) AS full_name,
                     t.create_date,
                     t.modify_date
-                FROM 
+                FROM
                     sys.tables t
-                INNER JOIN 
+                INNER JOIN
                     sys.schemas s ON t.schema_id = s.schema_id
-                LEFT JOIN 
-                    sys.extended_properties ep ON ep.major_id = t.object_id 
-                    AND ep.minor_id = 0 
+                LEFT JOIN
+                    sys.extended_properties ep ON ep.major_id = t.object_id
+                    AND ep.minor_id = 0
                     AND ep.name = 'MS_Description'
-                WHERE 
+                WHERE
                     t.is_ms_shipped = 0
-                ORDER BY 
+                ORDER BY
                     s.name, t.name
             ");
-            
+
             Log::info('Tables SQL Server trouvées: ' . count($tables));
-            
+
             foreach ($tables as $table) {
-                try {
-                    // Créer une entrée dans table_description
-                    $tableDescription = TableDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'tablename' => $table->table_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'description' => $table->description ?? null,
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les colonnes de la table
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            c.name AS column_name,
-                            t.name AS data_type,
-                            c.max_length,
-                            c.precision,
-                            c.scale,
-                            c.is_nullable,
-                            CASE WHEN pk.column_id IS NOT NULL THEN 'PK' ELSE '' END AS key_type,
-                            ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
-                        FROM 
-                            sys.columns c
-                        INNER JOIN 
-                            sys.types t ON c.user_type_id = t.user_type_id
-                        INNER JOIN 
-                            sys.tables tbl ON c.object_id = tbl.object_id
-                        LEFT JOIN 
-                            (SELECT 
-                                ic.column_id, ic.object_id
-                             FROM 
+                // ✅ Début de la transaction pour chaque table
+                DB::transaction(function () use ($table, $dbId, $connectionName) {
+                    try {
+                        // Créer ou mettre à jour l'entrée dans table_description
+                        $tableDescription = TableDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'tablename' => $table->table_name
+                            ],
+                            [
+                                'language' => 'fr',
+                                'description' => $table->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
+
+                        // --- Colonnes ---
+                        // Récupérer les colonnes de la table
+                        $columns = DB::connection($connectionName)->select("
+                            SELECT
+                                c.name AS column_name,
+                                t.name AS data_type,
+                                c.max_length,
+                                c.precision,
+                                c.scale,
+                                c.is_nullable,
+                                CASE WHEN pk.column_id IS NOT NULL THEN 'PK' ELSE '' END AS key_type,
+                                ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                            FROM
+                                sys.columns c
+                            INNER JOIN
+                                sys.types t ON c.user_type_id = t.user_type_id
+                            INNER JOIN
+                                sys.tables tbl ON c.object_id = tbl.object_id
+                            LEFT JOIN
+                                (SELECT
+                                    ic.column_id, ic.object_id
+                                   FROM
+                                     sys.indexes i
+                                   INNER JOIN
+                                     sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                                   WHERE
+                                     i.is_primary_key = 1) pk
+                                ON pk.column_id = c.column_id AND pk.object_id = c.object_id
+                            LEFT JOIN
+                                sys.extended_properties ep ON ep.major_id = c.object_id
+                                AND ep.minor_id = c.column_id
+                                AND ep.name = 'MS_Description'
+                            WHERE
+                                tbl.name = ?
+                            ORDER BY
+                                c.column_id
+                        ", [$table->table_name]);
+
+                        // Supprimer les anciennes colonnes pour cette table
+                        TableStructure::where('id_table', $tableDescription->id)->delete();
+
+                        // ✅ Préparer les données pour l'insertion en masse des colonnes
+                        $columnsToInsert = [];
+                        foreach ($columns as $column) {
+                            $dataType = $this->formatDataType($column);
+                            $columnsToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'column' => $column->column_name,
+                                'type' => $dataType,
+                                'nullable' => $column->is_nullable ? 1 : 0,
+                                'key' => $column->key_type,
+                                'description' => $column->description ?? null,
+                                'created_at' => now(), // Ajout des timestamps
+                                'updated_at' => now(),
+                            ];
+                        }
+                        // ✅ Insérer les colonnes en masse
+                        if (!empty($columnsToInsert)) {
+                            TableStructure::insert($columnsToInsert);
+                        }
+
+                        // --- Index ---
+                        // Récupérer les index de la table
+                        $indexes = DB::connection($connectionName)->select("
+                            SELECT
+                                i.name AS index_name,
+                                i.type_desc AS index_type,
+                                (
+                                    SELECT STRING_AGG(c2.name, ', ')
+                                    FROM sys.index_columns ic2
+                                    INNER JOIN sys.columns c2 ON ic2.object_id = c2.object_id AND ic2.column_id = c2.column_id
+                                    WHERE ic2.object_id = i.object_id AND ic2.index_id = i.index_id
+                                ) AS column_names,
+                                i.is_unique,
+                                i.is_primary_key
+                            FROM
                                 sys.indexes i
-                             INNER JOIN 
+                            INNER JOIN
                                 sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                             WHERE 
-                                i.is_primary_key = 1) pk 
-                            ON pk.column_id = c.column_id AND pk.object_id = c.object_id
-                        LEFT JOIN 
-                            sys.extended_properties ep ON ep.major_id = c.object_id 
-                            AND ep.minor_id = c.column_id 
-                            AND ep.name = 'MS_Description'
-                        WHERE 
-                            tbl.name = ?
-                        ORDER BY 
-                            c.column_id
-                    ", [$table->table_name]);
-                    
-                    // Supprimer les anciennes colonnes pour cette table
-                    TableStructure::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles colonnes
-                    foreach ($columns as $column) {
-                        $dataType = $this->formatDataType($column);
-                        
-                        TableStructure::create([
-                            'id_table' => $tableDescription->id,
-                            'column' => $column->column_name,
-                            'type' => $dataType,
-                            'nullable' => $column->is_nullable ? 1 : 0,
-                            'key' => $column->key_type,
-                            'description' => $column->description ?? null
+                            INNER JOIN
+                                sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+                            INNER JOIN
+                                sys.tables t ON i.object_id = t.object_id
+                            WHERE
+                                t.name = ?
+                                AND i.name IS NOT NULL
+                            GROUP BY
+                                i.name, i.type_desc, i.is_unique, i.is_primary_key, i.object_id, i.index_id
+                            ORDER BY
+                                i.is_primary_key DESC, i.name
+                        ", [$table->table_name]);
+
+                        // Supprimer les anciens index pour cette table
+                        TableIndex::where('id_table', $tableDescription->id)->delete();
+
+                        // ✅ Préparer les données pour l'insertion en masse des index
+                        $indexesToInsert = [];
+                        foreach ($indexes as $index) {
+                            $properties = [];
+                            if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
+                            if ($index->is_unique) $properties[] = 'UNIQUE';
+
+                            $indexesToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'name' => $index->index_name,
+                                'type' => $index->index_type,
+                                'column' => $index->column_names,
+                                'properties' => implode(', ', $properties),
+                                'created_at' => now(), // Ajout des timestamps
+                                'updated_at' => now(),
+                            ];
+                        }
+                        // ✅ Insérer les index en masse
+                        if (!empty($indexesToInsert)) {
+                            TableIndex::insert($indexesToInsert);
+                        }
+
+                        // --- Relations de clés étrangères ---
+                        // Récupérer les relations de clés étrangères
+                        $foreignKeys = DB::connection($connectionName)->select("
+                            SELECT
+                                fk.name AS constraint_name,
+                                COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS column_name,
+                                OBJECT_NAME(fkc.referenced_object_id) AS referenced_table,
+                                COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS referenced_column,
+                                CASE
+                                    WHEN fk.delete_referential_action = 1 THEN 'CASCADE'
+                                    WHEN fk.delete_referential_action = 2 THEN 'SET NULL'
+                                    WHEN fk.delete_referential_action = 3 THEN 'SET DEFAULT'
+                                    ELSE 'NO ACTION'
+                                END AS delete_action
+                            FROM
+                                sys.foreign_keys fk
+                            INNER JOIN
+                                sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
+                            INNER JOIN
+                                sys.tables t ON fk.parent_object_id = t.object_id
+                            WHERE
+                                t.name = ?
+                            ORDER BY
+                                fk.name
+                        ", [$table->table_name]);
+
+                        // Supprimer les anciennes relations pour cette table
+                        TableRelation::where('id_table', $tableDescription->id)->delete();
+
+                        // ✅ Préparer les données pour l'insertion en masse des relations
+                        $foreignKeysToInsert = [];
+                        foreach ($foreignKeys as $fk) {
+                            $foreignKeysToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'constraints' => $fk->constraint_name,
+                                'column' => $fk->column_name,
+                                'referenced_table' => $fk->referenced_table,
+                                'referenced_column' => $fk->referenced_column,
+                                'action' => $fk->delete_action,
+                                'created_at' => now(), // Ajout des timestamps
+                                'updated_at' => now(),
+                            ];
+                        }
+                        // ✅ Insérer les relations en masse
+                        if (!empty($foreignKeysToInsert)) {
+                            TableRelation::insert($foreignKeysToInsert);
+                        }
+
+                        // Log pour chaque table, mais à un niveau moins verbeux si la performance est critique
+                        // Log::info('Table extraite et sauvegardée: ' . $table->table_name);
+
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une table SQL Server', [
+                            'table' => $table->table_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
                         ]);
+                        // Re-lancer l'exception pour que la transaction soit rollbackée
+                        throw $e;
                     }
-                    
-                    // Récupérer les index de la table
-                    $indexes = DB::connection($connectionName)->select("
-                        SELECT 
-                            i.name AS index_name,
-                            i.type_desc AS index_type,
-                            (
-                                SELECT STRING_AGG(c2.name, ', ') 
-                                FROM sys.index_columns ic2
-                                INNER JOIN sys.columns c2 ON ic2.object_id = c2.object_id AND ic2.column_id = c2.column_id
-                                WHERE ic2.object_id = i.object_id AND ic2.index_id = i.index_id
-                            ) AS column_names,
-                            i.is_unique,
-                            i.is_primary_key
-                        FROM 
-                            sys.indexes i
-                        INNER JOIN 
-                            sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                        INNER JOIN 
-                            sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-                        INNER JOIN 
-                            sys.tables t ON i.object_id = t.object_id
-                        WHERE 
-                            t.name = ?
-                            AND i.name IS NOT NULL
-                        GROUP BY 
-                            i.name, i.type_desc, i.is_unique, i.is_primary_key, i.object_id, i.index_id
-                        ORDER BY 
-                            i.is_primary_key DESC, i.name
-                    ", [$table->table_name]);
-                    
-                    // Supprimer les anciens index pour cette table
-                    TableIndex::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouveaux index
-                    foreach ($indexes as $index) {
-                        $properties = [];
-                        if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
-                        if ($index->is_unique) $properties[] = 'UNIQUE';
-                        
-                        TableIndex::create([
-                            'id_table' => $tableDescription->id,
-                            'name' => $index->index_name,
-                            'type' => $index->index_type,
-                            'column' => $index->column_names,
-                            'properties' => implode(', ', $properties)
-                        ]);
-                    }
-                    
-                    // Récupérer les relations de clés étrangères
-                    $foreignKeys = DB::connection($connectionName)->select("
-                        SELECT 
-                            fk.name AS constraint_name,
-                            COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS column_name,
-                            OBJECT_NAME(fkc.referenced_object_id) AS referenced_table,
-                            COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS referenced_column,
-                            CASE 
-                                WHEN fk.delete_referential_action = 1 THEN 'CASCADE'
-                                WHEN fk.delete_referential_action = 2 THEN 'SET NULL'
-                                WHEN fk.delete_referential_action = 3 THEN 'SET DEFAULT'
-                                ELSE 'NO ACTION'
-                            END AS delete_action
-                        FROM 
-                            sys.foreign_keys fk
-                        INNER JOIN 
-                            sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
-                        INNER JOIN 
-                            sys.tables t ON fk.parent_object_id = t.object_id
-                        WHERE 
-                            t.name = ?
-                        ORDER BY 
-                            fk.name
-                    ", [$table->table_name]);
-                    
-                    // Supprimer les anciennes relations pour cette table
-                    TableRelation::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles relations
-                    foreach ($foreignKeys as $fk) {
-                        TableRelation::create([
-                            'id_table' => $tableDescription->id,
-                            'constraints' => $fk->constraint_name,
-                            'column' => $fk->column_name,
-                            'referenced_table' => $fk->referenced_table,
-                            'referenced_column' => $fk->referenced_column,
-                            'action' => $fk->delete_action
-                        ]);
-                    }
-                    
-                    Log::info('Table extraite et sauvegardée: ' . $table->table_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la table', [
-                        'table' => $table->table_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                }); // ✅ Fin de la transaction pour chaque table
             }
+            Log::info('Toutes les tables SQL Server ont été traitées.'); // Log récapitulatif
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveSqlServerTables', [
+            Log::error('Erreur globale dans extractAndSaveSqlServerTables', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e; // Re-lancer pour propager l'erreur
         }
     }
-    
-    /**
-     * Extrait et sauvegarde les tables de MySQL
-     */
+
+    // ... (Vos autres méthodes extractAndSaveMySqlTables, extractAndSavePostgreSqlTables, etc.
+    // devront être mises à jour de la même manière avec transactions et insertions en masse)
+
+    // Exemple pour extractAndSaveMySqlTables (structure similaire)
     private function extractAndSaveMySqlTables($connectionName, $dbId)
     {
         try {
-            // Récupérer le nom de la base de données
             $database = DB::connection($connectionName)->getDatabaseName();
-            
-            // Récupérer la liste des tables
+
             $tables = DB::connection($connectionName)->select("
-                SELECT 
+                SELECT
                     TABLE_NAME AS table_name,
                     TABLE_SCHEMA AS schema_name,
                     TABLE_COMMENT AS description,
                     CREATE_TIME AS create_date,
                     UPDATE_TIME AS modify_date
-                FROM 
+                FROM
                     INFORMATION_SCHEMA.TABLES
-                WHERE 
+                WHERE
                     TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'
-                ORDER BY 
+                ORDER BY
                     TABLE_NAME
             ", [$database]);
-            
+
             Log::info('Tables MySQL trouvées: ' . count($tables));
-            
+
             foreach ($tables as $table) {
-                try {
-                    // Créer une entrée dans table_description
-                    $tableDescription = TableDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'tablename' => $table->table_name
-                        ],
-                        [
-                            'language' => 'en',
-                            'description' => $table->description ?? null,
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les colonnes de la table
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            COLUMN_NAME AS column_name,
-                            DATA_TYPE AS data_type,
-                            CHARACTER_MAXIMUM_LENGTH AS max_length,
-                            NUMERIC_PRECISION AS precision,
-                            NUMERIC_SCALE AS scale,
-                            IS_NULLABLE = 'YES' AS is_nullable,
-                            COLUMN_KEY AS key_type,
-                            COLUMN_COMMENT AS description
-                        FROM 
-                            INFORMATION_SCHEMA.COLUMNS
-                        WHERE 
-                            TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                        ORDER BY 
-                            ORDINAL_POSITION
-                    ", [$database, $table->table_name]);
-                    
-                    // Supprimer les anciennes colonnes pour cette table
-                    TableStructure::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles colonnes
-                    foreach ($columns as $column) {
-                        // Convertir le format de clé MySQL en format interne
-                        $keyType = '';
-                        if ($column->key_type === 'PRI') $keyType = 'PK';
-                        else if ($column->key_type === 'MUL') $keyType = 'FK';
-                        else if ($column->key_type === 'UNI') $keyType = 'UK';
-                        
-                        $dataType = $this->formatMySqlDataType($column);
-                        
-                        TableStructure::create([
-                            'id_table' => $tableDescription->id,
-                            'column' => $column->column_name,
-                            'type' => $dataType,
-                            'nullable' => $column->is_nullable ? 1 : 0,
-                            'key' => $keyType,
-                            'description' => $column->description ?? null
+                DB::transaction(function () use ($table, $dbId, $connectionName, $database) {
+                    try {
+                        $tableDescription = TableDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'tablename' => $table->table_name
+                            ],
+                            [
+                                'language' => 'en',
+                                'description' => $table->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
+
+                        // --- Colonnes ---
+                        $columns = DB::connection($connectionName)->select("
+                            SELECT
+                                COLUMN_NAME AS column_name,
+                                DATA_TYPE AS data_type,
+                                CHARACTER_MAXIMUM_LENGTH AS max_length,
+                                NUMERIC_PRECISION AS precision,
+                                NUMERIC_SCALE AS scale,
+                                IS_NULLABLE = 'YES' AS is_nullable,
+                                COLUMN_KEY AS key_type,
+                                COLUMN_COMMENT AS description
+                            FROM
+                                INFORMATION_SCHEMA.COLUMNS
+                            WHERE
+                                TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                            ORDER BY
+                                ORDINAL_POSITION
+                        ", [$database, $table->table_name]);
+
+                        TableStructure::where('id_table', $tableDescription->id)->delete();
+                        $columnsToInsert = [];
+                        foreach ($columns as $column) {
+                            $keyType = '';
+                            if ($column->key_type === 'PRI') $keyType = 'PK';
+                            else if ($column->key_type === 'MUL') $keyType = 'FK';
+                            else if ($column->key_type === 'UNI') $keyType = 'UK';
+                            
+                            $dataType = $this->formatMySqlDataType($column);
+
+                            $columnsToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'column' => $column->column_name,
+                                'type' => $dataType,
+                                'nullable' => $column->is_nullable ? 1 : 0,
+                                'key' => $keyType,
+                                'description' => $column->description ?? null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($columnsToInsert)) {
+                            TableStructure::insert($columnsToInsert);
+                        }
+
+                        // --- Index ---
+                        $indexes = DB::connection($connectionName)->select("
+                            SELECT
+                                INDEX_NAME AS index_name,
+                                CASE
+                                    WHEN INDEX_TYPE = 'FULLTEXT' THEN 'FULLTEXT'
+                                    WHEN NON_UNIQUE = 0 AND INDEX_NAME = 'PRIMARY' THEN 'PRIMARY KEY'
+                                    WHEN NON_UNIQUE = 0 THEN 'UNIQUE'
+                                    ELSE 'INDEX'
+                                END AS index_type,
+                                GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS column_names,
+                                INDEX_NAME = 'PRIMARY' AS is_primary_key,
+                                NON_UNIQUE = 0 AS is_unique
+                            FROM
+                                INFORMATION_SCHEMA.STATISTICS
+                            WHERE
+                                TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                            GROUP BY
+                                INDEX_NAME, INDEX_TYPE, NON_UNIQUE
+                            ORDER BY
+                                INDEX_NAME
+                        ", [$database, $table->table_name]);
+
+                        TableIndex::where('id_table', $tableDescription->id)->delete();
+                        $indexesToInsert = [];
+                        foreach ($indexes as $index) {
+                            $properties = [];
+                            if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
+                            if ($index->is_unique) $properties[] = 'UNIQUE';
+                            $indexesToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'name' => $index->index_name,
+                                'type' => $index->index_type,
+                                'column' => $index->column_names,
+                                'properties' => implode(', ', $properties),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($indexesToInsert)) {
+                            TableIndex::insert($indexesToInsert);
+                        }
+
+                        // --- Relations de clés étrangères ---
+                        $foreignKeys = DB::connection($connectionName)->select("
+                            SELECT
+                                CONSTRAINT_NAME AS constraint_name,
+                                COLUMN_NAME AS column_name,
+                                REFERENCED_TABLE_NAME AS referenced_table,
+                                REFERENCED_COLUMN_NAME AS referenced_column,
+                                'CASCADE' AS delete_action -- MySQL doesn't directly expose ON DELETE action in KEY_COLUMN_USAGE, you might need to query INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS for precise action
+                            FROM
+                                INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                            WHERE
+                                TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                                AND REFERENCED_TABLE_NAME IS NOT NULL
+                            ORDER BY
+                                CONSTRAINT_NAME
+                        ", [$database, $table->table_name]);
+
+                        TableRelation::where('id_table', $tableDescription->id)->delete();
+                        $foreignKeysToInsert = [];
+                        foreach ($foreignKeys as $fk) {
+                            $foreignKeysToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'constraints' => $fk->constraint_name,
+                                'column' => $fk->column_name,
+                                'referenced_table' => $fk->referenced_table,
+                                'referenced_column' => $fk->referenced_column,
+                                'action' => $fk->delete_action,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($foreignKeysToInsert)) {
+                            TableRelation::insert($foreignKeysToInsert);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une table MySQL', [
+                            'table' => $table->table_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
                         ]);
+                        throw $e;
                     }
-                    
-                    // Récupérer les index de la table
-                    $indexes = DB::connection($connectionName)->select("
-                        SELECT 
-                            INDEX_NAME AS index_name,
-                            CASE 
-                                WHEN INDEX_TYPE = 'FULLTEXT' THEN 'FULLTEXT'
-                                WHEN NON_UNIQUE = 0 AND INDEX_NAME = 'PRIMARY' THEN 'PRIMARY KEY'
-                                WHEN NON_UNIQUE = 0 THEN 'UNIQUE'
-                                ELSE 'INDEX'
-                            END AS index_type,
-                            GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS column_names,
-                            INDEX_NAME = 'PRIMARY' AS is_primary_key,
-                            NON_UNIQUE = 0 AS is_unique
-                        FROM 
-                            INFORMATION_SCHEMA.STATISTICS
-                        WHERE 
-                            TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                        GROUP BY 
-                            INDEX_NAME, INDEX_TYPE, NON_UNIQUE
-                        ORDER BY 
-                            INDEX_NAME
-                    ", [$database, $table->table_name]);
-                    
-                    // Supprimer les anciens index pour cette table
-                    TableIndex::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouveaux index
-                    foreach ($indexes as $index) {
-                        $properties = [];
-                        if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
-                        if ($index->is_unique) $properties[] = 'UNIQUE';
-                        
-                        TableIndex::create([
-                            'id_table' => $tableDescription->id,
-                            'name' => $index->index_name,
-                            'type' => $index->index_type,
-                            'column' => $index->column_names,
-                            'properties' => implode(', ', $properties)
-                        ]);
-                    }
-                    
-                    // Récupérer les relations de clés étrangères
-                    $foreignKeys = DB::connection($connectionName)->select("
-                        SELECT 
-                            CONSTRAINT_NAME AS constraint_name,
-                            COLUMN_NAME AS column_name,
-                            REFERENCED_TABLE_NAME AS referenced_table,
-                            REFERENCED_COLUMN_NAME AS referenced_column,
-                            'CASCADE' AS delete_action
-                        FROM 
-                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                        WHERE 
-                            TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                            AND REFERENCED_TABLE_NAME IS NOT NULL
-                        ORDER BY 
-                            CONSTRAINT_NAME
-                    ", [$database, $table->table_name]);
-                    
-                    // Supprimer les anciennes relations pour cette table
-                    TableRelations::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles relations
-                    foreach ($foreignKeys as $fk) {
-                        TableRelations::create([
-                            'id_table' => $tableDescription->id,
-                            'constraints' => $fk->constraint_name,
-                            'column' => $fk->column_name,
-                            'referenced_table' => $fk->referenced_table,
-                            'referenced_column' => $fk->referenced_column,
-                            'action' => $fk->delete_action
-                        ]);
-                    }
-                    
-                    Log::info('Table extraite et sauvegardée: ' . $table->table_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la table MySQL', [
-                        'table' => $table->table_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                });
             }
+            Log::info('Toutes les tables MySQL ont été traitées.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveMySqlTables', [
+            Log::error('Erreur globale dans extractAndSaveMySqlTables', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
     
+    // ... (Vos autres méthodes extractAndSavePostgreSqlTables, extractAndSaveViews, extractAndSaveFunctions, extractAndSaveProcedures, extractAndSaveTriggers
+    // devront être mises à jour de la même manière avec transactions et insertions en masse)
+
     /**
      * Extrait et sauvegarde les tables de PostgreSQL
      */
@@ -504,1639 +556,1007 @@ class DatabaseStructureService
         try {
             // Récupérer la liste des tables
             $tables = DB::connection($connectionName)->select("
-                SELECT 
+                SELECT
                     c.relname AS table_name,
                     n.nspname AS schema_name,
                     COALESCE(d.description, '') AS description
-                FROM 
+                FROM
                     pg_class c
-                JOIN 
+                JOIN
                     pg_namespace n ON n.oid = c.relnamespace
-                LEFT JOIN 
+                LEFT JOIN
                     pg_description d ON d.objoid = c.oid AND d.objsubid = 0
-                WHERE 
+                WHERE
                     c.relkind = 'r'
                     AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-                ORDER BY 
+                ORDER BY
                     n.nspname, c.relname
             ");
-            
+
             Log::info('Tables PostgreSQL trouvées: ' . count($tables));
-            
+
             foreach ($tables as $table) {
-                try {
-                    // Créer une entrée dans table_description
-                    $tableDescription = TableDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'tablename' => $table->table_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'description' => $table->description ?? null,
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les colonnes de la table
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            a.attname AS column_name,
-                            pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
-                            CASE 
-                                WHEN a.atttypmod > 0 THEN a.atttypmod - 4
-                                ELSE NULL
-                            END AS max_length,
-                            NULL AS precision,
-                            NULL AS scale,
-                            NOT a.attnotnull AS is_nullable,
-                            CASE 
-                                WHEN pk.contype = 'p' THEN 'PK'
-                                WHEN fk.conname IS NOT NULL THEN 'FK'
-                                ELSE ''
-                            END AS key_type,
-                            COALESCE(d.description, '') AS description
-                        FROM 
-                            pg_catalog.pg_attribute a
-                        JOIN 
-                            pg_catalog.pg_class c ON c.oid = a.attrelid
-                        JOIN 
-                            pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                        LEFT JOIN 
-                            pg_catalog.pg_description d ON d.objoid = a.attrelid AND d.objsubid = a.attnum
-                        LEFT JOIN (
-                            SELECT 
-                                contype, conrelid, conkey, conname
-                            FROM 
-                                pg_catalog.pg_constraint
-                            WHERE 
-                                contype = 'p'
-                        ) pk ON pk.conrelid = c.oid AND a.attnum = ANY(pk.conkey)
-                        LEFT JOIN (
-                            SELECT 
-                                conname, conrelid, conkey
-                            FROM 
-                                pg_catalog.pg_constraint
-                            WHERE 
-                                contype = 'f'
-                        ) fk ON fk.conrelid = c.oid AND a.attnum = ANY(fk.conkey)
-                        WHERE 
-                            c.relname = ?
-                            AND n.nspname = ?
-                            AND a.attnum > 0
-                            AND NOT a.attisdropped
-                        ORDER BY 
-                            a.attnum
-                    ", [$table->table_name, $table->schema_name]);
-                    
-                    // Supprimer les anciennes colonnes pour cette table
-                    TableStructure::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles colonnes
-                    foreach ($columns as $column) {
-                        TableStructure::create([
-                            'id_table' => $tableDescription->id,
-                            'column' => $column->column_name,
-                            'type' => $column->data_type,
-                            'nullable' => $column->is_nullable ? 1 : 0,
-                            'key' => $column->key_type,
-                            'description' => $column->description ?? null
+                DB::transaction(function () use ($table, $dbId, $connectionName) {
+                    try {
+                        // Créer une entrée dans table_description
+                        $tableDescription = TableDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'tablename' => $table->table_name
+                            ],
+                            [
+                                'language' => 'fr',
+                                'description' => $table->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
+
+                        // --- Colonnes ---
+                        $columns = DB::connection($connectionName)->select("
+                            SELECT
+                                a.attname AS column_name,
+                                pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+                                CASE
+                                    WHEN a.atttypmod > 0 THEN a.atttypmod - 4
+                                    ELSE NULL
+                                END AS max_length,
+                                NULL AS precision,
+                                NULL AS scale,
+                                NOT a.attnotnull AS is_nullable,
+                                CASE
+                                    WHEN pk.contype = 'p' THEN 'PK'
+                                    WHEN fk.conname IS NOT NULL THEN 'FK'
+                                    ELSE ''
+                                END AS key_type,
+                                COALESCE(d.description, '') AS description
+                            FROM
+                                pg_catalog.pg_attribute a
+                            JOIN
+                                pg_catalog.pg_class c ON c.oid = a.attrelid
+                            JOIN
+                                pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                            LEFT JOIN
+                                pg_catalog.pg_description d ON d.objoid = a.attrelid AND d.objsubid = a.attnum
+                            LEFT JOIN (
+                                SELECT
+                                    contype, conrelid, conkey, conname
+                                FROM
+                                    pg_catalog.pg_constraint
+                                WHERE
+                                    contype = 'p'
+                            ) pk ON pk.conrelid = c.oid AND a.attnum = ANY(pk.conkey)
+                            LEFT JOIN (
+                                SELECT
+                                    conname, conrelid, conkey
+                                FROM
+                                    pg_catalog.pg_constraint
+                                WHERE
+                                    contype = 'f'
+                            ) fk ON fk.conrelid = c.oid AND a.attnum = ANY(fk.conkey)
+                            WHERE
+                                c.relname = ?
+                                AND n.nspname = ?
+                                AND a.attnum > 0
+                                AND NOT a.attisdropped
+                            ORDER BY
+                                a.attnum
+                        ", [$table->table_name, $table->schema_name]);
+
+                        TableStructure::where('id_table', $tableDescription->id)->delete();
+                        $columnsToInsert = [];
+                        foreach ($columns as $column) {
+                            $columnsToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'column' => $column->column_name,
+                                'type' => $column->data_type, // PostgreSQL format_type already includes length/precision
+                                'nullable' => $column->is_nullable ? 1 : 0,
+                                'key' => $column->key_type,
+                                'description' => $column->description ?? null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($columnsToInsert)) {
+                            TableStructure::insert($columnsToInsert);
+                        }
+
+                        // --- Index ---
+                        $indexes = DB::connection($connectionName)->select("
+                            SELECT
+                                i.relname AS index_name,
+                                am.amname AS index_type,
+                                array_to_string(array_agg(a.attname ORDER BY indseq.ord), ', ') AS column_names,
+                                ix.indisprimary AS is_primary_key,
+                                ix.indisunique AS is_unique
+                            FROM
+                                pg_index ix
+                            JOIN
+                                pg_class i ON i.oid = ix.indexrelid
+                            JOIN
+                                pg_class t ON t.oid = ix.indrelid
+                            JOIN
+                                pg_am am ON am.oid = i.relam
+                            JOIN
+                                pg_namespace n ON n.oid = t.relnamespace
+                            JOIN
+                                pg_attribute a ON a.attrelid = t.oid
+                            JOIN
+                                LATERAL unnest(ix.indkey) WITH ORDINALITY AS indseq(key, ord)
+                                ON a.attnum = indseq.key
+                            WHERE
+                                t.relname = ?
+                                AND n.nspname = ?
+                            GROUP BY
+                                i.relname, am.amname, ix.indisprimary, ix.indisunique
+                            ORDER BY
+                                ix.indisprimary DESC, i.relname
+                        ", [$table->table_name, $table->schema_name]);
+
+                        TableIndex::where('id_table', $tableDescription->id)->delete();
+                        $indexesToInsert = [];
+                        foreach ($indexes as $index) {
+                            $properties = [];
+                            if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
+                            if ($index->is_unique) $properties[] = 'UNIQUE';
+
+                            $indexesToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'name' => $index->index_name,
+                                'type' => $index->index_type,
+                                'column' => $index->column_names,
+                                'properties' => implode(', ', $properties),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($indexesToInsert)) {
+                            TableIndex::insert($indexesToInsert);
+                        }
+
+                        // --- Relations de clés étrangères ---
+                        $foreignKeys = DB::connection($connectionName)->select("
+                            SELECT
+                                con.conname AS constraint_name,
+                                att.attname AS column_name,
+                                cl.relname AS referenced_table,
+                                att2.attname AS referenced_column,
+                                CASE con.confdeltype
+                                    WHEN 'a' THEN 'NO ACTION'
+                                    WHEN 'r' THEN 'RESTRICT'
+                                    WHEN 'c' THEN 'CASCADE'
+                                    WHEN 'n' THEN 'SET NULL'
+                                    WHEN 'd' THEN 'SET DEFAULT'
+                                END AS delete_action
+                            FROM (
+                                SELECT
+                                    conname, conrelid, confrelid, conkey, confkey, confdeltype
+                                FROM
+                                    pg_constraint
+                                WHERE
+                                    contype = 'f'
+                            ) con
+                            JOIN
+                                pg_class cl ON cl.oid = con.confrelid
+                            JOIN
+                                pg_class cl2 ON cl2.oid = con.conrelid
+                            JOIN
+                                pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+                            JOIN
+                                pg_attribute att2 ON att2.attrelid = con.confrelid AND att2.attnum = ANY(con.confkey)
+                            WHERE
+                                cl2.relname = ?
+                                AND con.conrelid = (SELECT oid FROM pg_class WHERE relname = ? AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = ?))
+                            ORDER BY
+                                con.conname
+                        ", [$table->table_name, $table->table_name, $table->schema_name]);
+
+
+                        TableRelation::where('id_table', $tableDescription->id)->delete();
+                        $foreignKeysToInsert = [];
+                        foreach ($foreignKeys as $fk) {
+                            $foreignKeysToInsert[] = [
+                                'id_table' => $tableDescription->id,
+                                'constraints' => $fk->constraint_name,
+                                'column' => $fk->column_name,
+                                'referenced_table' => $fk->referenced_table,
+                                'referenced_column' => $fk->referenced_column,
+                                'action' => $fk->delete_action,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($foreignKeysToInsert)) {
+                            TableRelation::insert($foreignKeysToInsert);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une table PostgreSQL', [
+                            'table' => $table->table_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
                         ]);
+                        throw $e;
                     }
-                    
-                    // Récupérer les index de la table
-                    $indexes = DB::connection($connectionName)->select("
-                        SELECT 
-                            i.relname AS index_name,
-                            am.amname AS index_type,
-                            array_to_string(array_agg(a.attname ORDER BY indseq.ord), ', ') AS column_names,
-                            ix.indisprimary AS is_primary_key,
-                            ix.indisunique AS is_unique
-                        FROM 
-                            pg_index ix
-                        JOIN 
-                            pg_class i ON i.oid = ix.indexrelid
-                        JOIN 
-                            pg_class t ON t.oid = ix.indrelid
-                        JOIN 
-                            pg_am am ON am.oid = i.relam
-                        JOIN 
-                            pg_namespace n ON n.oid = t.relnamespace
-                        JOIN 
-                            pg_attribute a ON a.attrelid = t.oid
-                        JOIN 
-                            LATERAL unnest(ix.indkey) WITH ORDINALITY AS indseq(key, ord) 
-                            ON a.attnum = indseq.key
-                        WHERE 
-                            t.relname = ?
-                            AND n.nspname = ?
-                        GROUP BY 
-                            i.relname, am.amname, ix.indisprimary, ix.indisunique
-                        ORDER BY 
-                            ix.indisprimary DESC, i.relname
-                    ", [$table->table_name, $table->schema_name]);
-                    
-                    // Supprimer les anciens index pour cette table
-                    TableIndex::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouveaux index
-                    foreach ($indexes as $index) {
-                        $properties = [];
-                        if ($index->is_primary_key) $properties[] = 'PRIMARY KEY';
-                        if ($index->is_unique) $properties[] = 'UNIQUE';
-                        
-                        TableIndex::create([
-                            'id_table' => $tableDescription->id,
-                            'name' => $index->index_name,
-                            'type' => $index->index_type,
-                            'column' => $index->column_names,
-                            'properties' => implode(', ', $properties)
-                        ]);
-                    }
-                    
-                    // Récupérer les relations de clés étrangères
-                    $foreignKeys = DB::connection($connectionName)->select("
-                        SELECT 
-                            con.conname AS constraint_name,
-                            att.attname AS column_name,
-                            cl.relname AS referenced_table,
-                            att2.attname AS referenced_column,
-                            CASE con.confdeltype
-                                WHEN 'a' THEN 'NO ACTION'
-                                WHEN 'r' THEN 'RESTRICT'
-                                WHEN 'c' THEN 'CASCADE'
-                                WHEN 'n' THEN 'SET NULL'
-                                WHEN 'd' THEN 'SET DEFAULT'
-                            END AS delete_action
-                        FROM (
-                            SELECT 
-                                conname, conrelid, confrelid, conkey, confkey, confdeltype
-                            FROM 
-                                pg_constraint
-                            WHERE 
-                                contype = 'f'
-                        ) con
-                        JOIN 
-                            pg_class cl ON cl.oid = con.confrelid
-                        JOIN 
-                            pg_class cl2 ON cl2.oid = con.conrelid
-                        JOIN 
-                            pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
-                        JOIN 
-                            pg_attribute att2 ON att2.attrelid = con.confrelid AND att2.attnum = con.confkey[1]
-                        WHERE 
-                            cl2.relname = ?
-                        ORDER BY 
-                            con.conname
-                    ", [$table->table_name]);
-                    
-                    // Supprimer les anciennes relations pour cette table
-                    TableRelation::where('id_table', $tableDescription->id)->delete();
-                    
-                    // Sauvegarder les nouvelles relations
-                    foreach ($foreignKeys as $fk) {
-                        TableRelation::create([
-                            'id_table' => $tableDescription->id,
-                            'constraints' => $fk->constraint_name,
-                            'column' => $fk->column_name,
-                            'referenced_table' => $fk->referenced_table,
-                            'referenced_column' => $fk->referenced_column,
-                            'action' => $fk->delete_action
-                        ]);
-                    }
-                    
-                    Log::info('Table extraite et sauvegardée: ' . $table->table_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la table PostgreSQL', [
-                        'table' => $table->table_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                });
             }
+            Log::info('Toutes les tables PostgreSQL ont été traitées.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgreSqlTables', [
+            Log::error('Erreur globale dans extractAndSavePostgreSqlTables', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
-    
-    /**
-     * Extrait et sauvegarde les vues de la base de données
-     */
+
+
+    // TODO: Vous devrez appliquer les mêmes optimisations (transactions et insertions en masse)
+    // à toutes les autres méthodes d'extraction et de sauvegarde :
+    // - extractAndSaveViews
+    // - extractAndSaveFunctions
+    // - extractAndSaveProcedures
+    // - extractAndSaveTriggers
+
+    // Exemple de structure pour extractAndSaveViews (à compléter)
     private function extractAndSaveViews($connectionName, $dbId, $databaseType)
     {
+        Log::info('Début extraction des vues...');
         try {
-            Log::info('Début extraction des vues...');
-            
+            $views = []; // Récupérer les vues selon le databaseType
             if ($databaseType === 'sqlsrv') {
-                $this->extractAndSaveSqlServerViews($connectionName, $dbId);
+                // Requête SQL Server pour les vues
+                $views = DB::connection($connectionName)->select("
+                    SELECT
+                        v.name AS view_name,
+                        s.name AS schema_name,
+                        OBJECT_DEFINITION(v.object_id) AS definition,
+                        v.create_date,
+                        v.modify_date,
+                        ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                    FROM
+                        sys.views v
+                    INNER JOIN
+                        sys.schemas s ON v.schema_id = s.schema_id
+                    LEFT JOIN
+                        sys.extended_properties ep ON ep.major_id = v.object_id
+                        AND ep.minor_id = 0
+                        AND ep.name = 'MS_Description'
+                    WHERE
+                        v.is_ms_shipped = 0
+                    ORDER BY
+                        s.name, v.name
+                ");
             } elseif ($databaseType === 'mysql') {
-                $this->extractAndSaveMySqlViews($connectionName, $dbId);
+                $database = DB::connection($connectionName)->getDatabaseName();
+                $views = DB::connection($connectionName)->select("
+                    SELECT
+                        TABLE_NAME AS view_name,
+                        TABLE_SCHEMA AS schema_name,
+                        VIEW_DEFINITION AS definition,
+                        CREATE_TIME AS create_date,
+                        UPDATE_TIME AS modify_date,
+                        '' AS description -- MySQL views don't have direct comments like tables
+                    FROM
+                        INFORMATION_SCHEMA.VIEWS
+                    WHERE
+                        TABLE_SCHEMA = ?
+                    ORDER BY
+                        TABLE_NAME
+                ", [$database]);
             } elseif ($databaseType === 'pgsql') {
-                $this->extractAndSavePostgreSqlViews($connectionName, $dbId);
-            } else {
-                Log::warning('Type de base de données non supporté pour l\'extraction des vues', ['type' => $databaseType]);
-            }
-            
-            Log::info('Fin extraction des vues');
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveViews', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    /**
-     * Extrait et sauvegarde les vues de SQL Server
-     */
-    private function extractAndSaveSqlServerViews($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des vues
-            $views = DB::connection($connectionName)->select("
-                SELECT 
-                    v.name AS view_name,
-                    s.name AS schema_name,
-                    OBJECT_DEFINITION(v.object_id) AS definition,
-                    v.create_date,
-                    v.modify_date
-                FROM 
-                    sys.views v
-                INNER JOIN 
-                    sys.schemas s ON v.schema_id = s.schema_id
-                WHERE 
-                    v.is_ms_shipped = 0
-                ORDER BY 
-                    s.name, v.name
-            ");
-            
-            Log::info('Vues SQL Server trouvées: ' . count($views));
-            
-            foreach ($views as $view) {
-                try {
-                    // Créer une entrée dans view_description
-                    $viewDescription = ViewDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'viewname' => $view->view_name
-                        ]
-                    );
-                    
-                    // Récupérer les colonnes de la vue
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            c.name AS column_name,
-                            t.name AS data_type,
-                            c.max_length,
-                            c.precision,
-                            c.scale,
-                            c.is_nullable
-                        FROM 
-                            sys.columns c
-                        INNER JOIN 
-                            sys.types t ON c.user_type_id = t.user_type_id
-                        INNER JOIN 
-                            sys.views v ON c.object_id = v.object_id
-                        WHERE 
-                            v.name = ?
-                        ORDER BY 
-                            c.column_id
-                    ", [$view->view_name]);
-                    
-                    // Supprimer les anciennes informations pour cette vue
-                    ViewInformation::where('id_view', $viewDescription->id)->delete();
-                    ViewColumn::where('id_view', $viewDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la vue
-                    ViewInformation::create([
-                        'id_view' => $viewDescription->id,
-                        'schema_name' => $view->schema_name,
-                        'definition' => $view->definition
-                    ]);
-                    
-                    // Sauvegarder les colonnes
-                    foreach ($columns as $column) {
-                        $dataType = $this->formatDataType($column);
-                        
-                        ViewColumn::create([
-                            'id_view' => $viewDescription->id,
-                            'name' => $column->column_name,
-                            'type' => $dataType,
-                            'nullable' => $column->is_nullable ? 1 : 0
-                        ]);
-                    }
-                    
-                    Log::info('Vue extraite et sauvegardée: ' . $view->view_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la vue', [
-                        'view' => $view->view_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveSqlServerViews', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    /**
-     * Extrait et sauvegarde les vues de MySQL
-     */
-    private function extractAndSaveMySqlViews($connectionName, $dbId)
-    {
-        try {
-            // Récupérer le nom de la base de données
-            $database = DB::connection($connectionName)->getDatabaseName();
-            
-            // Récupérer la liste des vues
-            $views = DB::connection($connectionName)->select("
-                SELECT 
-                    TABLE_NAME AS view_name,
-                    TABLE_SCHEMA AS schema_name,
-                    VIEW_DEFINITION AS definition,
-                    CREATE_TIME AS create_date,
-                    LAST_ALTERED AS modify_date
-                FROM 
-                    INFORMATION_SCHEMA.VIEWS
-                WHERE 
-                    TABLE_SCHEMA = ?
-                ORDER BY 
-                    TABLE_NAME
-            ", [$database]);
-            
-            Log::info('Vues MySQL trouvées: ' . count($views));
-            
-            foreach ($views as $view) {
-                try {
-                    // Créer une entrée dans view_description
-                    $viewDescription = ViewDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'viewname' => $view->view_name
-                        ]
-                    );
-                    
-                    // Récupérer les colonnes de la vue
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            COLUMN_NAME AS column_name,
-                            DATA_TYPE AS data_type,
-                            CHARACTER_MAXIMUM_LENGTH AS max_length,
-                            NUMERIC_PRECISION AS precision,
-                            NUMERIC_SCALE AS scale,
-                            IS_NULLABLE = 'YES' AS is_nullable
-                        FROM 
-                            INFORMATION_SCHEMA.COLUMNS
-                        WHERE 
-                            TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                        ORDER BY 
-                            ORDINAL_POSITION
-                    ", [$database, $view->view_name]);
-                    
-                    // Supprimer les anciennes informations pour cette vue
-                    ViewInformation::where('id_view', $viewDescription->id)->delete();
-                    ViewColumn::where('id_view', $viewDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la vue
-                    ViewInformation::create([
-                        'id_view' => $viewDescription->id,
-                        'schema_name' => $view->schema_name,
-                        'definition' => $view->definition
-                    ]);
-                    
-                    // Sauvegarder les colonnes
-                    foreach ($columns as $column) {
-                        $dataType = $this->formatMySqlDataType($column);
-                        
-                        ViewColumn::create([
-                            'id_view' => $viewDescription->id,
-                            'name' => $column->column_name,
-                            'type' => $dataType,
-                            'nullable' => $column->is_nullable ? 1 : 0
-                        ]);
-                    }
-                    
-                    Log::info('Vue extraite et sauvegardée: ' . $view->view_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la vue MySQL', [
-                        'view' => $view->view_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveMySqlViews', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-    /**
-     * Extrait et sauvegarde les vues Postgres
-     */
-
-    private function extractAndSavePostgreSqlViews($connectionName, $dbId)
-    {
-        try {
-            // Vérifier que nous sommes bien connectés à PostgreSQL
-            $driver = DB::connection($connectionName)->getDriverName();
-            if ($driver !== 'pgsql') {
-                Log::info('Fonction PostgreSQL appelée sur une connexion non-PostgreSQL', [
-                    'driver' => $driver,
-                    'connectionName' => $connectionName,
-                    'expected' => 'pgsql'
-                ]);
-                return;
-            }
-
-            Log::info('Début extraction des vues PostgreSQL', [
-                'connectionName' => $connectionName,
-                'dbId' => $dbId
-            ]);
-
-            // Récupérer la liste des vues PostgreSQL (UNIQUEMENT les vues utilisateur)
-            $views = DB::connection($connectionName)->select("
-                SELECT 
-                    v.table_name AS view_name,
-                    v.table_schema AS schema_name,
-                    v.view_definition AS definition
-                FROM 
-                    information_schema.views v
-                WHERE 
-                    v.table_schema = 'public'
-                    AND v.table_name NOT LIKE 'pg_%'
-                    AND v.table_name NOT LIKE 'sql_%'
-                    AND v.table_name NOT LIKE '_pg_%'
-                ORDER BY 
-                    v.table_name
-            ");
-            
-            Log::info('Vues PostgreSQL trouvées: ' . count($views), [
-                'views' => collect($views)->pluck('view_name')->toArray()
-            ]);
-            
-            if (count($views) === 0) {
-                Log::info('Aucune vue utilisateur trouvée dans le schéma public');
-                return;
+                $views = DB::connection($connectionName)->select("
+                    SELECT
+                        c.relname AS view_name,
+                        n.nspname AS schema_name,
+                        pg_get_viewdef(c.oid, true) AS definition,
+                        pg_catalog.pg_postmaster_start_time() AS create_date, -- Placeholder, PostgreSQL views don't have direct creation_date
+                        pg_catalog.pg_postmaster_start_time() AS modify_date, -- Placeholder
+                        COALESCE(d.description, '') AS description
+                    FROM
+                        pg_class c
+                    JOIN
+                        pg_namespace n ON n.oid = c.relnamespace
+                    LEFT JOIN
+                        pg_description d ON d.objoid = c.oid AND d.objsubid = 0
+                    WHERE
+                        c.relkind = 'v'
+                        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY
+                        n.nspname, c.relname
+                ");
             }
 
             foreach ($views as $view) {
-                try {
-                    Log::info('Traitement de la vue: ' . $view->view_name);
+                DB::transaction(function () use ($view, $dbId, $connectionName, $databaseType) {
+                    try {
+                        $viewDescription = ViewDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'viewname' => $view->view_name
+                            ],
+                            [
+                                'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
+                                'description' => $view->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Créer une entrée dans view_description
-                    $viewDescription = ViewDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'viewname' => $view->view_name
-                        ],
-                        [
-                            'description' => null // Initialiser avec une description vide
-                        ]
-                    );
-                    
-                    Log::info('ViewDescription créée/mise à jour', [
-                        'id' => $viewDescription->id,
-                        'viewname' => $view->view_name
-                    ]);
+                        // Save ViewInformation
+                        $viewInfo = ViewInformation::updateOrCreate(
+                            ['id_view' => $viewDescription->id],
+                            [
+                                'definition' => $view->definition,
+                                'creation_date' => $view->create_date,
+                                'last_change_date' => $view->modify_date,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Récupérer les colonnes de la vue PostgreSQL
-                    $columns = DB::connection($connectionName)->select("
-                        SELECT 
-                            c.column_name,
-                            c.data_type,
-                            c.character_maximum_length AS max_length,
-                            c.numeric_precision AS precision,
-                            c.numeric_scale AS scale,
-                            CASE WHEN c.is_nullable = 'YES' THEN true ELSE false END AS is_nullable,
-                            c.ordinal_position,
-                            c.column_default,
-                            CASE 
-                                WHEN c.data_type = 'USER-DEFINED' THEN c.udt_name
-                                ELSE c.data_type
-                            END AS actual_data_type
-                        FROM 
-                            information_schema.columns c
-                        WHERE 
-                            c.table_schema = 'public' 
-                            AND c.table_name = ?
-                        ORDER BY 
-                            c.ordinal_position
-                    ", [$view->view_name]);
-                    
-                    Log::info('Colonnes trouvées pour la vue ' . $view->view_name . ': ' . count($columns));
+                        // --- View Columns ---
+                        $viewColumns = [];
+                        if ($databaseType === 'sqlsrv') {
+                            $viewColumns = DB::connection($connectionName)->select("
+                                SELECT
+                                    c.name AS column_name,
+                                    t.name AS data_type,
+                                    c.max_length,
+                                    c.precision,
+                                    c.scale,
+                                    c.is_nullable,
+                                    ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                                FROM
+                                    sys.columns c
+                                INNER JOIN
+                                    sys.types t ON c.user_type_id = t.user_type_id
+                                INNER JOIN
+                                    sys.views v ON c.object_id = v.object_id
+                                LEFT JOIN
+                                    sys.extended_properties ep ON ep.major_id = c.object_id
+                                    AND ep.minor_id = c.column_id
+                                    AND ep.name = 'MS_Description'
+                                WHERE
+                                    v.name = ?
+                                ORDER BY
+                                    c.column_id
+                            ", [$view->view_name]);
+                        } elseif ($databaseType === 'mysql') {
+                            $database = DB::connection($connectionName)->getDatabaseName();
+                            $viewColumns = DB::connection($connectionName)->select("
+                                SELECT
+                                    COLUMN_NAME AS column_name,
+                                    DATA_TYPE AS data_type,
+                                    CHARACTER_MAXIMUM_LENGTH AS max_length,
+                                    NUMERIC_PRECISION AS precision,
+                                    NUMERIC_SCALE AS scale,
+                                    IS_NULLABLE = 'YES' AS is_nullable,
+                                    '' AS description -- MySQL columns in views don't have direct comments
+                                FROM
+                                    INFORMATION_SCHEMA.COLUMNS
+                                WHERE
+                                    TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                                ORDER BY
+                                    ORDINAL_POSITION
+                            ", [$database, $view->view_name]);
+                        } elseif ($databaseType === 'pgsql') {
+                            $viewColumns = DB::connection($connectionName)->select("
+                                SELECT
+                                    a.attname AS column_name,
+                                    pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+                                    CASE
+                                        WHEN a.atttypmod > 0 THEN a.atttypmod - 4
+                                        ELSE NULL
+                                    END AS max_length,
+                                    NULL AS precision,
+                                    NULL AS scale,
+                                    NOT a.attnotnull AS is_nullable,
+                                    COALESCE(d.description, '') AS description
+                                FROM
+                                    pg_catalog.pg_attribute a
+                                JOIN
+                                    pg_catalog.pg_class c ON c.oid = a.attrelid
+                                JOIN
+                                    pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                                LEFT JOIN
+                                    pg_catalog.pg_description d ON d.objoid = a.attrelid AND d.objsubid = a.attnum
+                                WHERE
+                                    c.relname = ?
+                                    AND n.nspname = ?
+                                    AND a.attnum > 0
+                                    AND NOT a.attisdropped
+                                ORDER BY
+                                    a.attnum
+                            ", [$view->view_name, $view->schema_name]);
+                        }
 
-                    // Supprimer les anciennes informations pour cette vue
-                    ViewInformation::where('id_view', $viewDescription->id)->delete();
-                    ViewColumn::where('id_view', $viewDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la vue
-                    ViewInformation::create([
-                        'id_view' => $viewDescription->id,
-                        'schema_name' => $view->schema_name ?? 'public',
-                        'definition' => $view->definition ?? null
-                    ]);
-                    
-                    // Sauvegarder les colonnes
-                    foreach ($columns as $column) {
-                        $dataType = $this->formatPostgreSqlDataType($column);
-                        
-                        ViewColumn::create([
-                            'id_view' => $viewDescription->id,
-                            'name' => $column->column_name,
-                            'type' => $dataType,
-                            'nullable' => $column->is_nullable ? 1 : 0,
-                            'description' => null // Initialiser avec une description vide
+                        ViewColumn::where('id_view', $viewDescription->id)->delete();
+                        $columnsToInsert = [];
+                        foreach ($viewColumns as $column) {
+                            $dataType = $this->formatDataType($column); // Use formatDataType for consistency
+                            $columnsToInsert[] = [
+                                'id_view' => $viewDescription->id,
+                                'column_name' => $column->column_name,
+                                'data_type' => $dataType,
+                                'max_length' => $column->max_length ?? null,
+                                'precision' => $column->precision ?? null,
+                                'scale' => $column->scale ?? null,
+                                'is_nullable' => $column->is_nullable ? 1 : 0,
+                                'description' => $column->description ?? null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($columnsToInsert)) {
+                            ViewColumn::insert($columnsToInsert);
+                        }
+
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une vue', [
+                            'view' => $view->view_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
                         ]);
+                        throw $e;
                     }
-                    
-                    Log::info('Vue PostgreSQL extraite et sauvegardée avec succès: ' . $view->view_name);
-                    
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la vue PostgreSQL', [
-                        'view' => $view->view_name ?? 'unknown',
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                    // Continue avec la vue suivante
-                    continue;
-                }
+                });
             }
-            
-            Log::info('Extraction des vues PostgreSQL terminée');
-            
+            Log::info('Fin extraction des vues.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgreSqlViews', [
+            Log::error('Erreur globale dans extractAndSaveViews', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'connectionName' => $connectionName,
-                'dbId' => $dbId
+                'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
 
-/**
- * Formate le type de données PostgreSQL pour l'affichage
- */
-private function formatPostgreSqlDataType($column)
-{
-    $type = $column->actual_data_type ?? $column->data_type ?? 'unknown';
-    
-    // Gestion des types PostgreSQL spécifiques
-    switch (strtolower($type)) {
-        case 'character varying':
-            return $column->max_length ? "varchar({$column->max_length})" : 'varchar';
-        case 'character':
-            return $column->max_length ? "char({$column->max_length})" : 'char';
-        case 'text':
-            return 'text';
-        case 'integer':
-            return 'integer';
-        case 'bigint':
-            return 'bigint';
-        case 'smallint':
-            return 'smallint';
-        case 'numeric':
-            if (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
-                return "numeric({$column->precision},{$column->scale})";
-            } elseif (isset($column->precision) && $column->precision) {
-                return "numeric({$column->precision})";
-            }
-            return 'numeric';
-        case 'decimal':
-            if (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
-                return "decimal({$column->precision},{$column->scale})";
-            } elseif (isset($column->precision) && $column->precision) {
-                return "decimal({$column->precision})";
-            }
-            return 'decimal';
-        case 'real':
-            return 'real';
-        case 'double precision':
-            return 'double precision';
-        case 'boolean':
-            return 'boolean';
-        case 'date':
-            return 'date';
-        case 'time without time zone':
-            return 'time';
-        case 'time with time zone':
-            return 'timetz';
-        case 'timestamp without time zone':
-            return 'timestamp';
-        case 'timestamp with time zone':
-            return 'timestamptz';
-        case 'interval':
-            return 'interval';
-        case 'uuid':
-            return 'uuid';
-        case 'json':
-            return 'json';
-        case 'jsonb':
-            return 'jsonb';
-        case 'xml':
-            return 'xml';
-        case 'bytea':
-            return 'bytea';
-        case 'inet':
-            return 'inet';
-        case 'cidr':
-            return 'cidr';
-        case 'macaddr':
-            return 'macaddr';
-        case 'point':
-            return 'point';
-        case 'line':
-            return 'line';
-        case 'lseg':
-            return 'lseg';
-        case 'box':
-            return 'box';
-        case 'path':
-            return 'path';
-        case 'polygon':
-            return 'polygon';
-        case 'circle':
-            return 'circle';
-        case 'money':
-            return 'money';
-        case 'serial':
-            return 'serial';
-        case 'bigserial':
-            return 'bigserial';
-        case 'smallserial':
-            return 'smallserial';
-        default:
-            // Pour les types personnalisés ou non reconnus
-            if (isset($column->max_length) && $column->max_length) {
-                return "{$type}({$column->max_length})";
-            } elseif (isset($column->precision) && $column->precision && isset($column->scale) && $column->scale !== null) {
-                return "{$type}({$column->precision},{$column->scale})";
-            } elseif (isset($column->precision) && $column->precision) {
-                return "{$type}({$column->precision})";
-            }
-            return $type;
-    }
-}
-    
-    /**
-     * Extrait et sauvegarde les fonctions de la base de données
-     */
+    // Exemple de structure pour extractAndSaveFunctions (à compléter)
     private function extractAndSaveFunctions($connectionName, $dbId, $databaseType)
     {
+        Log::info('Début extraction des fonctions...');
         try {
-            Log::info('Début extraction des fonctions...');
-            
+            $functions = []; // Récupérer les fonctions selon le databaseType
+
             if ($databaseType === 'sqlsrv') {
-                $this->extractAndSaveSqlServerFunctions($connectionName, $dbId);
+                $functions = DB::connection($connectionName)->select("
+                    SELECT
+                        o.name AS function_name,
+                        s.name AS schema_name,
+                        o.type_desc AS function_type,
+                        OBJECT_DEFINITION(o.object_id) AS definition,
+                        o.create_date,
+                        o.modify_date,
+                        ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                    FROM
+                        sys.objects o
+                    INNER JOIN
+                        sys.schemas s ON o.schema_id = s.schema_id
+                    LEFT JOIN
+                        sys.extended_properties ep ON ep.major_id = o.object_id
+                        AND ep.minor_id = 0
+                        AND ep.name = 'MS_Description'
+                    WHERE
+                        o.type IN ('FN', 'IF', 'TF') -- FN: Scalar function, IF: Inline table-valued function, TF: Table-valued function
+                        AND o.is_ms_shipped = 0
+                    ORDER BY
+                        s.name, o.name
+                ");
             } elseif ($databaseType === 'mysql') {
-                $this->extractAndSaveMySqlFunctions($connectionName, $dbId);
+                $database = DB::connection($connectionName)->getDatabaseName();
+                $functions = DB::connection($connectionName)->select("
+                    SELECT
+                        ROUTINE_NAME AS function_name,
+                        ROUTINE_SCHEMA AS schema_name,
+                        ROUTINE_TYPE AS function_type, -- 'FUNCTION'
+                        ROUTINE_DEFINITION AS definition,
+                        CREATED AS create_date,
+                        LAST_ALTERED AS modify_date,
+                        ROUTINE_COMMENT AS description
+                    FROM
+                        INFORMATION_SCHEMA.ROUTINES
+                    WHERE
+                        ROUTINE_SCHEMA = ? AND ROUTINE_TYPE = 'FUNCTION'
+                    ORDER BY
+                        ROUTINE_NAME
+                ", [$database]);
             } elseif ($databaseType === 'pgsql') {
-                $this->extractAndSavePostgreSqlFunctions($connectionName, $dbId);
-            } else {
-                Log::warning('Type de base de données non supporté pour l\'extraction des fonctions', ['type' => $databaseType]);
+                $functions = DB::connection($connectionName)->select("
+                    SELECT
+                        p.proname AS function_name,
+                        n.nspname AS schema_name,
+                        CASE p.proretset WHEN TRUE THEN 'Table-valued function' ELSE 'Scalar function' END AS function_type,
+                        pg_get_functiondef(p.oid) AS definition,
+                        NULL AS create_date, -- PostgreSQL functions don't have direct creation_date
+                        NULL AS modify_date, -- PostgreSQL functions don't have direct modify_date
+                        COALESCE(d.description, '') AS description,
+                        pg_catalog.format_type(p.prorettype, NULL) AS return_type
+                    FROM
+                        pg_proc p
+                    JOIN
+                        pg_namespace n ON n.oid = p.pronamespace
+                    LEFT JOIN
+                        pg_description d ON d.objoid = p.oid
+                    WHERE
+                        p.prokind = 'f' -- 'f' for function, 'p' for procedure
+                        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY
+                        n.nspname, p.proname
+                ");
             }
-            
-            Log::info('Fin extraction des fonctions');
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveFunctions', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    /**
-     * Extrait et sauvegarde les fonctions de SQL Server
-     */
-    private function extractAndSaveSqlServerFunctions($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des fonctions
-            $functions = DB::connection($connectionName)->select("
-                SELECT 
-                    o.name AS function_name,
-                    s.name AS schema_name,
-                    o.type_desc AS function_type,
-                    OBJECT_DEFINITION(o.object_id) AS definition,
-                    o.create_date,
-                    o.modify_date
-                FROM 
-                    sys.objects o
-                INNER JOIN 
-                    sys.schemas s ON o.schema_id = s.schema_id
-                WHERE 
-                    o.type IN ('FN', 'IF', 'TF')
-                    AND o.is_ms_shipped = 0
-                ORDER BY 
-                    s.name, o.name
-            ");
-            
-            Log::info('Fonctions SQL Server trouvées: ' . count($functions));
-            
+
             foreach ($functions as $function) {
-                try {
-                    // Créer une entrée dans function_description
-                    $functionDescription = FunctionDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'functionname' => $function->function_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer le type de retour et les paramètres
-                    $returnType = DB::connection($connectionName)->select("
-                        SELECT 
-                            t.name AS type_name
-                        FROM 
-                            sys.objects o
-                        JOIN 
-                            sys.parameters p ON p.object_id = o.object_id AND p.parameter_id = 0
-                        JOIN 
-                            sys.types t ON p.user_type_id = t.user_type_id
-                        WHERE 
-                            o.name = ?
-                    ", [$function->function_name]);
-                    
-                    $returnTypeName = count($returnType) > 0 ? $returnType[0]->type_name : 'unknown';
-                    
-                    // Récupérer les paramètres
-                    $parameters = DB::connection($connectionName)->select("
-                        SELECT 
-                            p.name AS parameter_name,
-                            t.name AS data_type,
-                            p.max_length,
-                            p.precision,
-                            p.scale,
-                            p.is_output,
-                            p.parameter_id,
-                            p.has_default_value,
-                            p.default_value
-                        FROM 
-                            sys.parameters p
-                        INNER JOIN 
-                            sys.types t ON p.user_type_id = t.user_type_id
-                        INNER JOIN 
-                            sys.objects o ON p.object_id = o.object_id
-                        WHERE 
-                            o.name = ?
-                            AND p.parameter_id > 0
-                        ORDER BY 
-                            p.parameter_id
-                    ", [$function->function_name]);
-                    
-                    // Supprimer les anciennes informations pour cette fonction
-                    FuncInformation::where('id_func', $functionDescription->id)->delete();
-                    FuncParameter::where('id_func', $functionDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la fonction
-                    FuncInformation::create([
-                        'id_func' => $functionDescription->id,
-                        'type' => $function->function_type,
-                        'return_type' => $returnTypeName,
-                        'creation_date' => $function->create_date,
-                        'last_change_date' => $function->modify_date,
-                        'definition' => $function->definition
-                    ]);
-                    
-                    // Sauvegarder les paramètres
-                    foreach ($parameters as $param) {
-                        $dataType = $this->formatDataType($param);
-                        
-                        FuncParameter::create([
-                            'id_func' => $functionDescription->id,
-                            'name' => $param->parameter_name,
-                            'type' => $dataType,
-                            'output' => $param->is_output ? 'OUTPUT' : 'INPUT',
-                            'definition' => null
-                        ]);
-                    }
-                    
-                    Log::info('Fonction extraite et sauvegardée: ' . $function->function_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la fonction', [
-                        'function' => $function->function_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveSqlServerFunctions', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    /**
-     * Extrait et sauvegarde les fonctions de MySQL
-     */
-    private function extractAndSaveMySqlFunctions($connectionName, $dbId)
-    {
-        try {
-            // Récupérer le nom de la base de données
-            $database = DB::connection($connectionName)->getDatabaseName();
-            
-            // Récupérer la liste des fonctions
-            $functions = DB::connection($connectionName)->select("
-                SELECT 
-                    ROUTINE_NAME AS function_name,
-                    ROUTINE_SCHEMA AS schema_name,
-                    DTD_IDENTIFIER AS return_type,
-                    ROUTINE_DEFINITION AS definition,
-                    CREATED AS create_date,
-                    LAST_ALTERED AS modify_date
-                FROM 
-                    INFORMATION_SCHEMA.ROUTINES
-                WHERE 
-                    ROUTINE_SCHEMA = ? AND ROUTINE_TYPE = 'FUNCTION'
-                ORDER BY 
-                    ROUTINE_NAME
-            ", [$database]);
-            
-            Log::info('Fonctions MySQL trouvées: ' . count($functions));
-            
-            foreach ($functions as $function) {
-                try {
-                    // Créer une entrée dans function_description
-                    $functionDescription = FunctionDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'functionname' => $function->function_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les paramètres
-                    $parameters = DB::connection($connectionName)->select("
-                        SELECT 
-                            PARAMETER_NAME AS parameter_name,
-                            DATA_TYPE AS data_type,
-                            CHARACTER_MAXIMUM_LENGTH AS max_length,
-                            NUMERIC_PRECISION AS precision,
-                            NUMERIC_SCALE AS scale,
-                            PARAMETER_MODE IN ('OUT', 'INOUT') AS is_output,
-                            ORDINAL_POSITION AS parameter_id
-                        FROM 
-                            INFORMATION_SCHEMA.PARAMETERS
-                        WHERE 
-                            SPECIFIC_SCHEMA = ? AND SPECIFIC_NAME = ?
-                            AND PARAMETER_NAME IS NOT NULL
-                        ORDER BY 
-                            ORDINAL_POSITION
-                    ", [$database, $function->function_name]);
-                    
-                    // Supprimer les anciennes informations pour cette fonction
-                    FuncInformation::where('id_func', $functionDescription->id)->delete();
-                    FuncParameter::where('id_func', $functionDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la fonction
-                    FuncInformation::create([
-                        'id_func' => $functionDescription->id,
-                        'type' => 'FUNCTION',
-                        'return_type' => $function->return_type,
-                        'creation_date' => $function->create_date,
-                        'last_change_date' => $function->modify_date
-                    ]);
-                    
-                    // Sauvegarder les paramètres
-                    foreach ($parameters as $param) {
-                        $dataType = $this->formatMySqlDataType($param);
-                        
-                        FuncParameter::create([
-                            'id_func' => $functionDescription->id,
-                            'name' => $param->parameter_name,
-                            'type' => $dataType,
-                            'output' => $param->is_output ? 'OUTPUT' : 'INPUT',
-                            'definition' => null
-                        ]);
-                    }
-                    
-                    Log::info('Fonction extraite et sauvegardée: ' . $function->function_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la fonction MySQL', [
-                        'function' => $function->function_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveMySqlFunctions', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    /**
-     * Extrait et sauvegarde les fonctions de PostgreSQL
-     */
-    private function extractAndSavePostgreSqlFunctions($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des fonctions
-            $functions = DB::connection($connectionName)->select("
-                SELECT 
-                    p.proname AS function_name,
-                    n.nspname AS schema_name,
-                    pg_get_function_result(p.oid) AS return_type,
-                    pg_get_functiondef(p.oid) AS definition
-                FROM 
-                    pg_proc p
-                JOIN 
-                    pg_namespace n ON n.oid = p.pronamespace
-                WHERE 
-                    p.prokind = 'f'
-                    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-                ORDER BY 
-                    n.nspname, p.proname
-            ");
-            
-            Log::info('Fonctions PostgreSQL trouvées: ' . count($functions));
-            
-            foreach ($functions as $function) {
-                try {
-                    // Créer une entrée dans function_description
-                    $functionDescription = FunctionDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'functionname' => $function->function_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les paramètres (simplifiés car PostgreSQL a une structure plus complexe)
-                    $parametersText = DB::connection($connectionName)->select("
-                        SELECT 
-                            pg_get_function_arguments(p.oid) AS args
-                        FROM 
-                            pg_proc p
-                        JOIN 
-                            pg_namespace n ON n.oid = p.pronamespace
-                        WHERE 
-                            p.proname = ? 
-                            AND n.nspname = ?
-                    ", [$function->function_name, $function->schema_name]);
-                    
-                    $argsText = count($parametersText) > 0 ? $parametersText[0]->args : '';
-                    $paramArray = explode(',', $argsText);
-                    
-                    // Supprimer les anciennes informations pour cette fonction
-                    FuncInformation::where('id_func', $functionDescription->id)->delete();
-                    FuncParameter::where('id_func', $functionDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la fonction
-                    FuncInformation::create([
-                        'id_func' => $functionDescription->id,
-                        'type' => 'FUNCTION',
-                        'return_type' => $function->return_type,
-                        'creation_date' => now(),
-                        'last_change_date' => now()
-                    ]);
-                    
-                    // Sauvegarder les paramètres (traitement simplifié)
-                    foreach ($paramArray as $index => $paramText) {
-                        if (empty(trim($paramText))) continue;
-                        
-                        // Tentative d'extraction du nom et du type
-                        $parts = explode(' ', trim($paramText));
-                        if (count($parts) >= 2) {
-                            $paramName = $parts[0];
-                            $paramType = $parts[1];
-                            $isOut = stripos($paramText, 'OUT') !== false || stripos($paramText, 'INOUT') !== false;
-                            
-                            FuncParameter::create([
-                                'id_func' => $functionDescription->id,
-                                'name' => $paramName,
-                                'type' => $paramType,
-                                'output' => $isOut ? 'OUTPUT' : 'INPUT',
-                                'definition' => null
-                            ]);
+                DB::transaction(function () use ($function, $dbId, $connectionName, $databaseType) {
+                    try {
+                        $functionDescription = FunctionDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'functionname' => $function->function_name
+                            ],
+                            [
+                                'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
+                                'description' => $function->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
+
+                        // Save FuncInformation
+                        $funcInfo = FuncInformation::updateOrCreate(
+                            ['id_func' => $functionDescription->id],
+                            [
+                                'type' => $function->function_type,
+                                'return_type' => $function->return_type ?? null, // Add return_type for PostgreSQL
+                                'definition' => $function->definition,
+                                'creation_date' => $function->create_date,
+                                'last_change_date' => $function->modify_date,
+                                'updated_at' => now()
+                            ]
+                        );
+
+                        // --- Function Parameters ---
+                        $parameters = [];
+                        if ($databaseType === 'sqlsrv') {
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    p.name AS parameter_name,
+                                    TYPE_NAME(p.user_type_id) AS data_type,
+                                    CASE WHEN p.is_output = 1 THEN 'OUTPUT' ELSE 'INPUT' END AS output_type,
+                                    ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                                FROM
+                                    sys.parameters p
+                                INNER JOIN
+                                    sys.objects o ON p.object_id = o.object_id
+                                LEFT JOIN
+                                    sys.extended_properties ep ON ep.major_id = p.object_id
+                                    AND ep.minor_id = p.parameter_id
+                                    AND ep.name = 'MS_Description'
+                                WHERE
+                                    o.name = ?
+                                ORDER BY
+                                    p.parameter_id
+                            ", [$function->function_name]);
+                        } elseif ($databaseType === 'mysql') {
+                            $database = DB::connection($connectionName)->getDatabaseName();
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    PARAMETER_NAME AS parameter_name,
+                                    DTD_IDENTIFIER AS data_type,
+                                    PARAMETER_MODE AS output_type,
+                                    '' AS description -- MySQL parameters don't have direct comments
+                                FROM
+                                    INFORMATION_SCHEMA.PARAMETERS
+                                WHERE
+                                    SPECIFIC_SCHEMA = ?
+                                    AND SPECIFIC_NAME = ?
+                                    AND ROUTINE_TYPE = 'FUNCTION'
+                                ORDER BY
+                                    ORDINAL_POSITION
+                            ", [$database, $function->function_name]);
+                        } elseif ($databaseType === 'pgsql') {
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    unnest(p.proargnames) AS parameter_name,
+                                    pg_catalog.format_type(unnest(p.proargtypes), NULL) AS data_type,
+                                    'INPUT' AS output_type, -- PostgreSQL doesn't have direct OUTPUT parameters for functions in this view
+                                    COALESCE(d.description, '') AS description
+                                FROM
+                                    pg_proc p
+                                JOIN
+                                    pg_namespace n ON n.oid = p.pronamespace
+                                LEFT JOIN
+                                    pg_description d ON d.objoid = p.oid AND d.objsubid = (SELECT unnest(p.proargnames) WHERE unnest = unnest(p.proargnames)) -- This join is tricky, might need adjustment
+                                WHERE
+                                    p.proname = ?
+                                    AND n.nspname = ?
+                                ORDER BY
+                                    array_position(p.proargnames, unnest(p.proargnames))
+                            ", [$function->function_name, $function->schema_name]);
                         }
+
+                        FuncParameter::where('id_func', $functionDescription->id)->delete();
+                        $parametersToInsert = [];
+                        foreach ($parameters as $param) {
+                            $parametersToInsert[] = [
+                                'id_func' => $functionDescription->id,
+                                'name' => $param->parameter_name,
+                                'type' => $param->data_type,
+                                'output' => $param->output_type,
+                                'description' => $param->description ?? null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($parametersToInsert)) {
+                            FuncParameter::insert($parametersToInsert);
+                        }
+
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une fonction', [
+                            'function' => $function->function_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        throw $e;
                     }
-                    
-                    Log::info('Fonction extraite et sauvegardée: ' . $function->function_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la fonction PostgreSQL', [
-                        'function' => $function->function_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                });
             }
+            Log::info('Fin extraction des fonctions.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgreSqlFunctions', [
+            Log::error('Erreur globale dans extractAndSaveFunctions', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
 
-    /**
- * Extrait et sauvegarde les procédures stockées de la base de données
- */
+    // Exemple de structure pour extractAndSaveProcedures (à compléter)
     private function extractAndSaveProcedures($connectionName, $dbId, $databaseType)
     {
+        Log::info('Début extraction des procédures stockées...');
         try {
-            Log::info('Début extraction des procédures stockées...');
-            
+            $procedures = []; // Récupérer les procédures selon le databaseType
+
             if ($databaseType === 'sqlsrv') {
-                $this->extractAndSaveSqlServerProcedures($connectionName, $dbId);
+                $procedures = DB::connection($connectionName)->select("
+                    SELECT
+                        o.name AS procedure_name,
+                        s.name AS schema_name,
+                        OBJECT_DEFINITION(o.object_id) AS definition,
+                        o.create_date,
+                        o.modify_date,
+                        ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                    FROM
+                        sys.objects o
+                    INNER JOIN
+                        sys.schemas s ON o.schema_id = s.schema_id
+                    LEFT JOIN
+                        sys.extended_properties ep ON ep.major_id = o.object_id
+                        AND ep.minor_id = 0
+                        AND ep.name = 'MS_Description'
+                    WHERE
+                        o.type = 'P' -- P: Stored procedure
+                        AND o.is_ms_shipped = 0
+                    ORDER BY
+                        s.name, o.name
+                ");
             } elseif ($databaseType === 'mysql') {
-                $this->extractAndSaveMySqlProcedures($connectionName, $dbId);
+                $database = DB::connection($connectionName)->getDatabaseName();
+                $procedures = DB::connection($connectionName)->select("
+                    SELECT
+                        ROUTINE_NAME AS procedure_name,
+                        ROUTINE_SCHEMA AS schema_name,
+                        ROUTINE_TYPE AS procedure_type, -- 'PROCEDURE'
+                        ROUTINE_DEFINITION AS definition,
+                        CREATED AS create_date,
+                        LAST_ALTERED AS modify_date,
+                        ROUTINE_COMMENT AS description
+                    FROM
+                        INFORMATION_SCHEMA.ROUTINES
+                    WHERE
+                        ROUTINE_SCHEMA = ? AND ROUTINE_TYPE = 'PROCEDURE'
+                    ORDER BY
+                        ROUTINE_NAME
+                ", [$database]);
             } elseif ($databaseType === 'pgsql') {
-                $this->extractAndSavePostgreSqlProcedures($connectionName, $dbId);
-            } else {
-                Log::warning('Type de base de données non supporté pour l\'extraction des procédures stockées', ['type' => $databaseType]);
+                $procedures = DB::connection($connectionName)->select("
+                    SELECT
+                        p.proname AS procedure_name,
+                        n.nspname AS schema_name,
+                        pg_get_functiondef(p.oid) AS definition,
+                        NULL AS create_date, -- Placeholder
+                        NULL AS modify_date, -- Placeholder
+                        COALESCE(d.description, '') AS description
+                    FROM
+                        pg_proc p
+                    JOIN
+                        pg_namespace n ON n.oid = p.pronamespace
+                    LEFT JOIN
+                        pg_description d ON d.objoid = p.oid
+                    WHERE
+                        p.prokind = 'p' -- 'p' for procedure, 'f' for function
+                        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY
+                        n.nspname, p.proname
+                ");
             }
-            
-            Log::info('Fin extraction des procédures stockées');
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveProcedures', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-/**
- * Extrait et sauvegarde les procédures stockées de SQL Server
- */
-    private function extractAndSaveSqlServerProcedures($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des procédures stockées
-            $procedures = DB::connection($connectionName)->select("
-                SELECT 
-                    p.name AS procedure_name,
-                    s.name AS schema_name,
-                    OBJECT_DEFINITION(p.object_id) AS definition,
-                    p.create_date,
-                    p.modify_date
-                FROM 
-                    sys.procedures p
-                INNER JOIN 
-                    sys.schemas s ON p.schema_id = s.schema_id
-                WHERE 
-                    p.is_ms_shipped = 0
-                ORDER BY 
-                    s.name, p.name
-            ");
-            
-            Log::info('Procédures SQL Server trouvées: ' . count($procedures));
-            
-            foreach ($procedures as $procedure) {
-                try {
-                    // Créer une entrée dans ps_description
-                    $psDescription = \App\Models\PsDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'psname' => $procedure->procedure_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Récupérer les paramètres
-                    $parameters = DB::connection($connectionName)->select("
-                        SELECT 
-                            p.name AS parameter_name,
-                            t.name AS data_type,
-                            p.max_length,
-                            p.precision,
-                            p.scale,
-                            p.is_output,
-                            p.parameter_id,
-                            p.has_default_value,
-                            p.default_value
-                        FROM 
-                            sys.parameters p
-                        INNER JOIN 
-                            sys.types t ON p.user_type_id = t.user_type_id
-                        INNER JOIN 
-                            sys.procedures ON p.object_id = procedures.object_id
-                        WHERE 
-                            procedures.name = ?
-                        ORDER BY 
-                            p.parameter_id
-                    ", [$procedure->procedure_name]);
-                    
-                    // Supprimer les anciennes informations pour cette procédure
-                    \App\Models\PsInformation::where('id_ps', $psDescription->id)->delete();
-                    \App\Models\PsParameter::where('id_ps', $psDescription->id)->delete();
-                    
-                    // Sauvegarder les informations de la procédure
-                    \App\Models\PsInformation::create([
-                        'id_ps' => $psDescription->id,
-                        'schema' => $procedure->schema_name,
-                        'creation_date' => $procedure->create_date,
-                        'last_change_date' => $procedure->modify_date,
-                        'definition' => $procedure->definition
-                    ]);
-                    
-                    // Sauvegarder les paramètres
-                    foreach ($parameters as $param) {
-                        $dataType = $this->formatDataType($param);
-                        
-                        \App\Models\PsParameter::create([
-                            'id_ps' => $psDescription->id,
-                            'name' => $param->parameter_name,
-                            'type' => $dataType,
-                            'output' => $param->is_output ? 'OUTPUT' : 'INPUT',
-                            'definition' => null,
-                            'default_value' => $param->has_default_value ? $param->default_value : null
-                        ]);
-                    }
-                    
-                    Log::info('Procédure extraite et sauvegardée: ' . $procedure->procedure_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la procédure', [
-                        'procedure' => $procedure->procedure_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveSqlServerProcedures', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-/**
- * Extrait et sauvegarde les procédures stockées de MySQL
- */
-    private function extractAndSaveMySqlProcedures($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des procédures stockées dans MySQL
-            $procedures = DB::connection($connectionName)->select("
-                SELECT 
-                    ROUTINE_NAME AS procedure_name,
-                    ROUTINE_SCHEMA AS schema_name,
-                    CREATED AS create_date,
-                    LAST_ALTERED AS modify_date,
-                    ROUTINE_DEFINITION AS definition
-                FROM 
-                    INFORMATION_SCHEMA.ROUTINES
-                WHERE 
-                    ROUTINE_TYPE = 'PROCEDURE'
-                    AND ROUTINE_SCHEMA = DATABASE()
-                ORDER BY 
-                    ROUTINE_SCHEMA, ROUTINE_NAME
-            ");
-
-            Log::info('Procédures MySQL trouvées: ' . count($procedures));
 
             foreach ($procedures as $procedure) {
-                try {
-                    // Créer une entrée dans ps_description
-                    $psDescription = \App\Models\PsDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'psname' => $procedure->procedure_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
+                DB::transaction(function () use ($procedure, $dbId, $connectionName, $databaseType) {
+                    try {
+                        $psDescription = PsDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'psname' => $procedure->procedure_name
+                            ],
+                            [
+                                'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
+                                'description' => $procedure->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Récupérer les paramètres de la procédure
-                    $parameters = DB::connection($connectionName)->select("
-                        SELECT 
-                            PARAMETER_NAME AS parameter_name,
-                            DATA_TYPE AS data_type,
-                            CHARACTER_MAXIMUM_LENGTH AS max_length,
-                            NUMERIC_PRECISION AS precision,
-                            NUMERIC_SCALE AS scale,
-                            PARAMETER_MODE AS param_mode
-                        FROM 
-                            INFORMATION_SCHEMA.PARAMETERS
-                        WHERE 
-                            SPECIFIC_NAME = ?
-                            AND SPECIFIC_SCHEMA = DATABASE()
-                        ORDER BY 
-                            ORDINAL_POSITION
-                    ", [$procedure->procedure_name]);
+                        // Save PsInformation
+                        $psInfo = PsInformation::updateOrCreate(
+                            ['id_ps' => $psDescription->id],
+                            [
+                                'definition' => $procedure->definition,
+                                'creation_date' => $procedure->create_date,
+                                'last_change_date' => $procedure->modify_date,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Supprimer les anciennes informations
-                    \App\Models\PsInformation::where('id_ps', $psDescription->id)->delete();
-                    \App\Models\PsParameter::where('id_ps', $psDescription->id)->delete();
+                        // --- Procedure Parameters ---
+                        $parameters = [];
+                        if ($databaseType === 'sqlsrv') {
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    p.name AS parameter_name,
+                                    TYPE_NAME(p.user_type_id) AS data_type,
+                                    CASE WHEN p.is_output = 1 THEN 'OUTPUT' ELSE 'INPUT' END AS output_type,
+                                    ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                                FROM
+                                    sys.parameters p
+                                INNER JOIN
+                                    sys.objects o ON p.object_id = o.object_id
+                                LEFT JOIN
+                                    sys.extended_properties ep ON ep.major_id = p.object_id
+                                    AND ep.minor_id = p.parameter_id
+                                    AND ep.name = 'MS_Description'
+                                WHERE
+                                    o.name = ?
+                                ORDER BY
+                                    p.parameter_id
+                            ", [$procedure->procedure_name]);
+                        } elseif ($databaseType === 'mysql') {
+                            $database = DB::connection($connectionName)->getDatabaseName();
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    PARAMETER_NAME AS parameter_name,
+                                    DTD_IDENTIFIER AS data_type,
+                                    PARAMETER_MODE AS output_type,
+                                    '' AS description -- MySQL parameters don't have direct comments
+                                FROM
+                                    INFORMATION_SCHEMA.PARAMETERS
+                                WHERE
+                                    SPECIFIC_SCHEMA = ?
+                                    AND SPECIFIC_NAME = ?
+                                    AND ROUTINE_TYPE = 'PROCEDURE'
+                                ORDER BY
+                                    ORDINAL_POSITION
+                            ", [$database, $procedure->procedure_name]);
+                        } elseif ($databaseType === 'pgsql') {
+                            $parameters = DB::connection($connectionName)->select("
+                                SELECT
+                                    unnest(p.proargnames) AS parameter_name,
+                                    pg_catalog.format_type(unnest(p.proargtypes), NULL) AS data_type,
+                                    'INPUT' AS output_type, -- PostgreSQL doesn't have direct OUTPUT parameters for procedures in this view
+                                    COALESCE(d.description, '') AS description
+                                FROM
+                                    pg_proc p
+                                JOIN
+                                    pg_namespace n ON n.oid = p.pronamespace
+                                LEFT JOIN
+                                    pg_description d ON d.objoid = p.oid AND d.objsubid = (SELECT unnest(p.proargnames) WHERE unnest = unnest(p.proargnames)) -- This join is tricky, might need adjustment
+                                WHERE
+                                    p.proname = ?
+                                    AND n.nspname = ?
+                                ORDER BY
+                                    array_position(p.proargnames, unnest(p.proargnames))
+                            ", [$procedure->procedure_name, $procedure->schema_name]);
+                        }
 
-                    // Sauvegarder les informations de la procédure
-                    \App\Models\PsInformation::create([
-                        'id_ps' => $psDescription->id,
-                        'schema' => $procedure->schema_name,
-                        'creation_date' => $procedure->create_date,
-                        'last_change_date' => $procedure->modify_date,
-                        'definition' => $procedure->definition
-                    ]);
+                        PsParameter::where('id_ps', $psDescription->id)->delete();
+                        $parametersToInsert = [];
+                        foreach ($parameters as $param) {
+                            $parametersToInsert[] = [
+                                'id_ps' => $psDescription->id,
+                                'name' => $param->parameter_name,
+                                'type' => $param->data_type,
+                                'output' => $param->output_type,
+                                'description' => $param->description ?? null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                        if (!empty($parametersToInsert)) {
+                            PsParameter::insert($parametersToInsert);
+                        }
 
-                    // Sauvegarder les paramètres
-                    foreach ($parameters as $param) {
-                        $dataType = $this->formatDataType($param);
-
-                        \App\Models\PsParameter::create([
-                            'id_ps' => $psDescription->id,
-                            'name' => $param->parameter_name,
-                            'type' => $dataType,
-                            'output' => strtoupper($param->param_mode) === 'OUT' ? 'OUTPUT' : 'INPUT',
-                            'definition' => null,
-                            'default_value' => null // MySQL ne stocke pas les valeurs par défaut dans INFORMATION_SCHEMA
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'une procédure', [
+                            'procedure' => $procedure->procedure_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
                         ]);
+                        throw $e;
                     }
-
-                    Log::info('Procédure MySQL extraite et sauvegardée: ' . $procedure->procedure_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la procédure', [
-                        'procedure' => $procedure->procedure_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                });
             }
+            Log::info('Fin extraction des procédures stockées.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveMySqlProcedures', [
+            Log::error('Erreur globale dans extractAndSaveProcedures', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
 
-/**
- * Extrait et sauvegarde les procédures stockées de PostgreSQL
- */
-    private function extractAndSavePostgreSqlProcedures($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des procédures stockées dans PostgreSQL (procédures et fonctions)
-            $procedures = DB::connection($connectionName)->select("
-                SELECT 
-                    p.proname AS procedure_name,
-                    n.nspname AS schema_name,
-                    pg_get_functiondef(p.oid) AS definition,
-                    p.proconfig AS config,
-                    p.proacl AS acl,
-                    p.proowner,
-                    pg_catalog.pg_get_userbyid(p.proowner) AS owner,
-                    pg_catalog.obj_description(p.oid, 'pg_proc') AS comment,
-                    p.oid
-                FROM 
-                    pg_proc p
-                INNER JOIN 
-                    pg_namespace n ON n.oid = p.pronamespace
-                WHERE 
-                    n.nspname NOT IN ('pg_catalog', 'information_schema')
-                    AND p.prokind IN ('p', 'f') -- p = procédure, f = fonction
-                ORDER BY 
-                    n.nspname, p.proname
-            ");
-
-            Log::info('Procédures PostgreSQL trouvées: ' . count($procedures));
-
-            foreach ($procedures as $procedure) {
-                try {
-                    // Créer une entrée dans ps_description
-                    $psDescription = \App\Models\PsDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'psname' => $procedure->procedure_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-
-                    // Supprimer les anciennes informations
-                    \App\Models\PsInformation::where('id_ps', $psDescription->id)->delete();
-                    \App\Models\PsParameter::where('id_ps', $psDescription->id)->delete();
-
-                    // Sauvegarder les informations de la procédure
-                    \App\Models\PsInformation::create([
-                        'id_ps' => $psDescription->id,
-                        'schema' => $procedure->schema_name,
-                        'creation_date' => null, // Non disponible en natif
-                        'last_change_date' => null, // Non disponible non plus
-                        'definition' => $procedure->definition
-                    ]);
-
-                    // Récupérer les paramètres de la procédure via pg_catalog
-                    $parameters = DB::connection($connectionName)->select("
-                        SELECT 
-                            unnest(p.proargnames) AS parameter_name,
-                            unnest(p.proargmodes) AS mode,
-                            unnest(string_to_array(pg_catalog.format_type(unnest(p.proargtypes), NULL), ',')) AS data_type
-                        FROM 
-                            pg_proc p
-                        WHERE 
-                            p.oid = ?
-                    ", [$procedure->oid]);
-
-                    foreach ($parameters as $param) {
-                        $dataType = $this->formatDataType($param);
-
-                        \App\Models\PsParameter::create([
-                            'id_ps' => $psDescription->id,
-                            'name' => $param->parameter_name,
-                            'type' => $dataType,
-                            'output' => strtoupper($param->mode) === 'o' ? 'OUTPUT' : 'INPUT',
-                            'definition' => null,
-                            'default_value' => null // Valeurs par défaut pas accessibles facilement ici
-                        ]);
-                    }
-
-                    Log::info('Procédure PostgreSQL extraite et sauvegardée: ' . $procedure->procedure_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction de la procédure PostgreSQL', [
-                        'procedure' => $procedure->procedure_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgresProcedures', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-    /**
- * Extrait et sauvegarde les triggers de la base de données
- */
+    // Exemple de structure pour extractAndSaveTriggers (à compléter)
     private function extractAndSaveTriggers($connectionName, $dbId, $databaseType)
     {
+        Log::info('Début extraction des triggers...');
         try {
-            Log::info('Début extraction des triggers...');
-            
+            $triggers = []; // Récupérer les triggers selon le databaseType
+
             if ($databaseType === 'sqlsrv') {
-                $this->extractAndSaveSqlServerTriggers($connectionName, $dbId);
+                $triggers = DB::connection($connectionName)->select("
+                    SELECT
+                        t.name AS trigger_name,
+                        OBJECT_NAME(t.parent_id) AS table_name,
+                        SCHEMA_NAME(tbl.schema_id) AS schema_name,
+                        OBJECT_DEFINITION(t.object_id) AS definition,
+                        t.create_date,
+                        t.modify_date,
+                        CASE WHEN t.is_disabled = 1 THEN 1 ELSE 0 END AS is_disabled,
+                        CASE
+                            WHEN t.is_instead_of_trigger = 1 THEN 'INSTEAD OF'
+                            ELSE 'AFTER'
+                        END AS trigger_type,
+                        (
+                            SELECT STRING_AGG(event_type, ',')
+                            FROM (
+                                SELECT
+                                    CASE
+                                        WHEN is_insert_instead_of_trigger = 1 OR is_insert_after_trigger = 1 THEN 'INSERT'
+                                        WHEN is_update_instead_of_trigger = 1 OR is_update_after_trigger = 1 THEN 'UPDATE'
+                                        WHEN is_delete_instead_of_trigger = 1 OR is_delete_after_trigger = 1 THEN 'DELETE'
+                                        ELSE ''
+                                    END AS event_type
+                                FROM sys.triggers
+                                WHERE object_id = t.object_id
+                            ) AS TriggerEvents
+                            WHERE event_type <> ''
+                        ) AS trigger_event,
+                        ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                    FROM
+                        sys.triggers t
+                    INNER JOIN
+                        sys.tables tbl ON t.parent_id = tbl.object_id
+                    INNER JOIN
+                        sys.schemas s ON tbl.schema_id = s.schema_id
+                    LEFT JOIN
+                        sys.extended_properties ep ON ep.major_id = t.object_id
+                        AND ep.minor_id = 0
+                        AND ep.name = 'MS_Description'
+                    WHERE
+                        t.is_ms_shipped = 0
+                    ORDER BY
+                        t.name
+                ");
             } elseif ($databaseType === 'mysql') {
-                $this->extractAndSaveMySqlTriggers($connectionName, $dbId);
+                $database = DB::connection($connectionName)->getDatabaseName();
+                $triggers = DB::connection($connectionName)->select("
+                    SELECT
+                        TRIGGER_NAME AS trigger_name,
+                        EVENT_OBJECT_TABLE AS table_name,
+                        TRIGGER_SCHEMA AS schema_name,
+                        ACTION_STATEMENT AS definition,
+                        CREATED AS create_date,
+                        NULL AS modify_date, -- MySQL doesn't have direct modify_date for triggers in INFORMATION_SCHEMA
+                        '0' AS is_disabled, -- MySQL triggers are always enabled by default, unless explicitly disabled
+                        ACTION_TIMING AS trigger_type, -- 'BEFORE' or 'AFTER'
+                        EVENT_MANIPULATION AS trigger_event, -- 'INSERT', 'UPDATE', 'DELETE'
+                        '' AS description -- MySQL triggers don't have direct comments
+                    FROM
+                        INFORMATION_SCHEMA.TRIGGERS
+                    WHERE
+                        TRIGGER_SCHEMA = ?
+                    ORDER BY
+                        TRIGGER_NAME
+                ", [$database]);
             } elseif ($databaseType === 'pgsql') {
-                $this->extractAndSavePostgreSqlTriggers($connectionName, $dbId);
-            } else {
-                Log::warning('Type de base de données non supporté pour l\'extraction des triggers', ['type' => $databaseType]);
+                $triggers = DB::connection($connectionName)->select("
+                    SELECT
+                        t.tgname AS trigger_name,
+                        c.relname AS table_name,
+                        n.nspname AS schema_name,
+                        pg_get_triggerdef(t.oid) AS definition,
+                        NULL AS create_date, -- Placeholder
+                        NULL AS modify_date, -- Placeholder
+                        CASE WHEN t.tgisenabled = 'D' THEN 1 ELSE 0 END AS is_disabled, -- 'D' for disabled
+                        CASE t.tgtype & (1<<1) WHEN 0 THEN 'AFTER' ELSE 'BEFORE' END AS trigger_type, -- Bitmask for BEFORE/AFTER
+                        CASE
+                            WHEN t.tgtype & (1<<2) THEN 'INSERT'
+                            WHEN t.tgtype & (1<<3) THEN 'DELETE'
+                            WHEN t.tgtype & (1<<4) THEN 'UPDATE'
+                            WHEN t.tgtype & (1<<5) THEN 'TRUNCATE' -- TRUNCATE is also an event
+                            ELSE ''
+                        END AS trigger_event,
+                        COALESCE(d.description, '') AS description
+                    FROM
+                        pg_trigger t
+                    JOIN
+                        pg_class c ON c.oid = t.tgrelid
+                    JOIN
+                        pg_namespace n ON n.oid = c.relnamespace
+                    LEFT JOIN
+                        pg_description d ON d.objoid = t.oid
+                    WHERE
+                        NOT t.tgisinternal -- Exclude internal triggers
+                        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY
+                        t.tgname
+                ");
             }
-            
-            Log::info('Fin extraction des triggers');
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveTriggers', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-/**
- * Extrait et sauvegarde les triggers de SQL Server
- */
-    private function extractAndSaveSqlServerTriggers($connectionName, $dbId)
-    {
-        try {
-            // Récupérer la liste des triggers
-            $triggers = DB::connection($connectionName)->select("
-                select trg.name as trigger_name,
-                    schema_name(tab.schema_id) + '.' + tab.name as [table],
-                    case when is_instead_of_trigger = 1 then 'Instead of'
-                        else 'After' end as [activation],
-                    (case when objectproperty(trg.object_id, 'ExecIsUpdateTrigger') = 1
-                                then 'Update ' else '' end 
-                    + case when objectproperty(trg.object_id, 'ExecIsDeleteTrigger') = 1
-                                then 'Delete ' else '' end
-                    + case when objectproperty(trg.object_id, 'ExecIsInsertTrigger') = 1
-                                then 'Insert' else '' end
-                    ) as [event],
-                    case when trg.parent_class = 1 then 'Table trigger'
-                        when trg.parent_class = 0 then 'Database trigger' 
-                    end [class], 
-                    case when trg.[type] = 'TA' then 'Assembly (CLR) trigger'
-                        when trg.[type] = 'TR' then 'SQL trigger' 
-                        else '' end as [type],
-                    case when is_disabled = 1 then 'Disabled'
-                        else 'Active' end as [status],
-                    object_definition(trg.object_id) as [definition]
-                from sys.triggers trg
-                    left join sys.objects tab
-                        on trg.parent_id = tab.object_id
-                order by trg.name
-            ");
-            
-            Log::info('Triggers SQL Server trouvés: ' . count($triggers));
-            
-            foreach ($triggers as $trigger) {
-                try {
-                    // Créer une entrée dans trigger_description
-                    $triggerDescription = \App\Models\TriggerDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'triggername' => $trigger->trigger_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
-                    
-                    // Déterminer le type de trigger
-                    //$triggerType = $trigger->is_instead_of_trigger ? 'INSTEAD OF' : 'AFTER';
-                    $triggerType = $trigger->activation;
-                    
-                    // Supprimer les anciennes informations pour ce trigger
-                    \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
-                    
-                    // Sauvegarder les informations du trigger
-                    \App\Models\TriggerInformation::create([
-                        'id_trigger' => $triggerDescription->id,
-                        'table' => $trigger->table_name,
-                        'type' => $triggerType,
-                        'event' => $trigger->trigger_event,
-                        'state' => $trigger->is_disabled ? 0 : 1,
-                        'creation_date' => $trigger->create_date,
-                        'definition' => $trigger->trigger_definition
-                    ]);
-                    
-                    Log::info('Trigger extrait et sauvegardé: ' . $trigger->trigger_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction du trigger', [
-                        'trigger' => $trigger->trigger_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveSqlServerTriggers', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-/**
- * Extrait et sauvegarde les triggers de MySQL
- */
-    private function extractAndSaveMySqlTriggers($connectionName, $dbId)
-    {
-        try {
-            // Récupérer les triggers depuis INFORMATION_SCHEMA
-            $triggers = DB::connection($connectionName)->select("
-                SELECT 
-                    TRIGGER_NAME as trigger_name,
-                    CONCAT(TRIGGER_SCHEMA, '.', EVENT_OBJECT_TABLE) AS table_name,
-                    ACTION_TIMING AS activation,
-                    EVENT_MANIPULATION AS event,
-                    'Table trigger' AS class,
-                    'SQL trigger' AS type,
-                    'Active' AS status, -- MySQL n'a pas de statut 'disabled' pour les triggers
-                    CREATED AS creation_date,
-                    ACTION_STATEMENT AS definition
-                FROM INFORMATION_SCHEMA.TRIGGERS
-                WHERE TRIGGER_SCHEMA = DATABASE()
-                ORDER BY TRIGGER_NAME
-            ");
-
-            Log::info('Triggers MySQL trouvés: ' . count($triggers));
 
             foreach ($triggers as $trigger) {
-                try {
-                    // Créer ou mettre à jour une entrée dans trigger_description
-                    $triggerDescription = \App\Models\TriggerDescription::updateOrCreate(
-                        [
-                            'dbid' => $dbId,
-                            'triggername' => $trigger->trigger_name
-                        ],
-                        [
-                            'language' => 'fr',
-                            'updated_at' => now()
-                        ]
-                    );
+                DB::transaction(function () use ($trigger, $dbId, $connectionName, $databaseType) {
+                    try {
+                        $triggerDescription = TriggerDescription::updateOrCreate(
+                            [
+                                'dbid' => $dbId,
+                                'triggername' => $trigger->trigger_name
+                            ],
+                            [
+                                'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
+                                'description' => $trigger->description ?? null,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Supprimer les anciennes informations pour ce trigger
-                    \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
+                        // Save TriggerInformation
+                        $triggerInfo = TriggerInformation::updateOrCreate(
+                            ['id_trigger' => $triggerDescription->id],
+                            [
+                                'table_name' => $trigger->table_name,
+                                'schema_name' => $trigger->schema_name,
+                                'type' => $trigger->trigger_type,
+                                'event' => $trigger->trigger_event,
+                                'is_disabled' => $trigger->is_disabled,
+                                'definition' => $trigger->definition,
+                                'creation_date' => $trigger->create_date,
+                                'last_change_date' => $trigger->modify_date,
+                                'updated_at' => now()
+                            ]
+                        );
 
-                    // Sauvegarder les nouvelles informations
-                    \App\Models\TriggerInformation::create([
-                        'id_trigger' => $triggerDescription->id,
-                        'table' => $trigger->table_name,
-                        'type' => $trigger->activation,
-                        'event' => $trigger->event,
-                        'state' => 1, // Toujours actif en MySQL
-                        'creation_date' => $trigger->creation_date ?? now(),
-                        'definition' => $trigger->definition
-                    ]);
-
-                    Log::info('Trigger extrait et sauvegardé: ' . $trigger->trigger_name);
-                } catch (\Exception $e) {
-                    Log::error('Erreur lors de l\'extraction du trigger', [
-                        'trigger' => $trigger->trigger_name,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+                    } catch (\Exception $e) {
+                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'un trigger', [
+                            'trigger' => $trigger->trigger_name,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        throw $e;
+                    }
+                });
             }
+            Log::info('Fin extraction des triggers.');
         } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSaveMySqlTriggers', [
+            Log::error('Erreur globale dans extractAndSaveTriggers', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
-
-/**
- * Extrait et sauvegarde les triggers de PostgreSQL
- */
-    private function extractAndSavePostgreSqlTriggers($connectionName, $dbId)
-    {
-        try {
-        $triggers = DB::connection($connectionName)->select("
-            SELECT
-                trg.tgname AS trigger_name,
-                nsp.nspname || '.' || cls.relname AS table,
-                CASE
-                    WHEN trg.tgtype & 2 <> 0 THEN 'BEFORE'
-                    WHEN trg.tgtype & 64 <> 0 THEN 'INSTEAD OF'
-                    ELSE 'AFTER'
-                END AS activation,
-                TRIM(
-                    CASE WHEN trg.tgtype & 4 <> 0 THEN 'INSERT ' ELSE '' END ||
-                    CASE WHEN trg.tgtype & 8 <> 0 THEN 'DELETE ' ELSE '' END ||
-                    CASE WHEN trg.tgtype & 16 <> 0 THEN 'UPDATE ' ELSE '' END ||
-                    CASE WHEN trg.tgtype & 32 <> 0 THEN 'TRUNCATE ' ELSE '' END
-                ) AS event,
-                'Table trigger' AS class,
-                'SQL trigger' AS type,
-                CASE WHEN trg.tgenabled = 'D' THEN 'Disabled' ELSE 'Active' END AS status,
-                pg_get_triggerdef(trg.oid, true) AS definition,
-                trg.tgcreated AS create_date
-            FROM pg_trigger trg
-            JOIN pg_class cls ON cls.oid = trg.tgrelid
-            JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace
-            WHERE NOT trg.tgisinternal
-            ORDER BY trg.tgname
-        ");
-
-        Log::info('Triggers PostgreSQL trouvés: ' . count($triggers));
-
-        foreach ($triggers as $trigger) {
-            try {
-                // Créer ou mettre à jour une entrée dans trigger_description
-                $triggerDescription = \App\Models\TriggerDescription::updateOrCreate(
-                    [
-                        'dbid' => $dbId,
-                        'triggername' => $trigger->trigger_name
-                    ],
-                    [
-                        'language' => 'fr',
-                        'updated_at' => now()
-                    ]
-                );
-
-                // Supprimer les anciennes informations pour ce trigger
-                \App\Models\TriggerInformation::where('id_trigger', $triggerDescription->id)->delete();
-
-                // Sauvegarder les nouvelles informations
-                \App\Models\TriggerInformation::create([
-                    'id_trigger' => $triggerDescription->id,
-                    'table' => $trigger->table,
-                    'type' => $trigger->activation,
-                    'event' => $trigger->event,
-                    'state' => ($trigger->status === 'Active') ? 1 : 0,
-                    'creation_date' => $trigger->create_date ?? now(),
-                    'definition' => $trigger->definition
-                ]);
-
-                Log::info('Trigger extrait et sauvegardé: ' . $trigger->trigger_name);
-            } catch (\Exception $e) {
-                Log::error('Erreur lors de l\'extraction du trigger', [
-                    'trigger' => $trigger->trigger_name,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-        } catch (\Exception $e) {
-            Log::error('Erreur dans extractAndSavePostgresTriggers', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
 }

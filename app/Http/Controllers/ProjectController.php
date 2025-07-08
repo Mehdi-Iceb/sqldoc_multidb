@@ -90,9 +90,9 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'db_type' => 'required|in:sqlserver,mysql,pgsql', // Changé 'postgres' en 'pgsql'
+            'db_type' => 'required|in:sqlserver,mysql,pgsql',
             'description' => 'nullable|string|max:1000'
-            //'release' => 'nullable|string|max:10' 
+            
         ]);
 
         $project = $request->user()->projects()->create($validated);
@@ -106,7 +106,7 @@ class ProjectController extends Controller
             'dbTypes' => [
                 'mysql' => 'MySQL',
                 'sqlserver' => 'SQL Server',
-                'pgsql' => 'PostgreSQL' // Changé 'pgsql' au lieu de 'postgres'
+                'pgsql' => 'PostgreSQL' 
             ]
         ]);
     }
