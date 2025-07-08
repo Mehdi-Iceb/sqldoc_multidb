@@ -359,7 +359,7 @@ class DatabaseStructureService
                             'tablename' => $table->table_name
                         ],
                         [
-                            'language' => 'fr',
+                            'language' => 'en',
                             'description' => $table->description ?? null,
                             'updated_at' => now()
                         ]

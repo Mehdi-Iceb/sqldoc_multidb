@@ -73,6 +73,9 @@ Route::middleware('auth')->group(function () {
     // Routes qui ne nécessitent pas de projet sélectionné
     Route::get('/dashboard-data', [DashboardController::class, 'index']);
     Route::get('/database-structure', [DatabaseStructureController::class, 'index']);
+    Route::post('/database-structure/refresh', [DatabaseStructureController::class, 'refresh'])->name('database.structure.refresh');
+    Route::delete('/database-structure/cache', [DatabaseStructureController::class, 'clearCache'])->name('database.structure.clear-cache');
+    Route::get('/database-structure/cache-status', [DatabaseStructureController::class, 'cacheStatus'])->name('database.structure.cache-status');
 
     // Routes pour le soft delete des projets
     Route::delete('/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
@@ -151,10 +154,10 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::middleware('project.permissions:read')->group(function () {
         Route::get('/table/{tableName}/details', [TableController::class, 'apiDetails'])->name('api.table.details');
         Route::get('/table-id/{tableName}', [TableController::class, 'getTableId']);
-        Route::get('/view/{viewName}/details', [ViewController::class, 'apiDetails'])->name('api.view.details');
-        Route::get('/function/{functionName}/details', [FunctionController::class, 'apiDetails'])->name('api.function.details');
-        Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'apiDetails'])->name('api.procedure.details');
-        Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'apiDetails'])->name('api.trigger.details');
+        Route::get('/view/{viewName}/details', [ViewController::class, 'details'])->name('api.view.details');
+        Route::get('/function/{functionName}/details', [FunctionController::class, 'details'])->name('api.function.details');
+        Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'details'])->name('api.procedure.details');
+        Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'details'])->name('api.trigger.details');
         Route::get('/releases', [ReleaseApiController::class, 'index'])->name('api.releases.index');
         Route::get('/releases/all', [ReleaseApiController::class, 'getAllVersions'])->name('api.releases.all');
     });

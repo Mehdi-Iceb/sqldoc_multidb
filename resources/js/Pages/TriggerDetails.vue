@@ -137,107 +137,162 @@
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue'
-  import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-  
-  const form = ref({
-    description: ''
-  })
-  
-  const props = defineProps({
-    triggerName: {
-      type: String,
-      required: true
-    }
-  })
-  
-  const loading = ref(true)
-  const error = ref(null)
-  const saving = ref(false)
-  const triggerDetails = ref({
-    table_name: '',
-    schema: '',
-    trigger_type: '',
-    trigger_event: '',
-    is_disabled: false,
-    definition: '',
-    create_date: null,
-    description: ''
-  })
-  
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleString()
+import { ref, onMounted, watch } from 'vue' // ✅ N'oubliez pas d'importer 'watch'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+
+const form = ref({
+  description: ''
+})
+
+// ✅ Définition des props au début du script setup
+const props = defineProps({
+  triggerName: {
+    type: String,
+    required: true
   }
-  
-  // Sauvegarder uniquement la description
-  const saveDescription = async () => {
-    try {
-      saving.value = true
-      
-      // Appel à l'API pour sauvegarder uniquement la description
-      const response = await axios.post(`/trigger/${props.triggerName}/description`, {
-        description: form.value.description
-      })
-      
-      if (response.data.success) {
-        // Message de succès
-        alert('Description du trigger enregistrée avec succès')
-        
-        // Mise à jour locale
-        triggerDetails.value.description = form.value.description
-      } else {
-        throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
-      }
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error)
-      console.error('Détails:', error.response?.data)
-      alert('Erreur lors de la sauvegarde de la description')
-    } finally {
-      saving.value = false
-    }
+})
+
+const loading = ref(true)
+const error = ref(null)
+const saving = ref(false)
+const triggerDetails = ref({
+  table_name: '',
+  schema: '',
+  trigger_type: '',
+  trigger_event: '',
+  is_disabled: false,
+  definition: '',
+  create_date: null,
+  description: ''
+})
+
+const formatDate = (date) => {
+  if (!date) return '-';
+  const d = new Date(date)
+  // Vérifier si la date est valide
+  if (isNaN(d.getTime())) {
+    console.warn("Date invalide fournie pour formatDate:", date);
+    return 'Date invalide';
   }
-  
-  // Sauvegarder toutes les informations
-  const saveAll = async () => {
-    try {
-        saving.value = true
-        
-        // Préparer les données à envoyer (seulement la description)
-        const triggerData = {
-        description: form.value.description,
-        language: 'fr'
-        }
-        
-        // Appel à l'API
-        const response = await axios.post(`/trigger/${props.triggerName}/save-all`, triggerData)
-        
-        if (response.data.success) {
-        // Message de succès
-        alert('Description du trigger enregistrée avec succès')
-            } else {
-            throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
-            }
-        } catch (error) {
-            console.error('Erreur lors de la sauvegarde:', error)
-            console.error('Détails:', error.response?.data)
-            alert('Erreur lors de la sauvegarde de la description')
-        } finally {
-            saving.value = false
-        }
-    }
-  
-  onMounted(async () => {
-    try {
-      const response = await axios.get(`/trigger/${encodeURIComponent(props.triggerName)}/details`)
-      triggerDetails.value = response.data
-      // Initialiser la description avec celle du trigger si disponible
-      form.value.description = response.data.description || ''
-    } catch (err) {
-      console.error('Erreur lors du chargement des détails du trigger:', err)
-      error.value = err.response?.data?.error || 'Erreur lors du chargement des détails'
-    } finally {
-      loading.value = false
-    }
+  return d.toLocaleString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
-  </script>
+}
+
+// ✅ EXTRAIRE LA LOGIQUE DE CHARGEMENT DANS UNE FONCTION SÉPARÉE
+const loadTriggerDetailsFromAPI = async (nameOfTrigger) => {
+  try {
+    console.log('🔍 [TRIGGER] Début du chargement des détails pour:', nameOfTrigger);
+    // Réinitialiser les états de chargement et d'erreur
+    loading.value = true;
+    error.value = null;
+    // Réinitialiser les données pour un feedback visuel immédiat
+    triggerDetails.value = {
+      table_name: '',
+      schema: '',
+      trigger_type: '',
+      trigger_event: '',
+      is_disabled: false,
+      definition: '',
+      create_date: null,
+      description: ''
+    };
+    form.value.description = ''; // Réinitialiser la description du formulaire
+    
+    // ✅ Vérifiez que cette URL correspond à votre API pour les triggers
+    const response = await axios.get(`/api/trigger/${encodeURIComponent(nameOfTrigger)}/details`); 
+    console.log('🔍 [TRIGGER] Réponse reçue:', response.data);
+    
+    triggerDetails.value = response.data;
+    form.value.description = response.data.description || '';
+    
+    console.log('🔍 [TRIGGER] Données chargées avec succès pour:', nameOfTrigger);
+  } catch (err) {
+    console.error('❌ [TRIGGER] Erreur lors du chargement des détails du trigger:', err);
+    error.value = err.response?.data?.error || `Erreur lors du chargement des détails du trigger "${nameOfTrigger}"`;
+  } finally {
+    loading.value = false;
+    console.log('🔍 [TRIGGER] Finalisation du chargement pour:', nameOfTrigger);
+  }
+}
+
+// ✅ NOUVEAU WATCHER POUR LA PROP triggerName
+watch(
+  () => props.triggerName,
+  async (newTriggerName, oldTriggerName) => {
+    // Évite le rechargement si la prop n'a pas réellement changé
+    if (newTriggerName === oldTriggerName) {
+      console.log('🔍 [TRIGGER] Watcher: triggerName inchangé, pas de rechargement.');
+      return;
+    }
+    console.log(`🔍 [TRIGGER] Watcher: triggerName a changé de "${oldTriggerName}" à "${newTriggerName}". Rechargement des détails...`);
+    await loadTriggerDetailsFromAPI(newTriggerName);
+  },
+  { immediate: true } // `immediate: true` pour exécuter le watcher une fois au montage initial
+);
+
+// onMounted est maintenant géré par le watcher avec `immediate: true`
+onMounted(() => {
+  console.log('🔍 [TRIGGER] Composant TriggerDetails monté. Le chargement initial est géré par le watcher.');
+  // Vous pouvez ajouter ici d'autres logiques qui ne dépendent PAS de triggerName changeant
+});
+
+// Sauvegarder uniquement la description
+const saveDescription = async () => {
+  try {
+    saving.value = true
+    
+    // Appel à l'API pour sauvegarder uniquement la description
+    // ✅ Vérifiez que cette URL correspond à votre API pour la sauvegarde de description
+    const response = await axios.post(`/api/trigger/${props.triggerName}/description`, { 
+      description: form.value.description
+    })
+    
+    if (response.data.success) {
+      alert('Description du trigger enregistrée avec succès')
+      triggerDetails.value.description = form.value.description
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+  } catch (error) {
+    console.error('❌ [TRIGGER] Erreur lors de la sauvegarde de la description:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+// Sauvegarder toutes les informations
+const saveAll = async () => {
+  try {
+    saving.value = true
+    
+    const triggerData = {
+      description: form.value.description,
+      language: 'fr' // 'language' semble être un champ fixe ici, assurez-vous qu'il est pertinent pour votre API.
+    }
+    
+    // Appel à l'API
+    // ✅ Vérifiez que cette URL correspond à votre API pour la sauvegarde de toutes les infos
+    const response = await axios.post(`/api/trigger/${props.triggerName}/save-all`, triggerData) 
+    
+    if (response.data.success) {
+      alert('Description du trigger enregistrée avec succès')
+      // Mettre à jour d'autres champs si save-all les renvoie ou les modifie
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+  } catch (error) {
+    console.error('❌ [TRIGGER] Erreur lors de la sauvegarde globale:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde des informations du trigger: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+</script>

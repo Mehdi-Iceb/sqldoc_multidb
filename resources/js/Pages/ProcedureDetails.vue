@@ -156,108 +156,161 @@
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue'
-  import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-  import { Link } from '@inertiajs/vue3'
-  
-  const saving = ref(false)
-  
-  // Fonction pour sauvegarder la description
-  const saveDescription = async () => {
-    try {
-      saving.value = true
-      
-      // Appel à l'API pour sauvegarder uniquement la description
-      const response = await axios.post(`/procedure/${props.procedureName}/description`, {
-        description: form.value.description
-      })
-      
-      if (response.data.success) {
-        // Message de succès
-        alert('Description of the successfully registered stored procedure')
-        
-        // Mise à jour locale
-        procedureDetails.value.description = form.value.description
-      } else {
-        throw new Error(response.data.error || 'Error while saving')
-      }
-      
-    } catch (error) {
-      console.error('Error while saving:', error)
-      console.error('Details:', error.response?.data)
-      alert('Error saving description')
-    } finally {
-      saving.value = false
-    }
+import { ref, onMounted, watch } from 'vue' // ✅ N'oubliez pas d'importer 'watch'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { Link } from '@inertiajs/vue3' // Link est importé mais non utilisé directement dans le script, juste pour info
+
+const saving = ref(false)
+
+// ✅ Définition des props au début du script setup
+const props = defineProps({
+  procedureName: {
+    type: String,
+    required: true
   }
-  
-  // Fonction pour sauvegarder toutes les informations
-  const saveAll = async () => {
-    try {
-        saving.value = true
-        
-        // Préparer les données à envoyer (seulement la description)
-        const procedureData = {
-        description: form.value.description
-        }
-        
-        // Appel à l'API
-        const response = await axios.post(`/procedure/${props.procedureName}/save-all`, procedureData)
-        
-        if (response.data.success) {
-        // Message de succès
-        alert('Description of the successfully registered stored procedure')
-        } else {
-        throw new Error(response.data.error || 'Error while saving')
-        }
-        
-    } catch (error) {
-        console.error('Error while saving:', error)
-        console.error('Details:', error.response?.data)
-        alert('Error saving description')
-    } finally {
-        saving.value = false
-    }
+})
+
+const loading = ref(true)
+const error = ref(null)
+const procedureDetails = ref({
+  parameters: [],
+  definition: '',
+  schema: '',
+  create_date: null,
+  modify_date: null,
+  description: ''
+})
+
+const form = ref({
+  description: ''
+})
+
+// ✅ EXTRAIRE LA LOGIQUE DE CHARGEMENT DANS UNE FONCTION SÉPARÉE
+const loadProcedureDetailsFromAPI = async (nameOfProcedure) => {
+  try {
+    console.log('🔍 [PROCEDURE] Début du chargement des détails pour:', nameOfProcedure);
+    // Réinitialiser les états de chargement et d'erreur
+    loading.value = true;
+    error.value = null;
+    // Réinitialiser les données pour un feedback visuel immédiat
+    procedureDetails.value = {
+      parameters: [],
+      definition: '',
+      schema: '',
+      create_date: null,
+      modify_date: null,
+      description: ''
+    };
+    form.value.description = ''; // Réinitialiser la description du formulaire
+
+    const response = await axios.get(`/api/procedure/${encodeURIComponent(nameOfProcedure)}/details`);
+    console.log('🔍 [PROCEDURE] Réponse reçue:', response.data);
+    
+    procedureDetails.value = response.data;
+    form.value.description = response.data.description || '';
+    
+    console.log('🔍 [PROCEDURE] Données chargées avec succès pour:', nameOfProcedure);
+  } catch (err) {
+    console.error('❌ [PROCEDURE] Erreur lors du chargement des détails de la procédure:', err);
+    error.value = err.response?.data?.error || `Erreur lors du chargement des détails de la procédure "${nameOfProcedure}"`;
+  } finally {
+    loading.value = false;
+    console.log('🔍 [PROCEDURE] Finalisation du chargement pour:', nameOfProcedure);
   }
-  
-  const form = ref({
-    description: ''
-  })
-  
-  const props = defineProps({
-    procedureName: {
-      type: String,
-      required: true
+}
+
+// ✅ NOUVEAU WATCHER POUR LA PROP procedureName
+watch(
+  () => props.procedureName,
+  async (newProcedureName, oldProcedureName) => {
+    // Évite le rechargement si la prop n'a pas réellement changé
+    if (newProcedureName === oldProcedureName) {
+      console.log('🔍 [PROCEDURE] Watcher: procedureName inchangé, pas de rechargement.');
+      return;
     }
-  })
-  
-  const loading = ref(true)
-  const error = ref(null)
-  const procedureDetails = ref({
-    parameters: [],
-    definition: '',
-    schema: '',
-    create_date: null,
-    modify_date: null,
-    description: ''
-  })
-  
-  const formatDate = (dateString) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleString()
+    console.log(`🔍 [PROCEDURE] Watcher: procedureName a changé de "${oldProcedureName}" à "${newProcedureName}". Rechargement des détails...`);
+    await loadProcedureDetailsFromAPI(newProcedureName);
+  },
+  { immediate: true } // `immediate: true` pour exécuter le watcher une fois au montage initial
+);
+
+// onMounted est maintenant géré par le watcher avec `immediate: true`
+onMounted(() => {
+  console.log('🔍 [PROCEDURE] Composant ProcedureDetails monté. Le chargement initial est géré par le watcher.');
+  // Vous pouvez ajouter ici d'autres logiques qui ne dépendent PAS de procedureName changeant
+});
+
+
+// Fonction pour sauvegarder la description
+const saveDescription = async () => {
+  try {
+    saving.value = true
+    
+    // Appel à l'API pour sauvegarder uniquement la description
+    const response = await axios.post(`/api/procedure/${props.procedureName}/description`, { // ✅ Vérifiez l'URL de l'API
+      description: form.value.description
+    })
+    
+    if (response.data.success) {
+      alert('Description de la procédure stockée enregistrée avec succès')
+      procedureDetails.value.description = form.value.description
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+    
+  } catch (error) {
+    console.error('❌ [PROCEDURE] Erreur lors de la sauvegarde:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
   }
-  
-  onMounted(async () => {
-    try {
-      console.log('Chargement des détails pour:', props.procedureName);
-      const response = await axios.get(`/api/procedure/${encodeURIComponent(props.procedureName)}/details`)
-      console.log('Réponse reçue:', response.data);
-      procedureDetails.value = response.data
-      form.value.description = response.data.description || ''
-    } catch (err) {
-      error.value = err.response?.data?.error || 'Erreur lors du chargement des détails de la procédure'
-    } finally {
-      loading.value = false
+}
+
+// Fonction pour sauvegarder toutes les informations (actuellement, ne sauvegarde que la description)
+// Cette fonction semble dupliquer `saveDescription` si elle ne fait qu'envoyer la description.
+// Vous pourriez la renommer ou l'étendre si elle est censée gérer plus de champs à l'avenir.
+const saveAll = async () => {
+  try {
+    saving.value = true
+    
+    const procedureData = {
+      description: form.value.description
     }
+    
+    // Appel à l'API
+    const response = await axios.post(`/api/procedure/${props.procedureName}/save-all`, procedureData) // ✅ Vérifiez l'URL de l'API
+    
+    if (response.data.success) {
+      alert('Description de la procédure stockée enregistrée avec succès')
+      // Mettre à jour d'autres champs si save-all les renvoie ou les modifie
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+    
+  } catch (error) {
+    console.error('❌ [PROCEDURE] Erreur lors de la sauvegarde:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  // Vérifier si la date est valide
+  if (isNaN(date.getTime())) {
+    console.warn("Date invalide fournie pour formatDate:", dateString);
+    return 'Date invalide';
+  }
+  return date.toLocaleString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
-  </script>
+}
+</script>

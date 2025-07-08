@@ -1,7 +1,8 @@
 <template>
   <div>
     <div class="flex h-screen bg-gray-100">
-      <Navigation :databaseStructure="databaseStructure"/>
+      <!-- SUPPRESSION de la prop databaseStructure -->
+      <Navigation />
       <NavigationMobile />
 
       <div class="flex flex-col flex-1 w-full">
@@ -22,52 +23,15 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
 import Navigation from './Navigation.vue';
 import TopMenu from "./TopMenu.vue";
 import NavigationMobile from './NavigationMobile.vue';
-import axios from 'axios';
 
-const databaseStructure = ref(null)
+// SUPPRESSION COMPLÈTE de la logique de chargement AJAX
+// Les données sont maintenant fournies par AppServiceProvider via les props partagées
 
-onMounted(async () => {
-  try {
-    console.log('Chargement de la structure...');
-    
-    // Check si sur une page qui nécessite une structure de DB
-    const currentPath = window.location.pathname;
-    const pathsWithoutDb = ['/projects', '/projects/create'];
-    const isOnProjectsPage = pathsWithoutDb.some(path => currentPath.startsWith(path));
-    
-    if (isOnProjectsPage) {
-      console.log('Page projets détectée, pas de chargement de structure DB nécessaire');
-      return;
-    }
-    
-    const response = await axios.get('/database-structure');
-    console.log('Données reçues:', response.data);
-    databaseStructure.value = response.data;
-    console.log("Structure chargée dans layout:", databaseStructure.value);
-    
-  } catch (error) {
-    // Ne pas afficher d'erreur si nous sommes sur les pages de projets
-    const currentPath = window.location.pathname;
-    const pathsWithoutDb = ['/projects', '/projects/create'];
-    const isOnProjectsPage = pathsWithoutDb.some(path => currentPath.startsWith(path));
-    
-    if (isOnProjectsPage) {
-      console.log('Pas de base de données sélectionnée - normal sur la page projets');
-      return;
-    }
-    
-    // Pour les autres pages, gérer l'erreur normalement mais sans crash
-    if (error.response?.data?.error === 'Aucune base de données sélectionnée') {
-      console.warn('Aucune base de données sélectionnée - redirection vers les projets recommandée');
-      // window.location.href = '/projects';
-    } else {
-      console.error('Erreur détaillée:', error.response?.data?.error);
-      console.error('Erreur complète:', error);
-    }
-  }
-});
+// Si vous avez besoin de debug, ajoutez ceci temporairement :
+// import { usePage } from '@inertiajs/vue3'
+// const page = usePage()
+// console.log('AuthenticatedLayout - Navigation data available:', !!page.props.navigationData)
 </script>

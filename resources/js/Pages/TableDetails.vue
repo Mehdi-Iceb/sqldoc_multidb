@@ -1600,4 +1600,80 @@ const loadAvailableReleases = async () => {
     console.error('❌ [RELEASES] Erreur lors du chargement des versions:', error)
   }
 }
+
+// ✅ NOUVEAU WATCHER POUR LA PROP tableName
+watch(
+  () => props.tableName,
+  async (newTableName, oldTableName) => {
+    // Ne pas recharger si le nom de la table est le même (première initialisation ou pas de changement réel)
+    if (newTableName === oldTableName) {
+      console.log('🔍 [TABLE] Watcher: tableName inchangé, pas de rechargement.');
+      return;
+    }
+    
+    console.log(`🔍 [TABLE] Watcher: tableName a changé de "${oldTableName}" à "${newTableName}". Rechargement des détails...`);
+    
+    // Réinitialiser l'état de chargement
+    loading.value = true;
+    error.value = null; // Réinitialiser l'erreur précédente
+    tableDetails.value = { // Réinitialiser les détails pour montrer que quelque chose charge
+      description: '',
+      columns: [],
+      indexes: [],
+      relations: [],
+      can_edit: false,
+      can_add_columns: false,
+      can_add_relations: false
+    };
+    form.value.description = '';
+
+    // Déclencher la logique de chargement que vous avez déjà dans onMounted
+    // Vous pouvez extraire cette logique dans une fonction séparée pour la réutiliser.
+    await loadTableDetailsFromAPI(newTableName);
+  },
+  { immediate: true } // `immediate: true` pour exécuter le watcher une fois au montage initial
+)
+
+// ✅ EXTRAIRE LA LOGIQUE DE CHARGEMENT DANS UNE FONCTION SÉPARÉE
+const loadTableDetailsFromAPI = async (nameOfTable) => {
+  try {
+    console.log('🔍 [TABLE] Début du chargement pour:', nameOfTable);
+    simulateLoadingProgress();
+
+    const response = await axios.get(`/table/${encodeURIComponent(nameOfTable)}/details`);
+    console.log('🔍 [TABLE] Réponse complète du serveur:', response.data);
+
+    tableDetails.value = response.data;
+    form.value.description = response.data.description || '';
+    
+    await loadAvailableReleases(); // Assurez-vous que ceci est appelé après que tableDetails est mis à jour
+
+    console.log('🔍 [TABLE] Données chargées avec succès pour:', nameOfTable);
+    console.log('🔍 [TABLE] État final tableDetails:', tableDetails.value);
+
+  } catch (err) {
+    console.error('❌ [TABLE] Erreur complète:', err);
+    if (err.response?.status === 403) {
+      error.value = `Accès refusé: ${err.response?.data?.error || 'Permissions insuffisantes'}`;
+    } else if (err.response?.status === 404) {
+      error.value = `Table "${nameOfTable}" non trouvée`;
+    } else {
+      error.value = `Erreur: ${err.response?.data?.error || err.message}`;
+    }
+  } finally {
+    stopLoadingProgress();
+    setTimeout(() => {
+      loading.value = false;
+    }, 500);
+    console.log('🔍 [TABLE] Finalisation du chargement pour:', nameOfTable);
+  }
+}
+
+// ✅ MODIFIER onMounted pour appeler la nouvelle fonction
+onMounted(() => {
+  // Le watcher avec `immediate: true` gérera le chargement initial,
+  // donc le onMounted peut être plus simple ou même vide pour le chargement.
+  // Vous pouvez laisser des logs ici si vous voulez.
+  console.log('🔍 [TABLE] Composant TableDetails monté.');
+});
 </script>

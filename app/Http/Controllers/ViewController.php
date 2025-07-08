@@ -19,7 +19,7 @@ class ViewController extends Controller
     /**
      * Affiche les détails d'une vue spécifique
      */
-    public function details($viewName)
+    public function details(Request $request, $viewName)
     {
         try {
 

@@ -206,159 +206,216 @@
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue'
-  import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-  import { Link } from '@inertiajs/vue3'
-  
-  const form = ref({
-    description: ''
-  })
-  
-  const props = defineProps({
-    viewName: {
-      type: String,
-      required: true
+import { ref, onMounted, watch } from 'vue' // ✅ N'oubliez pas d'importer 'watch'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+// import { Link } from '@inertiajs/vue3' // Link est importé mais non utilisé directement dans le script, on peut le retirer si non nécessaire.
+
+const form = ref({
+  description: ''
+})
+
+// ✅ Définition des props au début du script setup
+const props = defineProps({
+  viewName: {
+    type: String,
+    required: true
+  }
+})
+
+const loading = ref(true)
+const error = ref(null)
+const saving = ref(false)
+const viewDetails = ref({
+  columns: [],
+  definition: '',
+  create_date: null,
+  modify_date: null,
+  description: '' // Assurez-vous que le modèle de données inclut la description de la vue
+})
+
+// Pour l'édition des descriptions de colonnes
+const editingColumnName = ref(null)
+const editingColumnDescription = ref('')
+
+const startEdit = (column) => {
+  editingColumnName.value = column.column_name
+  editingColumnDescription.value = column.description || ''
+}
+
+const cancelEdit = () => {
+  editingColumnName.value = null
+  editingColumnDescription.value = ''
+}
+
+// ✅ EXTRAIRE LA LOGIQUE DE CHARGEMENT DANS UNE FONCTION SÉPARÉE
+const loadViewDetailsFromAPI = async (nameOfView) => {
+  try {
+    console.log('🔍 [VIEW] Début du chargement des détails pour:', nameOfView);
+    // Réinitialiser les états de chargement et d'erreur
+    loading.value = true;
+    error.value = null;
+    // Réinitialiser les données pour un feedback visuel immédiat
+    viewDetails.value = {
+      columns: [],
+      definition: '',
+      create_date: null,
+      modify_date: null,
+      description: ''
+    };
+    form.value.description = ''; // Réinitialiser la description du formulaire
+
+    // ✅ Vérifiez que cette URL correspond à votre API pour les vues
+    const response = await axios.get(`/api/view/${encodeURIComponent(nameOfView)}/details`);
+    console.log('🔍 [VIEW] Réponse reçue:', response.data);
+    
+    viewDetails.value = response.data;
+    // Assurez-vous que la description de la vue est bien dans `response.data`
+    form.value.description = response.data.description || '';
+    
+    console.log('🔍 [VIEW] Données chargées avec succès pour:', nameOfView);
+  } catch (err) {
+    console.error('❌ [VIEW] Erreur lors du chargement des détails de la vue:', err);
+    error.value = err.response?.data?.error || `Erreur lors du chargement des détails de la vue "${nameOfView}"`;
+  } finally {
+    loading.value = false;
+    console.log('🔍 [VIEW] Finalisation du chargement pour:', nameOfView);
+  }
+}
+
+// ✅ NOUVEAU WATCHER POUR LA PROP viewName
+watch(
+  () => props.viewName,
+  async (newViewName, oldViewName) => {
+    // Évite le rechargement si la prop n'a pas réellement changé
+    if (newViewName === oldViewName) {
+      console.log('🔍 [VIEW] Watcher: viewName inchangé, pas de rechargement.');
+      return;
     }
-  })
-  
-  const loading = ref(true)
-  const error = ref(null)
-  const saving = ref(false)
-  const viewDetails = ref({
-    columns: [],
-    definition: '',
-    create_date: null,
-    modify_date: null
-  })
-  
-  // Pour l'édition des descriptions de colonnes
-  const editingColumnName = ref(null)
-  const editingColumnDescription = ref('')
-  
-  const startEdit = (column) => {
-    editingColumnName.value = column.column_name
-    editingColumnDescription.value = column.description || ''
-  }
-  
-  const cancelEdit = () => {
-    editingColumnName.value = null
-    editingColumnDescription.value = ''
-  }
-  
-  // Fonction pour sauvegarder la description d'une colonne
-  const saveColumnDescription = async (columnName) => {
-    try {
-      // Appel API pour sauvegarder la description de la colonne
-      const response = await axios.post(`/view/${props.viewName}/column/${columnName}/description`, {
-        description: editingColumnDescription.value
-      })
-      
-      if (response.data.success) {
-        // Mise à jour locale
-        const column = viewDetails.value.columns.find(c => c.column_name === columnName)
-        if (column) {
-          column.description = editingColumnDescription.value
-        }
-        
-        // Fin de l'édition
-        cancelEdit()
-      } else {
-        throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    console.log(`🔍 [VIEW] Watcher: viewName a changé de "${oldViewName}" à "${newViewName}". Rechargement des détails...`);
+    await loadViewDetailsFromAPI(newViewName);
+  },
+  { immediate: true } // `immediate: true` pour exécuter le watcher une fois au montage initial
+);
+
+// onMounted est maintenant géré par le watcher avec `immediate: true`
+onMounted(() => {
+  console.log('🔍 [VIEW] Composant ViewDetails monté. Le chargement initial est géré par le watcher.');
+  // Vous pouvez ajouter ici d'autres logiques qui ne dépendent PAS de viewName changeant
+});
+
+// Fonction pour sauvegarder la description d'une colonne
+const saveColumnDescription = async (columnName) => {
+  try {
+    saving.value = true; // Potentiellement, utiliser un état de sauvegarde spécifique pour les colonnes
+    
+    // ✅ Vérifiez que cette URL correspond à votre API pour la sauvegarde de description de colonne
+    const response = await axios.post(`/api/view/${props.viewName}/column/${columnName}/description`, {
+      description: editingColumnDescription.value
+    });
+    
+    if (response.data.success) {
+      // Mise à jour locale
+      const column = viewDetails.value.columns.find(c => c.column_name === columnName);
+      if (column) {
+        column.description = editingColumnDescription.value;
       }
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de la description de la colonne:', error)
-      alert('Erreur lors de la sauvegarde de la description de la colonne')
+      alert('Description de la colonne enregistrée avec succès.');
+      cancelEdit();
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde de la description de colonne');
     }
+  } catch (error) {
+    console.error('❌ [VIEW] Erreur lors de la sauvegarde de la description de la colonne:', error);
+    console.error('Détails:', error.response?.data);
+    alert('Erreur lors de la sauvegarde de la description de la colonne: ' + (error.response?.data?.error || error.message));
+  } finally {
+    saving.value = false; // Réinitialiser l'état de sauvegarde global, ou un état spécifique pour les colonnes
   }
-  
-  // Fonction pour sauvegarder la description
-  const saveDescription = async () => {
-    try {
-      saving.value = true
-      
-      // Appel API pour sauvegarder la description
-      const response = await axios.post(`/view/${props.viewName}/description`, {
-        description: form.value.description
-      })
-      
-      if (response.data.success) {
-        // Message de succès
-        alert('Description de la vue enregistrée avec succès')
-        
-        // Mise à jour locale
-        viewDetails.value.description = form.value.description
-      } else {
-        throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
-      }
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de la description:', error)
-      alert('Erreur lors de la sauvegarde de la description')
-    } finally {
-      saving.value = false
-    }
-  }
-  
-  // Fonction pour sauvegarder toutes les informations
-  const saveAll = async () => {
+}
+
+// Fonction pour sauvegarder la description de la vue (globale)
+const saveDescription = async () => {
   try {
     saving.value = true
     
-    // Préparer les données à envoyer (seulement les descriptions)
+    // ✅ Vérifiez que cette URL correspond à votre API pour la sauvegarde de description de la vue
+    const response = await axios.post(`/api/view/${props.viewName}/description`, {
+      description: form.value.description
+    })
+    
+    if (response.data.success) {
+      alert('Description de la vue enregistrée avec succès')
+      viewDetails.value.description = form.value.description
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+  } catch (error) {
+    console.error('❌ [VIEW] Erreur lors de la sauvegarde de la description de la vue:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde de la description de la vue: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+// Fonction pour sauvegarder toutes les informations
+const saveAll = async () => {
+  try {
+    saving.value = true
+    
+    // Préparer les données à envoyer (description de la vue et descriptions des colonnes)
     const viewData = {
       description: form.value.description,
-      
-      // Colonnes de la vue (uniquement les noms et descriptions)
       columns: viewDetails.value.columns.map(column => ({
         column_name: column.column_name,
         description: column.description
       }))
     }
     
-    // Appel à l'API
-    const response = await axios.post(`/view/${props.viewName}/save-all`, viewData)
+    // ✅ Vérifiez que cette URL correspond à votre API pour la sauvegarde globale
+    const response = await axios.post(`/api/view/${props.viewName}/save-all`, viewData)
     
     if (response.data.success) {
-      // Message de succès
-      alert('Les descriptions de la vue ont été enregistrées avec succès')
+      alert('Les descriptions de la vue et de ses colonnes ont été enregistrées avec succès')
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde globale')
     }
-    } catch (error) {
-        console.error('Erreur lors de la sauvegarde des descriptions:', error)
-        alert('Erreur lors de la sauvegarde des descriptions')
-    } finally {
-        saving.value = false
+  } catch (error) {
+    console.error('❌ [VIEW] Erreur lors de la sauvegarde globale des descriptions:', error)
+    console.error('Détails:', error.response?.data)
+    alert('Erreur lors de la sauvegarde globale des descriptions: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+const formatDataType = (column) => {
+  let type = column.data_type
+  if (['varchar', 'nvarchar', 'char', 'nchar'].includes(type.toLowerCase())) {
+    if (column.max_length) {
+      type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`
+    }
+  } else if (['decimal', 'numeric'].includes(type.toLowerCase())) {
+    if (column.precision && column.scale !== undefined) {
+      type += `(${column.precision},${column.scale})`
     }
   }
-  
-  const formatDataType = (column) => {
-    let type = column.data_type
-    if (['varchar', 'nvarchar', 'char', 'nchar'].includes(type.toLowerCase())) {
-      if (column.max_length) {
-        type += `(${column.max_length === -1 ? 'MAX' : column.max_length})`
-      }
-    } else if (['decimal', 'numeric'].includes(type.toLowerCase())) {
-      if (column.precision && column.scale !== undefined) {
-        type += `(${column.precision},${column.scale})`
-      }
-    }
-    return type
+  return type
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) { // Vérifie si la date est valide
+    console.warn("Date invalide fournie pour formatDate:", dateString);
+    return 'Date invalide';
   }
-  
-  const formatDate = (dateString) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleString()
-  }
-  
-  onMounted(async () => {
-    try {
-      const response = await axios.get(`/view/${props.viewName}/details`)
-      viewDetails.value = response.data
-      form.value.description = response.data.description || ''
-    } catch (err) {
-      error.value = err.response?.data?.error || 'Erreur lors du chargement des détails de la vue'
-    } finally {
-      loading.value = false
-    }
+  return date.toLocaleString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
-  </script>
+}
+</script>
