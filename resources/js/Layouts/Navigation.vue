@@ -349,8 +349,7 @@ const filteredTables = computed(() => {
     })
   }
   
-  // Limiter à 100 résultats pour éviter le lag
-  return tables.slice(0, 100)
+  return tables
 })
 
 const filteredViews = computed(() => {
@@ -366,7 +365,7 @@ const filteredViews = computed(() => {
     })
   }
   
-  return views.slice(0, 100)
+  return views
 })
 
 const filteredFunctions = computed(() => {
@@ -382,7 +381,7 @@ const filteredFunctions = computed(() => {
     })
   }
   
-  return functions.slice(0, 100)
+  return functions
 })
 
 const filteredProcedures = computed(() => {
@@ -398,7 +397,7 @@ const filteredProcedures = computed(() => {
     })
   }
   
-  return procedures.slice(0, 100)
+  return procedures
 })
 
 const filteredTriggers = computed(() => {
@@ -414,7 +413,7 @@ const filteredTriggers = computed(() => {
     })
   }
   
-  return triggers.slice(0, 100)
+  return triggers
 })
 
 // Fonction pour rafraîchir la navigation

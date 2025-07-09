@@ -32,6 +32,8 @@ class AdminController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'role_id' => 'required|exists:roles,id'
+        ], [
+            'password.min' => 'Password must contain at least 8 characters.'
         ]);
 
         $user = User::create([
