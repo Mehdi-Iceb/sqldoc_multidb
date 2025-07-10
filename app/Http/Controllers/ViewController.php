@@ -76,10 +76,13 @@ class ViewController extends Controller
                 ->get()
                 ->map(function ($column) {
                     return [
-                        'column_name' => $column->name,
-                        'data_type' => $column->type,
+                        'name' => $column->name,
+                        'type' => $column->type,
                         'is_nullable' => $column->nullable == 1,
-                        'description' => $column->description ?? null
+                        'description' => $column->description ?? null,
+                        'max_length' => $column->max_length ?? null,
+                        'precision' => $column->precision ?? null,
+                        'scale' => $column->scale ?? null
                     ];
                 });
 

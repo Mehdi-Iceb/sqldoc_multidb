@@ -17,7 +17,7 @@ class FuncParameter extends Model
         'type',
         'output',
         'definition',
-        'description'
+        
     ];
 
     // Pas de timestamps pour cette table si votre BD n'en a pas

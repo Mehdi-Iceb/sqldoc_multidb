@@ -82,12 +82,12 @@
       <div v-else>
         <!-- Informations de debug (seulement en dev) -->
         <div v-if="showDebugInfo" class="px-6 py-2 text-xs text-gray-300 border-b border-blue-600">
-          <div>Objets: {{ navigationData.metadata?.total_objects || 0 }}</div>
+          <!-- <div>Objets: {{ navigationData.metadata?.total_objects || 0 }}</div>
           <div>Temps: {{ navigationData.metadata?.execution_time_ms || 0 }}ms</div>
           <div>Cache: {{ navigationData.metadata?.generated_at ? 'Oui' : 'Non' }}</div>
           <button @click="refreshNavigation" class="text-blue-200 hover:text-white underline">
             Actualiser
-          </button>
+          </button> -->
         </div>
 
         <!-- Barre de recherche -->

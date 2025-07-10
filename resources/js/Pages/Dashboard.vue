@@ -3,7 +3,7 @@
 	  <template #header>
 		<div class="flex justify-between items-center">
 		  <h2 class="text-xl font-semibold leading-tight text-gray-800">
-			Dashboard - Database Documentation
+			Dashboard - {{ dashboardData.project_name }}
 		  </h2>
 		  <!-- Indicateur de permissions -->
 		  <div v-if="dashboardData.permissions" class="flex items-center space-x-2">

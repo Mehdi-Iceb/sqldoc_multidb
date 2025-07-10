@@ -26,7 +26,7 @@ class PsInformation extends Model
     ];
 
     // Pas de timestamps pour cette table
-    public $timestamps = false;
+    public $timestamps = true;
 
     public function psDescription()
     {

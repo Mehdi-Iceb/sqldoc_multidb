@@ -19,7 +19,10 @@ class TriggerInformation extends Model
         'event',
         'state',
         'creation_date',
-        'definition'
+        'definition',
+        'last_change_date',
+        'is_disabled'
+
     ];
 
     // Convertir les dates en instances Carbon
@@ -28,7 +31,7 @@ class TriggerInformation extends Model
     ];
 
     // Pas de timestamps pour cette table
-    public $timestamps = false;
+    public $timestamps = true;
 
     public function triggerDescription()
     {

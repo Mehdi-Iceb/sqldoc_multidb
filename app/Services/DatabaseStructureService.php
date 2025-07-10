@@ -168,7 +168,7 @@ class DatabaseStructureService
                                 'tablename' => $table->table_name
                             ],
                             [
-                                'language' => 'fr',
+                                'language' => 'en',
                                 'description' => $table->description ?? null,
                                 'updated_at' => now()
                             ]
@@ -585,7 +585,7 @@ class DatabaseStructureService
                                 'tablename' => $table->table_name
                             ],
                             [
-                                'language' => 'fr',
+                                'language' => 'en',
                                 'description' => $table->description ?? null,
                                 'updated_at' => now()
                             ]
@@ -788,15 +788,6 @@ class DatabaseStructureService
         }
     }
 
-
-    // TODO: Vous devrez appliquer les mêmes optimisations (transactions et insertions en masse)
-    // à toutes les autres méthodes d'extraction et de sauvegarde :
-    // - extractAndSaveViews
-    // - extractAndSaveFunctions
-    // - extractAndSaveProcedures
-    // - extractAndSaveTriggers
-
-    // Exemple de structure pour extractAndSaveViews (à compléter)
     private function extractAndSaveViews($connectionName, $dbId, $databaseType)
     {
         Log::info('Début extraction des vues...');
@@ -866,6 +857,7 @@ class DatabaseStructureService
             }
 
             foreach ($views as $view) {
+                
                 DB::transaction(function () use ($view, $dbId, $connectionName, $databaseType) {
                     try {
                         $viewDescription = ViewDescription::updateOrCreate(
@@ -876,6 +868,7 @@ class DatabaseStructureService
                             [
                                 'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
                                 'description' => $view->description ?? null,
+                                'created_at' => now(),
                                 'updated_at' => now()
                             ]
                         );
@@ -884,6 +877,7 @@ class DatabaseStructureService
                         $viewInfo = ViewInformation::updateOrCreate(
                             ['id_view' => $viewDescription->id],
                             [
+                                'schema_name' => $view->schema_name,
                                 'definition' => $view->definition,
                                 'creation_date' => $view->create_date,
                                 'last_change_date' => $view->modify_date,
@@ -967,14 +961,16 @@ class DatabaseStructureService
                             ", [$view->view_name, $view->schema_name]);
                         }
 
+                        // Suppression des anciennes colonnes pour cette vue (bonne pratique pour la synchronisation)
                         ViewColumn::where('id_view', $viewDescription->id)->delete();
+
                         $columnsToInsert = [];
                         foreach ($viewColumns as $column) {
                             $dataType = $this->formatDataType($column); // Use formatDataType for consistency
                             $columnsToInsert[] = [
                                 'id_view' => $viewDescription->id,
-                                'column_name' => $column->column_name,
-                                'data_type' => $dataType,
+                                'name' => $column->column_name,
+                                'type' => $dataType,
                                 'max_length' => $column->max_length ?? null,
                                 'precision' => $column->precision ?? null,
                                 'scale' => $column->scale ?? null,
@@ -984,8 +980,13 @@ class DatabaseStructureService
                                 'updated_at' => now(),
                             ];
                         }
+
+                        $chunkSize = 150;
+
                         if (!empty($columnsToInsert)) {
-                            ViewColumn::insert($columnsToInsert);
+                            foreach (array_chunk($columnsToInsert, $chunkSize) as $chunk) {
+                                ViewColumn::insert($chunk);
+                            }
                         }
 
                     } catch (\Exception $e) {
@@ -994,6 +995,7 @@ class DatabaseStructureService
                             'error' => $e->getMessage(),
                             'trace' => $e->getTraceAsString()
                         ]);
+
                         throw $e;
                     }
                 });
@@ -1161,7 +1163,7 @@ class DatabaseStructureService
                                 JOIN
                                     pg_namespace n ON n.oid = p.pronamespace
                                 LEFT JOIN
-                                    pg_description d ON d.objoid = p.oid AND d.objsubid = (SELECT unnest(p.proargnames) WHERE unnest = unnest(p.proargnames)) -- This join is tricky, might need adjustment
+                                    pg_description d ON d.objoid = p.oid AND d.objsubid = (SELECT unnest(p.proargnames) WHERE unnest = unnest(p.proargnames))
                                 WHERE
                                     p.proname = ?
                                     AND n.nspname = ?
@@ -1178,7 +1180,7 @@ class DatabaseStructureService
                                 'name' => $param->parameter_name,
                                 'type' => $param->data_type,
                                 'output' => $param->output_type,
-                                'description' => $param->description ?? null,
+                                'definition' => $param->description ?? null,
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
@@ -1297,9 +1299,11 @@ class DatabaseStructureService
                         $psInfo = PsInformation::updateOrCreate(
                             ['id_ps' => $psDescription->id],
                             [
+                                'schema' => $procedure->schema_name,
                                 'definition' => $procedure->definition,
                                 'creation_date' => $procedure->create_date,
                                 'last_change_date' => $procedure->modify_date,
+                                'created_at' => now(),
                                 'updated_at' => now()
                             ]
                         );
@@ -1373,6 +1377,7 @@ class DatabaseStructureService
                                 'type' => $param->data_type,
                                 'output' => $param->output_type,
                                 'description' => $param->description ?? null,
+                                'default_value' => "null",
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
@@ -1423,19 +1428,9 @@ class DatabaseStructureService
                             ELSE 'AFTER'
                         END AS trigger_type,
                         (
-                            SELECT STRING_AGG(event_type, ',')
-                            FROM (
-                                SELECT
-                                    CASE
-                                        WHEN is_insert_instead_of_trigger = 1 OR is_insert_after_trigger = 1 THEN 'INSERT'
-                                        WHEN is_update_instead_of_trigger = 1 OR is_update_after_trigger = 1 THEN 'UPDATE'
-                                        WHEN is_delete_instead_of_trigger = 1 OR is_delete_after_trigger = 1 THEN 'DELETE'
-                                        ELSE ''
-                                    END AS event_type
-                                FROM sys.triggers
-                                WHERE object_id = t.object_id
-                            ) AS TriggerEvents
-                            WHERE event_type <> ''
+                            SELECT STRING_AGG(tev.type_desc, ',')
+                            FROM sys.trigger_events tev
+                            WHERE tev.object_id = t.object_id
                         ) AS trigger_event,
                         ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
                     FROM
@@ -1451,7 +1446,7 @@ class DatabaseStructureService
                     WHERE
                         t.is_ms_shipped = 0
                     ORDER BY
-                        t.name
+                        t.name;
                 ");
             } elseif ($databaseType === 'mysql') {
                 $database = DB::connection($connectionName)->getDatabaseName();
@@ -1528,14 +1523,15 @@ class DatabaseStructureService
                         $triggerInfo = TriggerInformation::updateOrCreate(
                             ['id_trigger' => $triggerDescription->id],
                             [
-                                'table_name' => $trigger->table_name,
-                                'schema_name' => $trigger->schema_name,
+                                'table' => $trigger->table_name,
+                                'schema' => $trigger->schema_name,
                                 'type' => $trigger->trigger_type,
                                 'event' => $trigger->trigger_event,
                                 'is_disabled' => $trigger->is_disabled,
                                 'definition' => $trigger->definition,
                                 'creation_date' => $trigger->create_date,
                                 'last_change_date' => $trigger->modify_date,
+                                'created_at' => now(),
                                 'updated_at' => now()
                             ]
                         );

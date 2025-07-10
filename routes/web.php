@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/connect', [ProjectController::class, 'handleConnect'])->name('projects.handle-connect');
     Route::post('/disconnect', [ProjectController::class, 'disconnect'])->name('disconnect');
     Route::get('/projects/{project}/open', [ProjectController::class, 'open'])->name('projects.open');
+    Route::post('/projects/{project}/test-connection', [ProjectController::class, 'testConnection'])->name('projects.test-connection');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

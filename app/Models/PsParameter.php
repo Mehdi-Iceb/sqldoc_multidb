@@ -16,13 +16,12 @@ class PsParameter extends Model
         'name',
         'type',
         'output',
-        'definition',
         'default_value',
         'description'
     ];
 
     // Pas de timestamps pour cette table
-    public $timestamps = false;
+    public $timestamps = true;
 
     public function psDescription()
     {

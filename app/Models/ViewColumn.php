@@ -15,12 +15,15 @@ class ViewColumn extends Model
         'id_view',
         'name',
         'type',
-        'nullable',
-        'description'
+        'is_nullable',
+        'description',
+        'max_lengh',
+        'precision',
+        'scale',
     ];
 
     // Pas de timestamps automatiques pour cette table
-    public $timestamps = false;
+    public $timestamps = true;
 
     public function viewDescription()
     {
