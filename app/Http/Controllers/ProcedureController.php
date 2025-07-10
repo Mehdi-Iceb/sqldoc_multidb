@@ -50,7 +50,6 @@ class ProcedureController extends Controller
             ->get()
             ->map(function ($param) {
                 return [
-                    'parameter_id' => $param->id,
                     'parameter_name' => $param->name,
                     'data_type' => $param->type,
                     'is_output' => $param->output === 'OUTPUT',
@@ -90,6 +89,8 @@ class ProcedureController extends Controller
             if ($error = $this->requirePermission($request, 'read')) {
             return $error;
             }
+
+            $permissions = $request->get('user_project_permission');
 
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
@@ -140,12 +141,11 @@ class ProcedureController extends Controller
                 ->get()
                 ->map(function ($param) {
                     return [
-                        'parameter_id' => $param->id,
                         'parameter_name' => $param->name,
-                        'data_type' => $param->type,
+                        'data_type' => $param->type ?? null,
                         'is_output' => $param->output === 'OUTPUT',
-                        'default_value' => $param->default_value,
-                        'description' => $param->description
+                        'description' => $param->description ?? null,
+                        'default_value' => $param->default_value ?? null,
                     ];
                 });
 
@@ -159,7 +159,9 @@ class ProcedureController extends Controller
                     'modify_date' => $procedureInfo ? $procedureInfo->last_change_date : null,
                     'parameters' => $parameters,
                     'definition' => $procedureInfo ? $procedureInfo->definition : null
-                ]
+                ],
+                'permissions' => $permissions, // Ajoutez les permissions
+                'error' => null // Ajoutez cette ligne pour les cas de succès
             ]);
 
         } catch (\Exception $e) {
@@ -169,18 +171,19 @@ class ProcedureController extends Controller
             ]);
             
             return Inertia::render('ProcedureDetails', [
-                'procedureName' => $procedureName,
-                'procedureDetails' => [
-                    'name' => $procedureName,
-                    'description' => '',
-                    'schema' => null,
-                    'create_date' => null,
-                    'modify_date' => null,
-                    'parameters' => [],
-                    'definition' => null
-                ],
-                'error' => 'Erreur lors de la récupération des détails de la procédure stockée: ' . $e->getMessage()
-            ]);
+            'procedureName' => $procedureName,
+            'procedureDetails' => [
+                'name' => $procedureName,
+                'description' => '',
+                'schema' => null,
+                'create_date' => null,
+                'modify_date' => null,
+                'parameters' => [],
+                'definition' => null
+            ],
+            'permissions' => $request->get('user_project_permission', []),
+            'error' => 'Erreur lors de la récupération des détails de la procédure stockée: ' . $e->getMessage()
+        ]);
         }
     }
 
@@ -261,6 +264,79 @@ class ProcedureController extends Controller
             return response()->json([
                 'error' => 'Erreur lors de la sauvegarde de la description du paramètre: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function updateColumnPossibleValues(Request $request, $procedureName, $columnName)
+    {
+        try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update possible values.')) {
+            return $error;
+            }
+
+            // Valider les données
+            $validated = $request->validate([
+                'possible_values' => 'nullable|string'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $psDesc = PsDescription::where('dbid', $dbId)
+                ->where('psname', $procedureName)
+                ->first();
+
+            if (!$psDesc) {
+                return response()->json(['error' => 'Table non trouvée'], 404);
+            }
+
+            // Mettre à jour les valeurs possibles de la colonne
+            $column = PsParameter::where('id_ps', $psDesc->id)
+                ->where('name', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Colonne non trouvée'], 404);
+            }
+
+            // Vérifier si les valeurs possibles ont changé
+            if ($column->rangevalues !== $validated['possible_values']) {
+                $oldRangeValues = $column->rangevalues;
+                $column->rangevalues = $validated['possible_values'];
+                $column->save();
+                
+                // Log pour déboguer le résultat de la sauvegarde
+                Log::info('Résultat de la sauvegarde', [
+                    'column' => $columnName,
+                    'rangevalues' => $column->rangevalues,
+                    'saveResult' => $column 
+                ]);
+                
+                //Log de l'audit pour les valeurs possibles
+                $this->logAudit(
+                    $dbId, 
+                    $psDesc->id, 
+                    $columnName . '_rangevalues', 
+                    'update', 
+                    $oldRangeValues, 
+                    $validated['possible_values']
+                );
+            }
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour des valeurs possibles', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Erreur lors de la mise à jour des valeurs possibles: ' . $e->getMessage()], 500);
         }
     }
 

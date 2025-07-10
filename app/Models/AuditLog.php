@@ -18,10 +18,12 @@ class AuditLog extends Model
         'user_id',
         'db_id',
         'table_id',
+        'ps_id',
         'column_name',
         'change_type',
         'old_data',
-        'new_data'
+        'new_data',
+
     ];
 
     public function user()
@@ -37,5 +39,10 @@ class AuditLog extends Model
     public function tableDescription()
     {
         return $this->belongsTo(TableDescription::class, 'id_table', 'id');
+    }
+
+    public function psDescription()
+    {
+        return $this->belongsTo(PsDescription::class, 'id_ps', 'id');
     }
 }

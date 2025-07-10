@@ -56,33 +56,38 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 class="text-lg font-medium text-gray-900">Informations</h3>
+              <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900">Informations</h3>
+              </div>
             </div>
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p class="text-sm text-gray-600">Schema</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ procedureData.schema || 'Not specified' }}
-                </p>
+                  <h4 class="text-sm font-semibold text-gray-500 mb-1">Schema</h4>
+                    <div class="bg-gray-50 p-3 rounded">
+                      <p class="text-gray-800">{{ procedureData.schema || 'Not specified' }}</p>
+                  </div>
               </div>
               <div>
-                <p class="text-sm text-gray-600">Creation Date</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatDate(procedureData.create_date) }}
-                </p>
+                  <h4 class="text-sm font-semibold text-gray-500 mb-1">Creation Date</h4>
+                  <div class="bg-gray-50 p-3 rounded">
+                    <p class="text-gray-800">{{ formatDate(procedureData.create_date) }}</p>
+                  </div>
               </div>
               <div>
-                <p class="text-sm text-gray-600">Last Modification</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatDate(procedureData.modify_date) }}
-                </p>
+                  <h4 class="text-sm font-semibold text-gray-500 mb-1">Last Modification</h4>
+                  <div class="bg-gray-50 p-3 rounded">
+                    <p class="text-gray-800">{{ formatDate(procedureData.modify_date) }}</p>
+                  </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h3 class="text-lg font-medium text-gray-900">Parameters</h3>
             </div>
@@ -120,7 +125,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       <span v-if="param.is_output"
                             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Output
+                        {{ param.is_output }}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -182,7 +187,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h3 class="text-lg font-medium text-gray-900">SQL Definition</h3>
             </div>
@@ -199,236 +204,171 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-// No need for 'Link' from @inertiajs/vue3 if not directly used for navigation within the script.
+import { ref, computed, onMounted, watch } from 'vue' // Ajoutez 'watch'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { router } from '@inertiajs/vue3'
 
-const saving = ref(false);
-
-// ✅ Define all props received from Inertia
+// Définition des props reçues d'Inertia
 const props = defineProps({
   procedureName: {
     type: String,
     required: true
   },
-  // This prop will carry the initial procedure data from the Inertia controller
   procedureDetails: {
     type: Object,
-    default: () => ({ // Provide a default empty object to prevent errors if not passed
-      name: '',
-      schema: '',
-      create_date: null,
-      modify_date: null,
-      description: '',
-      parameters: [],
-      definition: ''
-    })
+    required: true
   },
-  // Add a prop for initial errors passed by Inertia
+  permissions: {
+    type: Object,
+    default: () => ({})
+  },
   error: {
     type: String,
     default: null
   }
-});
+})
 
-// Reactive state for procedure data (initialized from props)
-const procedureData = ref(props.procedureDetails);
-
-// Reactive state for the editable description (initialized from props)
+// États locaux
 const procedureForm = ref({
   description: props.procedureDetails.description || ''
-});
+})
 
-const loading = ref(true); // Initial state is loading until props are processed or API call finishes
-const currentError = ref(props.error); // Initialize with any error passed by Inertia
+const procedureData = ref(props.procedureDetails)
+const loading = ref(false)
+const saving = ref(false)
+const editingParamId = ref(null)
+const editingValue = ref('')
 
-// For editing parameter descriptions
-const editingParamId = ref(null);
-const editingValue = ref('');
+// Computed pour l'erreur
+const currentError = computed(() => props.error)
 
-// --- Functions ---
+// ✅ AJOUTEZ CE WATCHER POUR DÉTECTER LES CHANGEMENTS DE PROPS
+watch(
+  () => props.procedureDetails,
+  (newProcedureDetails) => {
+    console.log('🔍 [PROCEDURE] Props procedureDetails ont changé:', newProcedureDetails)
+    
+    // Mettre à jour les données locales avec les nouvelles props
+    procedureData.value = { ...newProcedureDetails }
+    procedureForm.value.description = newProcedureDetails.description || ''
+    
+    // Réinitialiser les états d'édition
+    editingParamId.value = null
+    editingValue.value = ''
+  },
+  { deep: true, immediate: true }
+)
 
-// Function to fetch procedure details from the API (for re-fetching on name change)
-const loadProcedureDetailsFromAPI = async (nameOfProcedure) => {
-  try {
-    console.log('🔍 [PROCEDURE] Starting details fetch for:', nameOfProcedure);
-    loading.value = true;
-    currentError.value = null;
-
-    // Reset data to show loading state more clearly
-    procedureData.value = {
-      parameters: [], definition: '', schema: '',
-      create_date: null, modify_date: null, description: ''
-    };
-    procedureForm.value.description = '';
-
-    // ✅ Ensure this API URL matches your Laravel route (e.g., in api.php)
-    const response = await axios.get(`/api/procedure/${encodeURIComponent(nameOfProcedure)}/details`);
-    console.log('🔍 [PROCEDURE] API response received:', response.data);
-
-    procedureData.value = response.data;
-    procedureForm.value.description = response.data.description || '';
-
-    console.log('🔍 [PROCEDURE] Data loaded successfully for:', nameOfProcedure);
-  } catch (err) {
-    console.error('❌ [PROCEDURE] Error loading procedure details:', err);
-    currentError.value = err.response?.data?.error || `Error loading procedure details for "${nameOfProcedure}"`;
-  } finally {
-    loading.value = false;
-    console.log('🔍 [PROCEDURE] Details fetch completed for:', nameOfProcedure);
-  }
-};
-
-// --- Lifecycle Hooks and Watchers ---
-
-// Watch the procedureName prop for changes
+// ✅ AJOUTEZ AUSSI UN WATCHER POUR LE NOM DE LA PROCEDURE
 watch(
   () => props.procedureName,
-  async (newProcedureName, oldProcedureName) => {
-    // If the new procedure name is the same as the old one AND we already have data, no need to re-fetch
-    if (newProcedureName === oldProcedureName && procedureData.value.name) {
-      console.log('🔍 [PROCEDURE] Watcher: procedureName unchanged and data already present, no re-fetch.');
-      loading.value = false; // Ensure loading is false if already loaded
-      return;
+  (newProcedureName, oldProcedureName) => {
+    if (newProcedureName !== oldProcedureName) {
+      console.log(`🔍 [PROCEDURE] Nom de procédure changé: ${oldProcedureName} → ${newProcedureName}`)
+      
+      // Réinitialiser les états d'édition quand on change de procédure
+      editingParamId.value = null
+      editingValue.value = ''
     }
-    console.log(`🔍 [PROCEDURE] Watcher: procedureName changed from "${oldProcedureName}" to "${newProcedureName}". Re-fetching details...`);
-    await loadProcedureDetailsFromAPI(newProcedureName);
-  },
-  { immediate: true } // Run the watcher immediately when the component is mounted for the initial load
-);
-
-// onMounted is now primarily for initial setup not covered by the watcher
-onMounted(() => {
-  console.log('🔍 [PROCEDURE] ProcedureDetails component mounted.');
-  // If initial data is provided by Inertia, set loading to false immediately.
-  // Otherwise, the watcher will handle the initial fetch.
-  if (props.procedureDetails.name) {
-    loading.value = false;
   }
-});
+)
 
-// --- Description Saving Function ---
-const saveDescription = async () => {
-  try {
-    saving.value = true;
-
-    // ✅ Ensure this API URL matches your Laravel route for updating procedure description
-    const response = await axios.post(`/api/procedure/${props.procedureName}/description`, {
-      description: procedureForm.value.description
-    });
-
-    if (response.data.success) {
-      alert('Procedure description saved successfully!');
-      procedureData.value.description = procedureForm.value.description; // Update local data
-    } else {
-      throw new Error(response.data.error || 'Failed to save description.');
-    }
-  } catch (error) {
-    console.error('❌ [PROCEDURE] Error saving description:', error);
-    currentError.value = error.response?.data?.error || `Error saving description: ${error.message}`;
-    alert('Error saving description: ' + (error.response?.data?.error || error.message));
-  } finally {
-    saving.value = false;
-  }
-};
-
-// --- Parameter Editing Functions ---
-// (These are new as they were not in your original procedureDetails but are good to have for consistency with FunctionDetails)
+// Fonctions d'édition des paramètres
 const startEdit = (param) => {
-  // Assuming parameters have a unique 'parameter_id' or 'parameter_name'
-  editingParamId.value = param.parameter_id || param.parameter_name;
-  editingValue.value = param.description || '';
-};
+  editingParamId.value = param.parameter_name
+  editingValue.value = param.description || ''
+}
 
 const cancelEdit = () => {
-  editingParamId.value = null;
-  editingValue.value = '';
-};
+  editingParamId.value = null
+  editingValue.value = ''
+}
 
+// Fonction pour sauvegarder la description de la procédure
+const saveDescription = async () => {
+  try {
+    saving.value = true
+    
+    router.post(`/procedure/${props.procedureName}/description`, {
+      description: procedureForm.value.description
+    }, {
+      onSuccess: () => {
+        alert('Description de la procédure enregistrée avec succès!')
+        // Mettre à jour les données locales
+        procedureData.value.description = procedureForm.value.description
+      },
+      onError: (errors) => {
+        console.error('Erreur lors de la sauvegarde:', errors)
+        alert('Erreur lors de la sauvegarde de la description')
+      },
+      onFinish: () => {
+        saving.value = false
+      }
+    })
+  } catch (error) {
+    console.error('Erreur:', error)
+    saving.value = false
+  }
+}
+
+// Fonction pour sauvegarder la description d'un paramètre
 const saveParameterDescription = async (param) => {
   try {
-    const parameterIdentifier = param.parameter_id || param.parameter_name; // Use an ID if available, else name
+    const parameterIdentifier = param.parameter_name
     if (!parameterIdentifier) {
-      alert("Cannot save: Parameter identifier is missing.");
-      return;
+      alert("Impossible de sauvegarder : identifiant du paramètre manquant.")
+      return
     }
 
-    saving.value = true; // Use global saving for simplicity
+    saving.value = true
 
-    // ✅ You'll need to define this API route and controller method
-    // It's good practice to use an ID if available for uniqueness.
-    // Assuming you'll add a 'description' field to your procedure parameters in the DB.
-    const response = await axios.post(`/api/procedure/${props.procedureName}/parameters/${encodeURIComponent(parameterIdentifier)}/description`, {
+    router.post(`/procedure/${props.procedureName}/parameters/${encodeURIComponent(parameterIdentifier)}/description`, {
       description: editingValue.value
-    });
-
-    if (response.data.success) {
-      // Find and update the parameter in the local reactive data
-      const index = procedureData.value.parameters.findIndex(p => (p.parameter_id === parameterIdentifier || p.parameter_name === parameterIdentifier));
-      if (index !== -1) {
-        procedureData.value.parameters[index].description = editingValue.value;
+    }, {
+      onSuccess: () => {
+        // Mise à jour locale
+        const index = procedureData.value.parameters.findIndex(p => p.parameter_name === parameterIdentifier)
+        if (index !== -1) {
+          procedureData.value.parameters[index].description = editingValue.value
+        }
+        alert('Description du paramètre enregistrée avec succès!')
+        cancelEdit()
+      },
+      onError: (errors) => {
+        console.error('Erreur lors de la sauvegarde:', errors)
+        alert('Erreur lors de la sauvegarde de la description du paramètre')
+      },
+      onFinish: () => {
+        saving.value = false
       }
-      alert('Parameter description saved successfully!');
-      cancelEdit();
-    } else {
-      throw new Error(response.data.error || 'Failed to save parameter description.');
-    }
+    })
   } catch (error) {
-    console.error('❌ [PROCEDURE] Error saving parameter description:', error);
-    currentError.value = error.response?.data?.error || `Error saving parameter description: ${error.message}`;
-    alert('Error saving parameter description: ' + (error.response?.data?.error || error.message));
-  } finally {
-    saving.value = false;
+    console.error('Erreur:', error)
+    saving.value = false
   }
-};
+}
 
-
-// The `saveAll` function seems redundant if `saveDescription` handles the only editable field.
-// I've kept it commented out. If you plan to add more editable fields, you can use it.
-/*
-const saveAll = async () => {
-  try {
-    saving.value = true;
-
-    const procedureDataToSave = {
-      description: procedureForm.value.description
-      // Add other editable fields here if they exist
-    };
-
-    // Make sure this API route exists and handles the full data object
-    const response = await axios.post(`/api/procedure/${props.procedureName}/save-all`, procedureDataToSave);
-
-    if (response.data.success) {
-      alert('Procedure details saved successfully!');
-      // Update other local data fields if 'save-all' returns them
-    } else {
-      throw new Error(response.data.error || 'Failed to save all procedure details.');
-    }
-
-  } catch (error) {
-    console.error('❌ [PROCEDURE] Error saving all details:', error);
-    currentError.value = error.response?.data?.error || `Error saving all details: ${error.message}`;
-    alert('Error saving all details: ' + (error.response?.data?.error || error.message));
-  } finally {
-    saving.value = false;
-  }
-};
-*/
-
-// --- Utility Functions ---
+// Fonction utilitaire pour formater les dates
 const formatDate = (dateString) => {
-  if (!dateString) return 'Not specified';
-  const date = new Date(dateString);
+  if (!dateString) return 'Not specified'
+  const date = new Date(dateString)
   if (isNaN(date.getTime())) {
-    console.warn("Invalid date provided for formatDate:", dateString);
-    return 'Invalid Date';
+    console.warn("Date invalide:", dateString)
+    return 'Invalid Date'
   }
-  return date.toLocaleDateString('en-US', { // Using 'en-US' for consistency with "Not specified"
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  });
-};
+  })
+}
+
+// Debug au montage
+onMounted(() => {
+  console.log('🔍 [PROCEDURE] Composant monté avec les props:', props)
+  console.log('🔍 [PROCEDURE] ProcedureDetails:', props.procedureDetails)
+  console.log('🔍 [PROCEDURE] Paramètres:', props.procedureDetails.parameters)
+})
 </script>

@@ -61,7 +61,7 @@
             </div>
   
             <!-- Informations générales -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <h3 class="text-lg font-medium text-gray-900">General Informations</h3>
               </div>
@@ -111,7 +111,7 @@
             </div>
   
             <!-- Définition SQL -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <h3 class="text-lg font-medium text-gray-900"> SQL Definition</h3>
               </div>

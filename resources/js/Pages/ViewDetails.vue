@@ -1,25 +1,25 @@
 <template>
-    <AuthenticatedLayout>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h2 class="text-xl font-semibold text-gray-800">
-            <span class="text-gray-500 font-normal">View :</span> 
-            {{ viewName }}
-          </h2>
-          <button 
-            @click="saveAll"
-            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :disabled="saving"
-            >
-            {{ saving ? 'Enregistrement...' : 'Enregistrer toutes les descriptions' }}
-          </button>
-        </div>
-      </template>
-  
-      <div class="py-12">
+  <AuthenticatedLayout>
+    <template #header>
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-800">
+          <span class="text-gray-500 font-normal">View :</span> 
+          {{ viewName }}
+        </h2>
+        <button 
+          @click="saveAll"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          :disabled="saving"
+          >
+          {{ saving ? 'Enregistrement...' : 'Enregistrer toutes les descriptions' }}
+        </button>
+      </div>
+    </template>
+
+    <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-        <!-- 🎯 SPINNER DE CHARGEMENT PRINCIPAL DE LA PAGE -->
-        <div v-if="loading" class="fixed inset-0 bg-gray-200 bg-opacity-20 flex items-center justify-center z-50">
+        <!-- 🎯 SPINNER DE CHARGEMENT PRINCIPAL -->
+        <div v-if="loading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center max-w-sm w-full mx-4">
             <!-- Spinner principal -->
             <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mb-6"></div>
@@ -38,28 +38,28 @@
             
             <!-- Messages de progression -->
             <div class="text-sm text-gray-500 text-center">
-              <div v-if="loadingProgress < 30" class="flex items-center">
+              <div v-if="loadingProgress < 30" class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Connecting to database...
               </div>
-              <div v-else-if="loadingProgress < 60" class="flex items-center">
+              <div v-else-if="loadingProgress < 60" class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Loading view informations...
               </div>
-              <div v-else-if="loadingProgress < 90" class="flex items-center">
+              <div v-else-if="loadingProgress < 90" class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Loading view Definition...
               </div>
-              <div v-else class="flex items-center">
+              <div v-else class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -71,7 +71,7 @@
         </div>
 
         <!-- Error state -->
-        <div v-if="error" 
+        <div v-else-if="error" 
              class="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg shadow-sm">
           <div class="flex items-center">
             <svg class="h-5 w-5 text-red-400 mr-3" viewBox="0 0 20 20" fill="currentColor">
@@ -101,26 +101,31 @@
           <!-- Informations de la vue -->
           <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 class="text-lg font-medium text-gray-900">Informations</h3>
+              <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900">Informations</h3>
+              </div>
             </div>
-            <div class="p-6 grid grid-cols-2 gap-6">
+            <div class="p-6 grid grid-cols-3 gap-6">
               <div>
-                <p class="text-sm text-gray-600">Schema</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatDate(viewDetails.schema_name) }}
-                </p>
+                <h4 class="text-sm font-semibold text-gray-500 mb-1">Schema</h4>
+                    <div class="bg-gray-50 p-3 rounded">
+                      <p class="text-gray-800">{{ viewDetails.schema || 'Not specified' }}</p>
+                  </div>
               </div>
               <div>
-                <p class="text-sm text-gray-600">Creation date</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatDate(viewDetails.create_date) }}
-                </p>
+                <h4 class="text-sm font-semibold text-gray-500 mb-1">Creation Date</h4>
+                  <div class="bg-gray-50 p-3 rounded">
+                    <p class="text-gray-800">{{ formatDate(viewDetails.create_date) }}</p>
+                  </div>
               </div>
               <div>
-                <p class="text-sm text-gray-600">Last modification</p>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatDate(viewDetails.modify_date) }}
-                </p>
+                <h4 class="text-sm font-semibold text-gray-500 mb-1">Last Modification</h4>
+                  <div class="bg-gray-50 p-3 rounded">
+                    <p class="text-gray-800">{{ formatDate(viewDetails.modify_date) }}</p>
+                  </div>
               </div>
             </div>
           </div>
@@ -178,13 +183,13 @@
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {{ column.max_length }}
+                      {{ column.max_length || '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {{ column.precision }}
+                      {{ column.precision || '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {{ column.scale }}
+                      {{ column.scale || '-' }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
@@ -233,7 +238,7 @@
                     </td>
                   </tr>
                   <tr v-if="!viewDetails.columns || viewDetails.columns.length === 0">
-                    <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
                       No column found
                     </td>
                   </tr>
@@ -269,11 +274,10 @@
 </template>
   
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { router } from '@inertiajs/vue3'
 
-// Définition des props reçues d'Inertia
 const props = defineProps({
   viewName: {
     type: String,
@@ -298,13 +302,89 @@ const form = ref({
   description: props.viewDetails.description || ''
 })
 
+const viewDetails = ref(props.viewDetails)
+const loadingProgress = ref(0)
 const loading = ref(false)
 const saving = ref(false)
 const editingColumnName = ref(null)
 const editingColumnDescription = ref('')
 
+// Variable pour l'intervalle de progression
+let progressInterval = null
+
 // Computed pour l'erreur
 const error = computed(() => props.error)
+
+// ✅ DÉCLARATION DES FONCTIONS AVANT LES WATCHERS
+const simulateLoadingProgress = () => {
+  loadingProgress.value = 0
+  
+  if (progressInterval) {
+    clearInterval(progressInterval)
+  }
+  
+  progressInterval = setInterval(() => {
+    if (loadingProgress.value < 95) {
+      const increment = loadingProgress.value < 50 ? 
+        Math.random() * 15 + 5 : 
+        Math.random() * 8 + 2   
+      
+      loadingProgress.value = Math.min(95, loadingProgress.value + increment)
+    }
+  }, 200)
+}
+
+const stopLoadingProgress = () => {
+  if (progressInterval) {
+    clearInterval(progressInterval)
+    progressInterval = null
+  }
+  loadingProgress.value = 100
+  setTimeout(() => {
+    loading.value = false
+  }, 300)
+}
+
+const startLoading = () => {
+  loading.value = true
+  simulateLoadingProgress()
+}
+
+// ✅ WATCHERS APRÈS LA DÉCLARATION DES FONCTIONS
+watch(
+  () => props.viewDetails,
+  (newViewDetails) => {
+    console.log('🔍 [VIEW] Props viewDetails ont changé:', newViewDetails)
+    
+    // Mettre à jour les données locales
+    viewDetails.value = { ...newViewDetails }
+    form.value.description = newViewDetails.description || ''
+    
+    // Réinitialiser les états d'édition
+    editingColumnName.value = null
+    editingColumnDescription.value = ''
+    
+    // Arrêter le chargement
+    stopLoadingProgress()
+  },
+  { deep: true, immediate: true }
+)
+
+watch(
+  () => props.viewName,
+  (newViewName, oldViewName) => {
+    if (newViewName !== oldViewName && oldViewName) {
+      console.log(`🔍 [VIEW] Nom de vue changé: ${oldViewName} → ${newViewName}`)
+      
+      // Démarrer le chargement
+      startLoading()
+      
+      // Réinitialiser les états d'édition
+      editingColumnName.value = null
+      editingColumnDescription.value = ''
+    }
+  }
+)
 
 // Fonctions d'édition
 const startEdit = (column) => {
@@ -322,13 +402,12 @@ const saveColumnDescription = async (columnName) => {
   try {
     saving.value = true
     
-    // Utiliser router.post d'Inertia au lieu d'axios
     router.post(`/view/${props.viewName}/column/${columnName}/description`, {
       description: editingColumnDescription.value
     }, {
       onSuccess: () => {
         // Mise à jour locale
-        const column = props.viewDetails.columns.find(c => c.column_name === columnName)
+        const column = viewDetails.value.columns.find(c => c.column_name === columnName)
         if (column) {
           column.description = editingColumnDescription.value
         }
@@ -356,7 +435,7 @@ const saveAll = async () => {
     
     const viewData = {
       description: form.value.description,
-      columns: props.viewDetails.columns.map(column => ({
+      columns: viewDetails.value.columns.map(column => ({
         column_name: column.column_name,
         description: column.description
       }))
@@ -410,6 +489,13 @@ const formatDate = (dateString) => {
     minute: '2-digit'
   })
 }
+
+// Nettoyage au démontage
+onUnmounted(() => {
+  if (progressInterval) {
+    clearInterval(progressInterval)
+  }
+})
 
 // Debug au montage
 onMounted(() => {
