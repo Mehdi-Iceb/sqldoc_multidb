@@ -11,75 +11,20 @@ use Inertia\Inertia;
 
 class TriggerController extends Controller
 {
-
     use HasProjectPermissions;
 
     /**
-     * Récupère les détails d'un trigger
+     * Affiche les détails d'un trigger avec toutes les données
      */
-    public function apiDetails(Request $request, $triggerName)
-    {
-        try {
-
-            if ($error = $this->requirePermission($request, 'read')) {
-            return $error;
-            }
-
-            // Obtenir l'ID de la base de données actuelle depuis la session
-            $dbId = session('current_db_id');
-            Log::info('API - Récupération des détails pour triggerName: ' . $triggerName . ', dbId: ' . $dbId);
-            
-            if (!$dbId) {
-                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
-            }
-
-            // Récupérer la description du trigger
-            $triggerDesc = TriggerDescription::where('dbid', $dbId)
-                ->where('triggername', $triggerName)
-                ->first();
-
-            if (!$triggerDesc) {
-                return response()->json(['error' => 'Trigger non trouvé'], 404);
-            }
-
-            // Récupérer les informations du trigger
-            $triggerInfo = TriggerInformation::where('id_trigger', $triggerDesc->id)->first();
-
-            if (!$triggerInfo) {
-                return response()->json(['error' => 'Informations du trigger non trouvées'], 404);
-            }
-
-            // Construire la réponse
-            return response()->json([
-                'name' => $triggerDesc->triggername,
-                'description' => $triggerDesc->description,
-                'table_name' => $triggerInfo->table,
-                'schema' => $triggerInfo->schema ?? null,
-                'trigger_type' => $triggerInfo->type,
-                'trigger_event' => $triggerInfo->event,
-                'is_disabled' => $triggerInfo->state === 0 || $triggerInfo->state === 'DISABLED',
-                'definition' => $triggerInfo->definition,
-                'create_date' => $triggerInfo->creation_date
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur dans TriggerController::apiDetails', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json(['error' => 'Erreur lors de la récupération des détails du trigger: ' . $e->getMessage()], 500);
-        }
-    }
-
-// méthode pour le rendu Inertia
     public function details(Request $request, $triggerName)
     {
         try {
-
             if ($error = $this->requirePermission($request, 'read')) {
-            return $error;
+                return $error;
             }
+
+            // Décoder le nom du trigger
+            $triggerName = urldecode($triggerName);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
@@ -88,78 +33,44 @@ class TriggerController extends Controller
             if (!$dbId) {
                 return Inertia::render('TriggerDetails', [
                     'triggerName' => $triggerName,
-                    'triggerDetails' => [
-                        'name' => $triggerName,
-                        'description' => '',
-                        'table_name' => '',
-                        'schema' => null,
-                        'trigger_type' => '',
-                        'trigger_event' => '',
-                        'is_disabled' => false,
-                        'definition' => '',
-                        'create_date' => null
-                    ],
+                    'triggerDetails' => $this->getDefaultTriggerData($triggerName),
                     'error' => 'Aucune base de données sélectionnée'
                 ]);
             }
 
-            // Récupérer la description du trigger
+            // Récupérer ou créer la description du trigger
             $triggerDesc = TriggerDescription::where('dbid', $dbId)
                 ->where('triggername', $triggerName)
                 ->first();
 
             if (!$triggerDesc) {
-                return Inertia::render('TriggerDetails', [
-                    'triggerName' => $triggerName,
-                    'triggerDetails' => [
-                        'name' => $triggerName,
-                        'description' => '',
-                        'table_name' => '',
-                        'schema' => null,
-                        'trigger_type' => '',
-                        'trigger_event' => '',
-                        'is_disabled' => false,
-                        'definition' => '',
-                        'create_date' => null
-                    ],
-                    'error' => 'Trigger non trouvé'
+                $triggerDesc = TriggerDescription::create([
+                    'dbid' => $dbId,
+                    'triggername' => $triggerName,
+                    'description' => ''
                 ]);
+                Log::info('Trigger description créée par défaut pour: ' . $triggerName);
             }
 
             // Récupérer les informations du trigger
             $triggerInfo = TriggerInformation::where('id_trigger', $triggerDesc->id)->first();
 
-            if (!$triggerInfo) {
-                return Inertia::render('TriggerDetails', [
-                    'triggerName' => $triggerName,
-                    'triggerDetails' => [
-                        'name' => $triggerDesc->triggername,
-                        'description' => $triggerDesc->description,
-                        'table_name' => '',
-                        'schema' => null,
-                        'trigger_type' => '',
-                        'trigger_event' => '',
-                        'is_disabled' => false,
-                        'definition' => '',
-                        'create_date' => null
-                    ],
-                    'error' => 'Informations du trigger non trouvées'
-                ]);
-            }
+            // Construire les données du trigger
+            $triggerDetails = [
+                'name' => $triggerDesc->triggername,
+                'description' => $triggerDesc->description ?? '',
+                'table_name' => $triggerInfo->table ?? '',
+                'schema' => $triggerInfo->schema ?? null,
+                'trigger_type' => $triggerInfo->type ?? '',
+                'trigger_event' => $triggerInfo->event ?? '',
+                'is_disabled' => $triggerInfo ? ($triggerInfo->state === 0 || $triggerInfo->state === 'DISABLED') : false,
+                'definition' => $triggerInfo->definition ?? '',
+                'create_date' => $triggerInfo->creation_date ?? null
+            ];
 
             return Inertia::render('TriggerDetails', [
                 'triggerName' => $triggerName,
-                'triggerDetails' => [
-                    'name' => $triggerDesc->triggername,
-                    'description' => $triggerDesc->description,
-                    'table_name' => $triggerInfo->table,
-                    'schema' => $triggerInfo->schema ?? null,
-                    'trigger_type' => $triggerInfo->type,
-                    'trigger_event' => $triggerInfo->event,
-                    'is_disabled' => $triggerInfo->state === 0 || $triggerInfo->state === 'DISABLED',
-                    'definition' => $triggerInfo->definition,
-                    'create_date' => $triggerInfo->creation_date
-                ]
+                'triggerDetails' => $triggerDetails
             ]);
 
         } catch (\Exception $e) {
@@ -170,20 +81,28 @@ class TriggerController extends Controller
             
             return Inertia::render('TriggerDetails', [
                 'triggerName' => $triggerName,
-                'triggerDetails' => [
-                    'name' => $triggerName,
-                    'description' => '',
-                    'table_name' => '',
-                    'schema' => null,
-                    'trigger_type' => '',
-                    'trigger_event' => '',
-                    'is_disabled' => false,
-                    'definition' => '',
-                    'create_date' => null
-                ],
+                'triggerDetails' => $this->getDefaultTriggerData($triggerName),
                 'error' => 'Erreur lors de la récupération des détails du trigger: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Retourne les données par défaut d'un trigger
+     */
+    private function getDefaultTriggerData($triggerName)
+    {
+        return [
+            'name' => $triggerName,
+            'description' => '',
+            'table_name' => '',
+            'schema' => null,
+            'trigger_type' => '',
+            'trigger_event' => '',
+            'is_disabled' => false,
+            'definition' => '',
+            'create_date' => null
+        ];
     }
 
     /**
@@ -192,14 +111,16 @@ class TriggerController extends Controller
     public function saveDescription(Request $request, $triggerName)
     {
         try {
-
             if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update triggers.')) {
-            return $error;
+                return $error;
             }
+
+            // Décoder le nom du trigger
+            $triggerName = urldecode($triggerName);
 
             // Valider les données
             $validated = $request->validate([
-                'description' => 'nullable|string'
+                'description' => 'nullable|string|max:65535'
             ]);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
@@ -208,40 +129,53 @@ class TriggerController extends Controller
                 return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
             }
 
-            // Récupérer la description du trigger
+            // Récupérer ou créer la description du trigger
             $triggerDesc = TriggerDescription::where('dbid', $dbId)
                 ->where('triggername', $triggerName)
                 ->first();
 
             if (!$triggerDesc) {
-                return response()->json(['error' => 'Trigger non trouvé'], 404);
+                $triggerDesc = TriggerDescription::create([
+                    'dbid' => $dbId,
+                    'triggername' => $triggerName,
+                    'description' => $validated['description'] ?? ''
+                ]);
+            } else {
+                $triggerDesc->description = $validated['description'] ?? '';
+                $triggerDesc->save();
             }
 
-            // Mettre à jour la description
-            $triggerDesc->description = $validated['description'];
-            $triggerDesc->save();
-
+            Log::info('Description sauvegardée pour trigger: ' . $triggerName);
             return response()->json(['success' => true]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Erreur de validation dans saveDescription:', $e->errors());
+            return response()->json(['error' => 'Erreur de validation: ' . implode(', ', $e->errors()['description'] ?? [])], 422);
         } catch (\Exception $e) {
+            Log::error('Erreur dans saveDescription:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Erreur lors de la sauvegarde de la description: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * Sauvegarde toutes les informations d'un trigger (uniquement la description)
+     * Sauvegarde toutes les informations d'un trigger
      */
     public function saveAll(Request $request, $triggerName)
     {
         try {
-
             if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update triggers.')) {
-            return $error;
+                return $error;
             }
+
+            // Décoder le nom du trigger
+            $triggerName = urldecode($triggerName);
             
             // Valider les données
             $validated = $request->validate([
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:65535',
                 'language' => 'nullable|string|max:3'
             ]);
 
@@ -251,25 +185,37 @@ class TriggerController extends Controller
                 return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
             }
 
-            // Récupérer la description du trigger
+            // Récupérer ou créer la description du trigger
             $triggerDesc = TriggerDescription::where('dbid', $dbId)
                 ->where('triggername', $triggerName)
                 ->first();
 
             if (!$triggerDesc) {
-                return response()->json(['error' => 'Trigger non trouvé'], 404);
+                $triggerDesc = TriggerDescription::create([
+                    'dbid' => $dbId,
+                    'triggername' => $triggerName,
+                    'description' => $validated['description'] ?? '',
+                    'language' => $validated['language'] ?? 'fr'
+                ]);
+            } else {
+                $triggerDesc->description = $validated['description'] ?? '';
+                if (isset($validated['language'])) {
+                    $triggerDesc->language = $validated['language'];
+                }
+                $triggerDesc->save();
             }
 
-            // Mettre à jour la description et éventuellement la langue
-            $triggerDesc->description = $validated['description'];
-            if (isset($validated['language'])) {
-                $triggerDesc->language = $validated['language'];
-            }
-            $triggerDesc->save();
-
+            Log::info('Toutes les informations sauvegardées pour trigger: ' . $triggerName);
             return response()->json(['success' => true]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Erreur de validation dans saveAll:', $e->errors());
+            return response()->json(['error' => 'Erreur de validation: ' . implode(', ', array_merge(...array_values($e->errors())))], 422);
         } catch (\Exception $e) {
+            Log::error('Erreur dans saveAll:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Erreur lors de la sauvegarde des informations: ' . $e->getMessage()], 500);
         }
     }

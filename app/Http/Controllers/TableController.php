@@ -23,203 +23,171 @@ class TableController extends Controller
     public function details(Request $request, $tableName)
     {
         try {
-
             if ($error = $this->requirePermission($request, 'read')) {
-            return $error;
+                return $error;
             }
-
-            // Récupérer les permissions
-            $permissions = $this->getUserPermissions($request);
-            
-            // Vérifier si propriétaire
-            $isOwner = $this->isProjectOwner($request);
-            
-            // Vérifier niveau minimum
-            $canModifyStructure = $this->hasMinimumLevel($request, 'write');
-
 
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour tableName: ' . $tableName . ', dbId: ' . $dbId);
-        
+
             if (!$dbId) {
-                $permissions = $this->getUserPermissions($request);
-            
-                if (request()->header('X-Inertia')) {
-                    return Inertia::render('TableDetails', [
-                        'tableName' => $tableName,
-                        'tableDetails' => [
-                            'description' => '',
-                            'columns' => [],
-                            'indexes' => [],
-                            'relations' => [],
-                            'can_edit' => false,
-                            'can_add_columns' => false,
-                            'can_add_relations' => false
-                        ],
-                        'permissions' => $permissions,
-                        'error' => 'Aucune base de données sélectionnée'
-                    ]);
-                } else {
-                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
-            }
-        }
-
-            // Récupérer la description de la table
-            $tableDesc = TableDescription::where('dbid', $dbId)
-                ->where('tablename', $tableName)
-                ->first();
-
-            if (!$tableDesc) {
-                return response()->json(['error' => 'Table non trouvée'], 404);
+                return Inertia::render('TableDetails', [
+                    'tableName' => $tableName,
+                    'tableDetails' => $this->getDefaultTableData(),
+                    'availableReleases' => $this->getAvailableReleases(),
+                    'permissions' => $this->getUserPermissions($request),
+                    'error' => 'Aucune base de données sélectionnée'
+                ]);
             }
 
-            // Récupérer les colonnes de la table
-            $columns = TableStructure::where('id_table', $tableDesc->id)
-                ->get()
-                ->map(function ($column) {
-                    return [
-                        'column_name' => $column->column,
-                        'data_type' => $column->type,
-                        'is_nullable' => $column->nullable == 1,
-                        'is_primary_key' => $column->key === 'PK',
-                        'is_foreign_key' => $column->key === 'FK',
-                        'description' => $column->description,
-                        'rangevalues' => $column->rangevalues,
-                        'release_id' => $column->release_id, 
-                        'release_version' => $column->release ? $column->release->version_number : null,
-                        'project_id' => $column->release ? $column->release->project_id : null,
-                        'can_edit' => $permissions['can_write'] ?? false
-                        ];
-                });
+            // Récupérer toutes les données nécessaires
+            $tableData = $this->getCompleteTableData($dbId, $tableName, $request);
+            $availableReleases = $this->getAvailableReleases();
+            $permissions = $this->getUserPermissions($request);
 
-            // Récupérer les index de la table
-            $indexes = DB::table('table_index')
-                ->where('id_table', $tableDesc->id)
-                ->get()
-                ->map(function ($index) {
-                    return [
-                        'index_name' => $index->name,
-                        'index_type' => $index->type,
-                        'columns' => $index->column,
-                        'is_primary_key' => strpos($index->properties, 'PRIMARY KEY') !== false,
-                        'is_unique' => strpos($index->properties, 'UNIQUE') !== false
-                    ];
-                });
-
-            // Récupérer les relations de la table
-            $relations = DB::table('table_relations')
-                ->where('id_table', $tableDesc->id)
-                ->get()
-                ->map(function ($relation) {
-                    // Analyse de la chaîne d'action pour extraire les règles DELETE et UPDATE
-                    $deleteRule = 'NO ACTION';
-                    $updateRule = 'NO ACTION';
-                    
-                    if ($relation->action) {
-                        if (preg_match('/ON DELETE (\w+( \w+)?)/', $relation->action, $deleteMatches)) {
-                            $deleteRule = $deleteMatches[1];
-                        }
-                        if (preg_match('/ON UPDATE (\w+( \w+)?)/', $relation->action, $updateMatches)) {
-                            $updateRule = $updateMatches[1];
-                        }
-                    }
-                    
-                    return [
-                        'constraint_name' => $relation->constraints,
-                        'column_name' => $relation->column,
-                        'referenced_table' => $relation->referenced_table,
-                        'referenced_column' => $relation->referenced_column,
-                        'delete_rule' => $deleteRule,
-                        'update_rule' => $updateRule
-                    ];
-                });
-
-                $permissions = $this->getUserPermissions($request);
-                $isOwner = $this->isProjectOwner($request);
-                $canModifyStructure = $this->hasMinimumLevel($request, 'write');
-
-                // Debug des permissions
-                Log::info('Permissions debug', [
-                    'permissions' => $permissions,
-                    'isOwner' => $isOwner,
-                    'canModifyStructure' => $canModifyStructure,
-                    'user_id' => auth()->id()
-                ]);
-
-                // Pour un owner, forcer les permissions à true
-                $canEdit = $isOwner || ($permissions['can_write'] ?? false);
-                $canAddColumns = $isOwner || ($permissions['can_write'] ?? false);
-                $canAddRelations = $isOwner || ($permissions['can_write'] ?? false);
-
-                // Mapper les colonnes avec les permissions
-                $columnsWithPermissions = $columns->map(function ($column) use ($canEdit) {
-                    $column['can_edit'] = $canEdit;
-                    return $column;
-                });
-
-                $tableData = [
-                    'description' => $tableDesc->description,
-                    'columns' => $columnsWithPermissions,
-                    'indexes' => $indexes,
-                    'relations' => $relations,
-                    'can_edit' => $canEdit,
-                    'can_add_columns' => $canAddColumns,
-                    'can_add_relations' => $canAddRelations,
-                    'is_owner' => $isOwner,
-                    // ✅ AJOUT: Debug info pour le frontend
-                    'permissions_debug' => [
-                        'raw_permissions' => $permissions,
-                        'is_owner' => $isOwner,
-                        'can_edit_computed' => $canEdit,
-                        'can_add_columns_computed' => $canAddColumns,
-                        'can_add_relations_computed' => $canAddRelations
-                    ]
-                ];
-
-                // ✅ Log final pour vérifier ce qui est envoyé
-                Log::info('Données envoyées au frontend', [
-                    'can_edit' => $tableData['can_edit'],
-                    'can_add_columns' => $tableData['can_add_columns'],
-                    'can_add_relations' => $tableData['can_add_relations'],
-                    'is_owner' => $tableData['is_owner']
-                ]);
-
-                if (request()->header('X-Inertia')) {
-                    return Inertia::render('TableDetails', [
-                        'tableName' => $tableName,
-                        'tableDetails' => $tableData,
-                        'permissions' => $permissions
-                    ]);
-                } else {
-                    return response()->json($tableData);
-                }
-                
-            } catch (\Exception $e) {
-                Log::error('Erreur dans TableController::details', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                if (request()->header('X-Inertia')) {
-                    return Inertia::render('TableDetails', [
-                        'tableName' => $tableName,
-                        'tableDetails' => [
-                            'description' => '',
-                            'columns' => [],
-                            'indexes' => [],
-                            'relations' => []
-                        ],
-                        'error' => 'Erreur lors de la récupération des détails de la table: ' . $e->getMessage()
-                    ]);
-                } else {
-                    return response()->json(['error' => 'Erreur lors de la récupération des détails de la table: ' . $e->getMessage()], 500);
-                }
-            
+            return Inertia::render('TableDetails', [
+                'tableName' => $tableName,
+                'tableDetails' => $tableData,
+                'availableReleases' => $availableReleases,
+                'permissions' => $permissions
+            ]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la récupération des détails de la table: ' . $e->getMessage()], 500);
+            Log::error('Erreur dans TableController::details', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('TableDetails', [
+                'tableName' => $tableName,
+                'tableDetails' => $this->getDefaultTableData(),
+                'availableReleases' => [],
+                'permissions' => $this->getUserPermissions($request),
+                'error' => 'Erreur lors de la récupération des détails de la table: ' . $e->getMessage()
+            ]);
         }
+    }
+
+    private function getCompleteTableData($dbId, $tableName, $request)
+    {
+        // Récupérer la description de la table
+        $tableDesc = TableDescription::where('dbid', $dbId)
+            ->where('tablename', $tableName)
+            ->first();
+
+        if (!$tableDesc) {
+            throw new \Exception('Table non trouvée');
+        }
+
+        // Récupérer les permissions
+        $permissions = $this->getUserPermissions($request);
+        $isOwner = $this->isProjectOwner($request);
+        $canEdit = $isOwner || ($permissions['can_write'] ?? false);
+
+        // Récupérer les colonnes
+        $columns = TableStructure::where('id_table', $tableDesc->id)
+            ->with('releases')
+            ->get()
+            ->map(function ($column) use ($canEdit) {
+                return [
+                    'column_name' => $column->column,
+                    'data_type' => $column->type,
+                    'is_nullable' => $column->nullable == 1,
+                    'is_primary_key' => $column->key === 'PK',
+                    'is_foreign_key' => $column->key === 'FK',
+                    'description' => $column->description,
+                    'possible_values' => $column->rangevalues,
+                    'release_id' => $column->release_id,
+                    'release_version' => $column->releases ? $column->releases->version_number : null,
+                    'can_edit' => $canEdit
+                ];
+            });
+
+        // Récupérer les index
+        $indexes = DB::table('table_index')
+            ->where('id_table', $tableDesc->id)
+            ->get()
+            ->map(function ($index) {
+                return [
+                    'index_name' => $index->name,
+                    'index_type' => $index->type,
+                    'columns' => $index->column,
+                    'is_primary_key' => strpos($index->properties, 'PRIMARY KEY') !== false,
+                    'is_unique' => strpos($index->properties, 'UNIQUE') !== false
+                ];
+            });
+
+        // Récupérer les relations
+        $relations = DB::table('table_relations')
+            ->where('id_table', $tableDesc->id)
+            ->get()
+            ->map(function ($relation) {
+                $deleteRule = 'NO ACTION';
+                $updateRule = 'NO ACTION';
+                
+                if ($relation->action) {
+                    if (preg_match('/ON DELETE (\w+( \w+)?)/', $relation->action, $deleteMatches)) {
+                        $deleteRule = $deleteMatches[1];
+                    }
+                    if (preg_match('/ON UPDATE (\w+( \w+)?)/', $relation->action, $updateMatches)) {
+                        $updateRule = $updateMatches[1];
+                    }
+                }
+                
+                return [
+                    'constraint_name' => $relation->constraints,
+                    'column_name' => $relation->column,
+                    'referenced_table' => $relation->referenced_table,
+                    'referenced_column' => $relation->referenced_column,
+                    'delete_rule' => $deleteRule,
+                    'update_rule' => $updateRule
+                ];
+            });
+
+        return [
+            'description' => $tableDesc->description,
+            'columns' => $columns,
+            'indexes' => $indexes,
+            'relations' => $relations,
+            'can_edit' => $canEdit,
+            'can_add_columns' => $canEdit,
+            'can_add_relations' => $canEdit,
+            'is_owner' => $isOwner
+        ];
+    }
+
+    private function getAvailableReleases()
+    {
+        try {
+            return Release::select('id', 'version_number', 'project_id')
+                ->get()
+                ->map(function ($release) {
+                    return [
+                        'id' => $release->id,
+                        'version_number' => $release->version_number,
+                        'display_name' => $release->version_number,
+                        'project_id' => $release->project_id
+                    ];
+                });
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération des releases:', $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getDefaultTableData()
+    {
+        return [
+            'description' => '',
+            'columns' => [],
+            'indexes' => [],
+            'relations' => [],
+            'can_edit' => false,
+            'can_add_columns' => false,
+            'can_add_relations' => false,
+            'is_owner' => false
+        ];
     }
 
     /**
@@ -228,10 +196,8 @@ class TableController extends Controller
     private function logAudit($dbId, $tableId, $columnName, $changeType, $oldData, $newData)
     {
         try {
-            // Récupérer l'ID de l'utilisateur connecté
             $userId = Auth::id() ?? null;
             
-            // Créer l'entrée dans les logs d'audit
             AuditLog::create([
                 'user_id' => $userId,
                 'db_id' => $dbId,
@@ -299,7 +265,6 @@ class TableController extends Controller
     public function saveStructure(Request $request, $tableName)
     {
         try {
-
             if ($error = $this->requirePermission($request, 'write', 'You need write permissions to modify table structure.')) {
                 return $error;
             }
@@ -312,7 +277,6 @@ class TableController extends Controller
                 'columns.*.column' => 'required|string',
                 'columns.*.description' => 'nullable|string',
                 'columns.*.rangevalues' => 'nullable|string',
-                
             ]);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
