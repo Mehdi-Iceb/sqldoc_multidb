@@ -12,7 +12,7 @@ use Inertia\Inertia;
 use App\Models\DbDescription;
 use App\Services\DatabaseStructureService;
 use App\Models\UserProjectAccess;
-
+use Illuminate\Support\Facades\Cache;
 
 class ProjectController extends Controller
 {
@@ -546,11 +546,15 @@ class ProjectController extends Controller
 
     public function open($id)
     {
+
         try {
             Log::info('=== DÉBUT OUVERTURE PROJET ===', ['project_id' => $id, 'user_id' => auth()->id()]);
             
-            // Récupérer le projet
-            $project = Project::withTrashed()->findOrFail($id);
+            // OPTIMISATION 1: Eager loading pour éviter les requêtes N+1
+            $project = Project::with(['user:id,name'])
+                ->withTrashed()
+                ->findOrFail($id);
+            
             Log::info('Projet trouvé', ['project_name' => $project->name, 'db_type' => $project->db_type, 'owner_id' => $project->user_id]);
             
             // Vérifier si le projet est supprimé
@@ -559,121 +563,34 @@ class ProjectController extends Controller
                     ->with('error', 'Ce projet a été supprimé et ne peut pas être ouvert.');
             }
             
-            // *** VÉRIFICATION DES PERMISSIONS D'ACCÈS ***
-            $userCanAccess = $this->checkUserProjectAccess($project);
+            // OPTIMISATION 2: Vérification rapide des permissions
+            $userCanAccess = $this->checkUserProjectAccessOptimized($project);
             
             if (!$userCanAccess['allowed']) {
                 return redirect()->route('projects.index')
                     ->with('error', $userCanAccess['message']);
             }
             
-            // Récupérer le niveau d'accès pour l'affichage
             $accessLevel = $userCanAccess['access_level'];
             $isOwner = $userCanAccess['is_owner'];
-            Log::info('Accès autorisé', [
-                'access_level' => $accessLevel, 
-                'is_owner' => $isOwner,
-                'user_id' => auth()->id(),
-                'project_owner_id' => $project->user_id
-            ]);
             
-            // Rechercher la description de BD
+            // OPTIMISATION 3: Une seule requête pour récupérer DbDescription
             $dbDescription = DbDescription::where('project_id', $project->id)->first();
-            Log::info('DbDescription', ['found' => $dbDescription ? 'oui' : 'non', 'dbname' => $dbDescription->dbname ?? 'N/A']);
             
-            // *** CAS : Projet jamais connecté à une base de données ***
             if (!$dbDescription) {
-                Log::info('Projet jamais connecté à une base de données', [
-                    'project_id' => $project->id, 
-                    'access_level' => $accessLevel,
-                    'is_owner' => $isOwner
-                ]);
-                
                 if ($isOwner) {
-                    // Le propriétaire peut configurer la connexion
-                    Log::info('Redirection vers connexion pour le propriétaire', ['project_id' => $project->id]);
                     return redirect()->route('projects.connect', $project->id)
-                        ->with('info', "Project '{$project->name}' needs to be connected to a database. Please provide the database connection details below.");
+                        ->with('info', "Project '{$project->name}' needs to be connected to a database.");
                 } else {
-                    // Les utilisateurs avec accès partagé ne peuvent pas configurer
-                    Log::info('Accès refusé pour utilisateur non-propriétaire', [
-                        'project_id' => $project->id,
-                        'user_id' => auth()->id(),
-                        'owner_id' => $project->user_id
-                    ]);
                     return redirect()->route('projects.index')
-                        ->with('warning', "Project '{$project->name}' is not configured yet. Only the project owner can set up the database connection. Please contact the project owner to configure this project.");
+                        ->with('warning', "Project '{$project->name}' is not configured yet. Only the project owner can set up the database connection.");
                 }
             }
             
-            // Définir les informations de connexion (CODE ORIGINAL INCHANGÉ)
-            $connectionInfo = null;
-            if (isset($project->connection_info) && !empty($project->connection_info)) {
-                if (is_string($project->connection_info)) {
-                    $connectionInfo = json_decode($project->connection_info, true);
-                } else {
-                    $connectionInfo = $project->connection_info;
-                }
-            } else {
-                $connectionInfo = [
-                    'driver' => $this->getDriverFromDbType($project->db_type),
-                    'host' => 'localhost',
-                    'database' => $dbDescription->dbname,
-                    'username' => '',
-                    'password' => ''
-                ];
-            }
+            // OPTIMISATION 4: Préparation rapide des infos de connexion
+            $connectionInfo = $this->prepareConnectionInfoOptimized($project, $dbDescription);
             
-            if (!isset($connectionInfo['driver'])) {
-                $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
-            }
-            
-            Log::info('Informations de connexion préparées', [
-                'driver' => $connectionInfo['driver'],
-                'host' => $connectionInfo['host'],
-                'database' => $connectionInfo['database']
-            ]);
-            
-            // VÉRIFICATION DU CONTENU DE LA BASE DE DONNÉES (CODE ORIGINAL INCHANGÉ)
-            $messages = ['success' => "Project '{$project->name}' opened successfully."]; // Valeur par défaut
-            
-            try {
-                Log::info('Début vérification contenu base de données');
-                
-                $connectionName = "project_temp_check_{$project->id}";
-                Config::set("database.connections.{$connectionName}", $connectionInfo);
-                
-                // Test de connexion
-                $pdo = DB::connection($connectionName)->getPdo();
-                Log::info('Connexion PDO réussie');
-                
-                // Vérifier le contenu de la base de données
-                $databaseStats = $this->checkDatabaseContent($connectionName, $project->db_type, $dbDescription->dbname);
-                Log::info('Statistiques de la base de données', $databaseStats);
-                
-                // Nettoyer la connexion temporaire
-                DB::disconnect($connectionName);
-                Config::forget("database.connections.{$connectionName}");
-                Log::info('Connexion temporaire nettoyée');
-                
-                // Analyser les statistiques et préparer les messages
-                $messages = $this->analyzeDatabaseStats($databaseStats, $project->name);
-                Log::info('Messages générés', $messages);
-                
-            } catch (\Exception $e) {
-                Log::error('Erreur lors de la vérification du contenu de la base de données', [
-                    'project_id' => $project->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                // En cas d'erreur de connexion, on continue quand même mais avec un avertissement
-                $messages = [
-                    'warning' => "Project '{$project->name}' opened, but unable to verify database content. The database may be inaccessible."
-                ];
-            }
-            
-            // Mettre à jour la session avec les informations d'accès
+            // OPTIMISATION 5: Mise à jour de session AVANT la vérification de DB (non-bloquant)
             session([
                 'current_project' => [
                     'id' => $project->id,
@@ -686,36 +603,162 @@ class ProjectController extends Controller
                 'current_db_id' => $dbDescription->id
             ]);
             
-            Log::info('Session mise à jour');
+            // OPTIMISATION 6: Vérification DB optionnelle et asynchrone
+            $messages = $this->quickDatabaseCheck($project, $dbDescription, $connectionInfo);
             
-            // Rediriger avec les messages appropriés (CODE ORIGINAL INCHANGÉ)
+            Log::info('Session mise à jour et redirection');
+            
+            // Redirection immédiate avec message approprié
             $redirectResponse = redirect()->route('dashboard');
             
             if (isset($messages['error'])) {
-                Log::info('Redirection avec erreur', ['message' => $messages['error']]);
                 return $redirectResponse->with('error', $messages['error']);
             } elseif (isset($messages['warning'])) {
-                Log::info('Redirection avec warning', ['message' => $messages['warning']]);
                 return $redirectResponse->with('warning', $messages['warning']);
-            } elseif (isset($messages['info'])) {
-                Log::info('Redirection avec info', ['message' => $messages['info']]);
-                return $redirectResponse->with('info', $messages['info']);
             } else {
-                Log::info('Redirection avec succès', ['message' => $messages['success'] ?? 'Message par défaut']);
                 return $redirectResponse->with('success', $messages['success'] ?? "Project '{$project->name}' opened successfully.");
             }
-                    
+                        
         } catch (\Exception $e) {
             Log::error('=== ERREUR LORS DE L\'OUVERTURE DU PROJET ===', [
                 'project_id' => $id,
                 'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             
             return redirect()->route('projects.index')
                 ->with('error', 'Unable to open project: ' . $e->getMessage());
         }
+    }
+
+    private function checkUserProjectAccessOptimized($project)
+    {
+        $userId = auth()->id();
+        
+        // Le propriétaire a toujours accès
+        if ($project->user_id == $userId) {
+            return [
+                'allowed' => true,
+                'access_level' => 'owner',
+                'is_owner' => true,
+                'message' => 'Owner access'
+            ];
+        }
+        
+        // Une seule requête pour vérifier les accès partagés
+        $projectAccess = UserProjectAccess::where('user_id', $userId)
+            ->where('project_id', $project->id)
+            ->first(['access_level']);
+        
+        if ($projectAccess) {
+            return [
+                'allowed' => true,
+                'access_level' => $projectAccess->access_level,
+                'is_owner' => false,
+                'message' => 'Shared access: ' . $projectAccess->access_level
+            ];
+        }
+        
+        return [
+            'allowed' => false,
+            'access_level' => null,
+            'is_owner' => false,
+            'message' => "You don't have permission to access this project."
+        ];
+    }
+
+    private function prepareConnectionInfoOptimized($project, $dbDescription)
+    {
+        if (isset($project->connection_info) && !empty($project->connection_info)) {
+            $connectionInfo = is_string($project->connection_info) 
+                ? json_decode($project->connection_info, true) 
+                : $project->connection_info;
+        } else {
+            $connectionInfo = [
+                'driver' => $this->getDriverFromDbType($project->db_type),
+                'host' => 'localhost',
+                'database' => $dbDescription->dbname,
+                'username' => '',
+                'password' => ''
+            ];
+        }
+        
+        if (!isset($connectionInfo['driver'])) {
+            $connectionInfo['driver'] = $this->getDriverFromDbType($project->db_type);
+        }
+        
+        return $connectionInfo;
+    }
+
+    private function quickDatabaseCheck($project, $dbDescription, $connectionInfo)
+    {
+        // Message par défaut de succès
+        $messages = ['success' => "Project '{$project->name}' opened successfully."];
+        
+        try {
+            // Vérification ultra-rapide avec timeout court
+            $connectionName = "project_quick_check_{$project->id}";
+            
+            // Configurer un timeout très court pour cette vérification
+            $quickConfig = $connectionInfo;
+            $quickConfig['options'] = [
+                \PDO::ATTR_TIMEOUT => 2, // 2 secondes max
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION
+            ];
+            
+            Config::set("database.connections.{$connectionName}", $quickConfig);
+            
+            // Test de connexion ultra-rapide
+            $pdo = DB::connection($connectionName)->getPdo();
+            
+            // Test simple d'existence de la DB (requête très rapide)
+            $testQuery = "SELECT 1";
+            switch ($project->db_type) {
+                case 'mysql':
+                    $testQuery = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ? LIMIT 1";
+                    break;
+                case 'pgsql':
+                    $testQuery = "SELECT 1 FROM pg_database WHERE datname = ? LIMIT 1";
+                    break;
+                case 'sqlserver':
+                    $testQuery = "SELECT 1 FROM sys.databases WHERE name = ?";
+                    break;
+            }
+            
+            $result = DB::connection($connectionName)->select($testQuery, [$dbDescription->dbname]);
+            
+            // Nettoyer immédiatement
+            DB::disconnect($connectionName);
+            Config::forget("database.connections.{$connectionName}");
+            
+            if (empty($result) && $project->db_type !== 'general') {
+                $messages = [
+                    'warning' => "Project '{$project->name}' opened, but database '{$dbDescription->dbname}' seems inaccessible. You may need to check the connection settings."
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Quick database check failed (non-blocking)', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Ne pas bloquer l'ouverture, juste avertir
+            $messages = [
+                'info' => "Project '{$project->name}' opened. Database connectivity will be verified when needed."
+            ];
+            
+            // Nettoyer en cas d'erreur
+            try {
+                $connectionName = "project_quick_check_{$project->id}";
+                DB::disconnect($connectionName);
+                Config::forget("database.connections.{$connectionName}");
+            } catch (\Exception $cleanupException) {
+                // Ignorer les erreurs de nettoyage
+            }
+        }
+        
+        return $messages;
     }
 
     private function prepareConnectionInfo($project, $dbDescription)
@@ -1259,49 +1302,72 @@ class ProjectController extends Controller
     /**
      * Suppression définitive d'un projet
      */
-    public function forceDelete($id)
+    public function forceDeleteProject($id)
     {
         try {
-            // Vérifier si l'utilisateur est admin
+            // Log pour débugger
+            Log::info('🚨 ProjectController::forceDeleteProject appelée', [
+                'project_id' => $id,
+                'user_id' => auth()->id()
+            ]);
+
+            // Vérifier les permissions (ajustez selon votre logique)
             if (!auth()->user()->isAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent supprimer définitivement des projets.'
+                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent restaurer des projets.'
                 ], 403);
             }
 
-            $project = Project::withTrashed()
-                ->where('user_id', auth()->id())
-                ->findOrFail($id);
-            
-            $dbDescriptionsCount = DbDescription::where('project_id', $project->id)->count();
-            
-            if ($dbDescriptionsCount > 0) {
-                return response()->json([
-                    'success' => false,
-                    'error' => "Impossible de supprimer définitivement ce projet car il contient {$dbDescriptionsCount} base(s) de données associée(s)."
-                ], 400);
-            }
-
+            $project = Project::withTrashed()->findOrFail($id);
             $projectName = $project->name;
-            $project->forceDelete();
+            $projectOwner = $project->user->name ?? 'Utilisateur supprimé';
 
-            Log::info('Projet supprimé définitivement par admin', [
+            Log::info('🗑️ Début de suppression forcée du projet', [
                 'project_id' => $id,
                 'project_name' => $projectName,
                 'admin_id' => auth()->id()
             ]);
 
+            // Analyser toutes les dépendances
+            $dependencies = $this->analyzeProjectDependencies($project->id);
+            
+            Log::info('📊 Dépendances trouvées', [
+                'project_id' => $id,
+                'dependencies' => $dependencies
+            ]);
+
+            // Supprimer toutes les dépendances dans une transaction
+            DB::transaction(function () use ($project, $dependencies) {
+                $this->deleteProjectDependencies($project->id, $dependencies);
+                
+                // ✅ IMPORTANT: Utiliser forceDelete() sur l'instance Eloquent
+                $project->forceDelete();
+            });
+
+            Log::warning('✅ Projet supprimé définitivement avec succès', [
+                'project_id' => $id,
+                'project_name' => $projectName,
+                'project_owner' => $projectOwner,
+                'dependencies_deleted' => $dependencies,
+                'admin_id' => auth()->id()
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Projet supprimé définitivement'
+                'message' => 'Projet et toutes ses dépendances supprimés définitivement',
+                'details' => [
+                    'project_name' => $projectName,
+                    'dependencies_removed' => $dependencies
+                ]
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Erreur dans ProjectController::forceDelete', [
+            Log::error('❌ Erreur dans ProjectController::forceDeleteProject', [
                 'id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => auth()->id()
+                'trace' => $e->getTraceAsString(),
+                'admin_id' => auth()->id()
             ]);
 
             return response()->json([
@@ -1310,6 +1376,158 @@ class ProjectController extends Controller
             ], 500);
         }
     }
+
+    private function analyzeProjectDependencies($projectId)
+    {
+        $dependencies = [];
+
+        try {
+            Log::info('📊 Analyse des dépendances pour le projet', ['project_id' => $projectId]);
+
+            // 1. Bases de données
+            $dbDescriptions = DbDescription::where('project_id', $projectId)->get();
+            $dependencies['databases'] = $dbDescriptions->count();
+
+            if ($dependencies['databases'] > 0) {
+                $dbIds = $dbDescriptions->pluck('id');
+                Log::info('📁 Bases de données trouvées', ['count' => $dependencies['databases'], 'db_ids' => $dbIds->toArray()]);
+                
+                // 2. Tables
+                $dependencies['tables'] = DB::table('table_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->count();
+                    
+                // 3. Colonnes
+                $tableIds = DB::table('table_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($tableIds->isNotEmpty()) {
+                    $dependencies['columns'] = DB::table('table_structure')
+                        ->whereIn('id_table', $tableIds)
+                        ->count();
+                        
+                    $dependencies['indexes'] = DB::table('table_index')
+                        ->whereIn('id_table', $tableIds)
+                        ->count();
+                        
+                    $dependencies['relations'] = DB::table('table_relations')
+                        ->whereIn('id_table', $tableIds)
+                        ->count();
+                }
+                
+                // 4. Triggers
+                $dependencies['triggers'] = DB::table('trigger_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->count();
+            }
+
+            // 5. Releases
+            $dependencies['releases'] = DB::table('release')
+                ->where('project_id', $projectId)
+                ->count();
+                
+            // 6. Permissions utilisateur
+            $dependencies['user_permissions'] = DB::table('user_project_permission')
+                ->where('project_id', $projectId)
+                ->count();
+
+            Log::info('📊 Analyse terminée', ['dependencies' => $dependencies]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erreur lors de l\'analyse des dépendances', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+
+        return array_filter($dependencies, function($count) {
+            return $count > 0;
+        });
+    }
+
+    private function deleteProjectDependencies($projectId, $dependencies)
+    {
+        Log::info('🗑️ Début suppression des dépendances', [
+            'project_id' => $projectId,
+            'dependencies' => $dependencies
+        ]);
+
+        try {
+            $dbIds = DbDescription::where('project_id', $projectId)->pluck('id');
+            
+            if ($dbIds->isNotEmpty()) {
+                Log::info('🔍 IDs des bases de données à traiter', ['db_ids' => $dbIds->toArray()]);
+                
+                $tableIds = DB::table('table_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($tableIds->isNotEmpty()) {
+                    Log::info('🔍 IDs des tables à traiter', ['table_ids' => $tableIds->toArray()]);
+                    
+                    // Supprimer dans l'ordre: enfants d'abord
+                    
+                    if (isset($dependencies['columns'])) {
+                        $deleted = DB::table('table_structure')->whereIn('id_table', $tableIds)->delete();
+                        Log::info("✅ Colonnes supprimées: {$deleted}");
+                    }
+                    
+                    if (isset($dependencies['indexes'])) {
+                        $deleted = DB::table('table_index')->whereIn('id_table', $tableIds)->delete();
+                        Log::info("✅ Index supprimés: {$deleted}");
+                    }
+                    
+                    if (isset($dependencies['relations'])) {
+                        $deleted = DB::table('table_relations')->whereIn('id_table', $tableIds)->delete();
+                        Log::info("✅ Relations supprimées: {$deleted}");
+                    }
+                }
+                
+                if (isset($dependencies['triggers'])) {
+                    $triggerIds = DB::table('trigger_description')->whereIn('dbid', $dbIds)->pluck('id');
+                    if ($triggerIds->isNotEmpty()) {
+                        $deleted = DB::table('trigger_information')->whereIn('id_trigger', $triggerIds)->delete();
+                        Log::info("✅ Informations de triggers supprimées: {$deleted}");
+                    }
+                    $deleted = DB::table('trigger_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Triggers supprimés: {$deleted}");
+                }
+                
+                if (isset($dependencies['tables'])) {
+                    $deleted = DB::table('table_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Tables supprimées: {$deleted}");
+                }
+                
+                if (isset($dependencies['databases'])) {
+                    $deleted = DbDescription::where('project_id', $projectId)->delete();
+                    Log::info("✅ Bases de données supprimées: {$deleted}");
+                }
+            }
+            
+            if (isset($dependencies['releases'])) {
+                $deleted = DB::table('release')->where('project_id', $projectId)->delete();
+                Log::info("✅ Releases supprimées: {$deleted}");
+            }
+            
+            if (isset($dependencies['user_permissions'])) {
+                $deleted = DB::table('user_project_permission')->where('project_id', $projectId)->delete();
+                Log::info("✅ Permissions supprimées: {$deleted}");
+            }
+
+            Log::info('✅ Suppression des dépendances terminée');
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erreur lors de la suppression des dépendances', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
 
     /**
      * Affiche les projets supprimés pour l'utilisateur connecté

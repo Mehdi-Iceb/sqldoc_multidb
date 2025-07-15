@@ -43,9 +43,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     
     // Routes existantes pour les projets supprimés 
     Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects'])->name('admin.projects.deleted');
-    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject'])->name('admin.projects.restore');
-    Route::delete('/projects/{id}/force-delete', [AdminController::class, 'forceDeleteProject'])->name('admin.projects.force-delete');
+    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject'])->name('admin.projects.restore');;
     Route::get('/projects/stats', [AdminController::class, 'getProjectStats'])->name('admin.projects.stats');
+    Route::get('/admin/projects/all', [AdminController::class, 'getAllProjects']);
+    Route::get('/projects/{id}/deletion-preview', [ProjectController::class, 'getProjectDeletionPreview']);
+    Route::delete('/projects/{id}/force', [ProjectController::class, 'forceDeleteProject']);
 });
 
 // ROUTES AUTHENTIFIÉES DE BASE (sans projet requis)
@@ -81,7 +83,7 @@ Route::middleware('auth')->group(function () {
     // Routes pour le soft delete des projets
     Route::delete('/projects/{id}/soft', [ProjectController::class, 'softDelete'])->name('projects.soft-delete');
     Route::post('/projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
-    Route::delete('/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
+    //Route::delete('/projects/{id}/force', [ProjectController::class, 'forceDelete'])->name('projects.force-delete');
     Route::get('/projects/deleted', [ProjectController::class, 'deleted'])->name('projects.deleted');
     Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
 });

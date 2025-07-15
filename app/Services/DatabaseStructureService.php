@@ -57,11 +57,10 @@ class DatabaseStructureService
         return $type;
     }
 
-    // Assurez-vous d'avoir une méthode similaire pour MySQL si nécessaire
+
     private function formatMySqlDataType($column)
     {
-        // Implémentation spécifique à MySQL si différente de formatDataType
-        // Pour l'exemple, je vais juste appeler la fonction générique
+ 
         return $this->formatDataType($column);
     }
 
@@ -339,8 +338,6 @@ class DatabaseStructureService
                             TableRelation::insert($foreignKeysToInsert);
                         }
 
-                        // Log pour chaque table, mais à un niveau moins verbeux si la performance est critique
-                        // Log::info('Table extraite et sauvegardée: ' . $table->table_name);
 
                     } catch (\Exception $e) {
                         Log::error('Erreur lors de l\'extraction et sauvegarde d\'une table SQL Server', [
@@ -363,10 +360,7 @@ class DatabaseStructureService
         }
     }
 
-    // ... (Vos autres méthodes extractAndSaveMySqlTables, extractAndSavePostgreSqlTables, etc.
-    // devront être mises à jour de la même manière avec transactions et insertions en masse)
 
-    // Exemple pour extractAndSaveMySqlTables (structure similaire)
     private function extractAndSaveMySqlTables($connectionName, $dbId)
     {
         try {
@@ -545,8 +539,6 @@ class DatabaseStructureService
         }
     }
     
-    // ... (Vos autres méthodes extractAndSavePostgreSqlTables, extractAndSaveViews, extractAndSaveFunctions, extractAndSaveProcedures, extractAndSaveTriggers
-    // devront être mises à jour de la même manière avec transactions et insertions en masse)
 
     /**
      * Extrait et sauvegarde les tables de PostgreSQL
@@ -1010,7 +1002,7 @@ class DatabaseStructureService
         }
     }
 
-    // Exemple de structure pour extractAndSaveFunctions (à compléter)
+    
     private function extractAndSaveFunctions($connectionName, $dbId, $databaseType)
     {
         Log::info('Début extraction des fonctions...');
@@ -1209,7 +1201,7 @@ class DatabaseStructureService
         }
     }
 
-    // Exemple de structure pour extractAndSaveProcedures (à compléter)
+    
     private function extractAndSaveProcedures($connectionName, $dbId, $databaseType)
     {
         Log::info('Début extraction des procédures stockées...');
@@ -1406,153 +1398,210 @@ class DatabaseStructureService
         }
     }
 
-    // Exemple de structure pour extractAndSaveTriggers (à compléter)
+    
     private function extractAndSaveTriggers($connectionName, $dbId, $databaseType)
-    {
-        Log::info('Début extraction des triggers...');
-        try {
-            $triggers = []; // Récupérer les triggers selon le databaseType
+{
+    Log::info('Début extraction des triggers...', ['dbId' => $dbId, 'connectionName' => $connectionName]);
+    
+    try {
+        $triggers = [];
+        $startTime = microtime(true);
 
-            if ($databaseType === 'sqlsrv') {
-                $triggers = DB::connection($connectionName)->select("
-                    SELECT
-                        t.name AS trigger_name,
-                        OBJECT_NAME(t.parent_id) AS table_name,
-                        SCHEMA_NAME(tbl.schema_id) AS schema_name,
-                        OBJECT_DEFINITION(t.object_id) AS definition,
-                        t.create_date,
-                        t.modify_date,
-                        CASE WHEN t.is_disabled = 1 THEN 1 ELSE 0 END AS is_disabled,
-                        CASE
-                            WHEN t.is_instead_of_trigger = 1 THEN 'INSTEAD OF'
-                            ELSE 'AFTER'
-                        END AS trigger_type,
-                        (
-                            SELECT STRING_AGG(tev.type_desc, ',')
-                            FROM sys.trigger_events tev
-                            WHERE tev.object_id = t.object_id
-                        ) AS trigger_event,
-                        ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
-                    FROM
-                        sys.triggers t
-                    INNER JOIN
-                        sys.tables tbl ON t.parent_id = tbl.object_id
-                    INNER JOIN
-                        sys.schemas s ON tbl.schema_id = s.schema_id
-                    LEFT JOIN
-                        sys.extended_properties ep ON ep.major_id = t.object_id
-                        AND ep.minor_id = 0
-                        AND ep.name = 'MS_Description'
-                    WHERE
-                        t.is_ms_shipped = 0
-                    ORDER BY
-                        t.name;
-                ");
-            } elseif ($databaseType === 'mysql') {
-                $database = DB::connection($connectionName)->getDatabaseName();
-                $triggers = DB::connection($connectionName)->select("
-                    SELECT
-                        TRIGGER_NAME AS trigger_name,
-                        EVENT_OBJECT_TABLE AS table_name,
-                        TRIGGER_SCHEMA AS schema_name,
-                        ACTION_STATEMENT AS definition,
-                        CREATED AS create_date,
-                        NULL AS modify_date, -- MySQL doesn't have direct modify_date for triggers in INFORMATION_SCHEMA
-                        '0' AS is_disabled, -- MySQL triggers are always enabled by default, unless explicitly disabled
-                        ACTION_TIMING AS trigger_type, -- 'BEFORE' or 'AFTER'
-                        EVENT_MANIPULATION AS trigger_event, -- 'INSERT', 'UPDATE', 'DELETE'
-                        '' AS description -- MySQL triggers don't have direct comments
-                    FROM
-                        INFORMATION_SCHEMA.TRIGGERS
-                    WHERE
-                        TRIGGER_SCHEMA = ?
-                    ORDER BY
-                        TRIGGER_NAME
-                ", [$database]);
-            } elseif ($databaseType === 'pgsql') {
-                $triggers = DB::connection($connectionName)->select("
-                    SELECT
-                        t.tgname AS trigger_name,
-                        c.relname AS table_name,
-                        n.nspname AS schema_name,
-                        pg_get_triggerdef(t.oid) AS definition,
-                        NULL AS create_date, -- Placeholder
-                        NULL AS modify_date, -- Placeholder
-                        CASE WHEN t.tgisenabled = 'D' THEN 1 ELSE 0 END AS is_disabled, -- 'D' for disabled
-                        CASE t.tgtype & (1<<1) WHEN 0 THEN 'AFTER' ELSE 'BEFORE' END AS trigger_type, -- Bitmask for BEFORE/AFTER
-                        CASE
-                            WHEN t.tgtype & (1<<2) THEN 'INSERT'
-                            WHEN t.tgtype & (1<<3) THEN 'DELETE'
-                            WHEN t.tgtype & (1<<4) THEN 'UPDATE'
-                            WHEN t.tgtype & (1<<5) THEN 'TRUNCATE' -- TRUNCATE is also an event
-                            ELSE ''
-                        END AS trigger_event,
-                        COALESCE(d.description, '') AS description
-                    FROM
-                        pg_trigger t
-                    JOIN
-                        pg_class c ON c.oid = t.tgrelid
-                    JOIN
-                        pg_namespace n ON n.oid = c.relnamespace
-                    LEFT JOIN
-                        pg_description d ON d.objoid = t.oid
-                    WHERE
-                        NOT t.tgisinternal -- Exclude internal triggers
-                        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-                    ORDER BY
-                        t.tgname
-                ");
-            }
-
-            foreach ($triggers as $trigger) {
-                DB::transaction(function () use ($trigger, $dbId, $connectionName, $databaseType) {
-                    try {
-                        $triggerDescription = TriggerDescription::updateOrCreate(
-                            [
-                                'dbid' => $dbId,
-                                'triggername' => $trigger->trigger_name
-                            ],
-                            [
-                                'language' => ($databaseType === 'mysql' ? 'en' : 'fr'),
-                                'description' => $trigger->description ?? null,
-                                'updated_at' => now()
-                            ]
-                        );
-
-                        // Save TriggerInformation
-                        $triggerInfo = TriggerInformation::updateOrCreate(
-                            ['id_trigger' => $triggerDescription->id],
-                            [
-                                'table' => $trigger->table_name,
-                                'schema' => $trigger->schema_name,
-                                'type' => $trigger->trigger_type,
-                                'event' => $trigger->trigger_event,
-                                'is_disabled' => $trigger->is_disabled,
-                                'definition' => $trigger->definition,
-                                'creation_date' => $trigger->create_date,
-                                'last_change_date' => $trigger->modify_date,
-                                'created_at' => now(),
-                                'updated_at' => now()
-                            ]
-                        );
-
-                    } catch (\Exception $e) {
-                        Log::error('Erreur lors de l\'extraction et sauvegarde d\'un trigger', [
-                            'trigger' => $trigger->trigger_name,
-                            'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString()
-                        ]);
-                        throw $e;
-                    }
-                });
-            }
-            Log::info('Fin extraction des triggers.');
-        } catch (\Exception $e) {
-            Log::error('Erreur globale dans extractAndSaveTriggers', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
+        if ($databaseType === 'sqlsrv') {
+            $triggers = DB::connection($connectionName)->select("
+                SELECT
+                    t.name AS trigger_name,
+                    OBJECT_NAME(t.parent_id) AS table_name,
+                    SCHEMA_NAME(tbl.schema_id) AS schema_name,
+                    OBJECT_DEFINITION(t.object_id) AS definition,
+                    t.create_date,
+                    t.modify_date,
+                    CASE WHEN t.is_disabled = 1 THEN 1 ELSE 0 END AS is_disabled,
+                    CASE
+                        WHEN t.is_instead_of_trigger = 1 THEN 'INSTEAD OF'
+                        ELSE 'AFTER'
+                    END AS trigger_type,
+                    (
+                        SELECT STRING_AGG(tev.type_desc, ',')
+                        FROM sys.trigger_events tev
+                        WHERE tev.object_id = t.object_id
+                    ) AS trigger_event,
+                    ISNULL(CONVERT(VARCHAR(8000), ep.value), '') AS description
+                FROM
+                    sys.triggers t
+                INNER JOIN
+                    sys.tables tbl ON t.parent_id = tbl.object_id
+                INNER JOIN
+                    sys.schemas s ON tbl.schema_id = s.schema_id
+                LEFT JOIN
+                    sys.extended_properties ep ON ep.major_id = t.object_id
+                    AND ep.minor_id = 0
+                    AND ep.name = 'MS_Description'
+                WHERE
+                    t.is_ms_shipped = 0
+                ORDER BY
+                    t.name;
+            ");
+            
+        } elseif ($databaseType === 'mysql') {
+            $database = DB::connection($connectionName)->getDatabaseName();
+            $triggers = DB::connection($connectionName)->select("
+                SELECT
+                    TRIGGER_NAME AS trigger_name,
+                    EVENT_OBJECT_TABLE AS table_name,
+                    TRIGGER_SCHEMA AS schema_name,
+                    ACTION_STATEMENT AS definition,
+                    CREATED AS create_date,
+                    NULL AS modify_date,
+                    '0' AS is_disabled, -- MySQL triggers sont toujours activés par défaut
+                    ACTION_TIMING AS trigger_type, -- 'BEFORE' ou 'AFTER'
+                    EVENT_MANIPULATION AS trigger_event, -- 'INSERT', 'UPDATE', 'DELETE'
+                    COALESCE(
+                        (SELECT COMMENT FROM INFORMATION_SCHEMA.TRIGGERS 
+                         WHERE TRIGGER_NAME = t.TRIGGER_NAME AND TRIGGER_SCHEMA = t.TRIGGER_SCHEMA LIMIT 1), 
+                        ''
+                    ) AS description
+                FROM
+                    INFORMATION_SCHEMA.TRIGGERS t
+                WHERE
+                    TRIGGER_SCHEMA = ?
+                ORDER BY
+                    TRIGGER_NAME
+            ", [$database]);
+            
+        } elseif ($databaseType === 'pgsql') {
+            // ✅ CORRECTION: Requête PostgreSQL améliorée
+            $triggers = DB::connection($connectionName)->select("
+                SELECT
+                    t.tgname AS trigger_name,
+                    c.relname AS table_name,
+                    n.nspname AS schema_name,
+                    pg_get_triggerdef(t.oid) AS definition,
+                    NULL AS create_date,
+                    NULL AS modify_date,
+                    CASE WHEN t.tgenabled = 'D' THEN 1 ELSE 0 END AS is_disabled,
+                    CASE 
+                        WHEN (t.tgtype & 2) = 2 THEN 'BEFORE'
+                        WHEN (t.tgtype & 64) = 64 THEN 'INSTEAD OF'
+                        ELSE 'AFTER'
+                    END AS trigger_type,
+                    ARRAY_TO_STRING(
+                        ARRAY[
+                            CASE WHEN (t.tgtype & 4) = 4 THEN 'INSERT' END,
+                            CASE WHEN (t.tgtype & 8) = 8 THEN 'DELETE' END,
+                            CASE WHEN (t.tgtype & 16) = 16 THEN 'UPDATE' END,
+                            CASE WHEN (t.tgtype & 32) = 32 THEN 'TRUNCATE' END
+                        ]::text[], 
+                        ','
+                    ) AS trigger_event,
+                    COALESCE(d.description, '') AS description
+                FROM
+                    pg_trigger t
+                JOIN
+                    pg_class c ON c.oid = t.tgrelid
+                JOIN
+                    pg_namespace n ON n.oid = c.relnamespace
+                LEFT JOIN
+                    pg_description d ON d.objoid = t.oid AND d.objsubid = 0
+                WHERE
+                    NOT t.tgisinternal
+                    AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                    AND c.relkind = 'r' -- Tables seulement
+                ORDER BY
+                    t.tgname
+            ");
+        } else {
+            throw new \InvalidArgumentException("Type de base de données non supporté: {$databaseType}");
         }
+
+        $triggerCount = count($triggers);
+        Log::info("Triggers trouvés: {$triggerCount}");
+
+        if ($triggerCount === 0) {
+            Log::info('Aucun trigger trouvé dans la base de données');
+            return;
+        }
+
+        $successCount = 0;
+        $errorCount = 0;
+
+        foreach ($triggers as $trigger) {
+            try {
+                DB::transaction(function () use ($trigger, $dbId) {
+                    // ✅ AMÉLIORATION: Validation des données
+                    $triggerName = trim($trigger->trigger_name ?? '');
+                    if (empty($triggerName)) {
+                        throw new \InvalidArgumentException('Nom de trigger vide');
+                    }
+
+                    $triggerDescription = TriggerDescription::updateOrCreate(
+                        [
+                            'dbid' => $dbId,
+                            'triggername' => $triggerName
+                        ],
+                        [
+                            'language' => 'fr', // ✅ SIMPLIFICATION: toujours 'fr'
+                            'description' => $trigger->description ?? '',
+                            'updated_at' => now()
+                        ]
+                    );
+
+                    // ✅ AMÉLIORATION: Validation des champs
+                    $triggerInfo = TriggerInformation::updateOrCreate(
+                        ['id_trigger' => $triggerDescription->id],
+                        [
+                            'table' => trim($trigger->table_name ?? ''),
+                            'schema' => trim($trigger->schema_name ?? ''),
+                            'type' => trim($trigger->trigger_type ?? ''),
+                            'event' => trim($trigger->trigger_event ?? ''),
+                            'state' => $trigger->is_disabled ? 0 : 1, // ✅ CORRECTION: inversion logique
+                            'definition' => $trigger->definition ?? '',
+                            'creation_date' => $trigger->create_date,
+                            'last_change_date' => $trigger->modify_date,
+                            'updated_at' => now()
+                        ]
+                    );
+                });
+                
+                $successCount++;
+                
+            } catch (\Exception $e) {
+                $errorCount++;
+                Log::error('Erreur lors de l\'extraction d\'un trigger', [
+                    'trigger_name' => $trigger->trigger_name ?? 'unknown',
+                    'table_name' => $trigger->table_name ?? 'unknown',
+                    'error' => $e->getMessage(),
+                    'line' => $e->getLine()
+                ]);
+                
+                // ✅ AMÉLIORATION: Continuer même en cas d'erreur sur un trigger
+                continue;
+            }
+        }
+
+        $executionTime = round(microtime(true) - $startTime, 2);
+        
+        Log::info('Extraction des triggers terminée', [
+            'total_found' => $triggerCount,
+            'success_count' => $successCount,
+            'error_count' => $errorCount,
+            'execution_time' => "{$executionTime}s"
+        ]);
+        
+        if ($errorCount > 0) {
+            Log::warning("Extraction partiellement réussie: {$errorCount} erreur(s) sur {$triggerCount} trigger(s)");
+        }
+        
+    } catch (\Exception $e) {
+        Log::error('Erreur globale dans extractAndSaveTriggers', [
+            'dbId' => $dbId,
+            'connectionName' => $connectionName,
+            'databaseType' => $databaseType,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        throw $e;
     }
+}
 }

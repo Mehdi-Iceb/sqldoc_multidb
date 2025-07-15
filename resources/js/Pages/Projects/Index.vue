@@ -191,7 +191,7 @@
                                                     <span v-if="openingProject === project.id" class="flex items-center">
                                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                         </svg>
                                                         Opening...
                                                     </span>
@@ -248,7 +248,7 @@
                                                     <span v-if="openingProject === project.id" class="flex items-center">
                                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                         </svg>
                                                         Opening...
                                                     </span>
@@ -318,6 +318,76 @@
             </div>
         </div>
 
+        <!-- ✅ NOUVEAU MODAL: Aperçu des dépendances -->
+        <div v-if="showDependenciesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">
+                        Project Dependencies - {{ selectedProject?.name }}
+                    </h3>
+                    <button @click="closeDependenciesModal" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div v-if="loadingDependencies" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading dependencies...</p>
+                </div>
+                
+                <div v-else>
+                    <div v-if="Object.keys(projectDependencies).length === 0" class="text-center text-gray-500 py-8">
+                        <svg class="h-16 w-16 text-green-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">No dependencies found</h4>
+                        <p>This project can be safely deleted without affecting other data.</p>
+                    </div>
+                    
+                    <div v-else class="space-y-4">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                            <div class="flex">
+                                <svg class="h-5 w-5 text-yellow-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="text-sm text-yellow-700">
+                                    <strong>Warning:</strong> This project contains data that will be permanently deleted.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div v-for="(count, type) in projectDependencies" :key="type" 
+                                 class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                                <div class="flex items-center">
+                                    <div class="h-3 w-3 bg-red-400 rounded-full mr-3"></div>
+                                    <span class="font-medium text-gray-900 capitalize">{{ type.replace('_', ' ') }}</span>
+                                </div>
+                                <span class="bg-red-100 text-red-800 text-sm px-2 py-1 rounded-full font-medium">{{ count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button 
+                            @click="closeDependenciesModal"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="proceedWithForceDelete"
+                            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        >
+                            Proceed with Deletion
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal confirmation suppression -->
         <div v-if="showDeleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/3 shadow-lg rounded-md bg-white">
@@ -354,32 +424,56 @@
 
         <!-- Modal confirmation suppression définitive -->
         <div v-if="showForceDeleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/3 shadow-lg rounded-md bg-white">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+                <!-- Overlay de chargement pour le modal -->
+                <div v-if="forceDeleting" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
+                    <div class="flex flex-col items-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+                        <p class="text-gray-600 text-lg font-medium">Deleting project...</p>
+                        <p class="text-gray-500 text-sm mt-2">Please wait, this may take a moment</p>
+                    </div>
+                </div>
+
                 <div class="flex flex-col items-center">
-                    <svg class="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-20 w-20 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2 text-center">
-                        Definitive deletion
+                    <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">
+                        ⚠️ PERMANENT DELETION
                     </h3>
-                    <p class="text-sm text-gray-500 text-center mb-6">
-                        Delete definitively the project <span class="font-semibold">{{ selectedProject?.name }}</span> ?<br>
-                        <span class="text-red-600 font-medium">This action is irreversible !</span>
-                    </p>
+                    <div class="text-center mb-6 space-y-2">
+                        <p class="text-lg font-semibold text-red-600">
+                            Delete project "{{ selectedProject?.name }}" FOREVER?
+                        </p>
+                        <div class="bg-red-50 border border-red-200 rounded-md p-4 text-left">
+                            <p class="text-sm text-red-800 font-medium mb-2">⚠️ This will permanently delete:</p>
+                            <ul class="text-xs text-red-700 space-y-1 list-disc list-inside">
+                                <li>All databases and tables</li>
+                                <li>All columns, indexes, and relations</li>
+                                <li>All triggers and procedures</li>
+                                <li>All project data and metadata</li>
+                                <li>All user permissions for this project</li>
+                            </ul>
+                            <p class="text-sm text-red-800 font-bold mt-3">
+                                🚨 THIS ACTION CANNOT BE UNDONE!
+                            </p>
+                        </div>
+                    </div>
                     
                     <div class="flex justify-center space-x-4 w-full">
                         <button 
                             @click="showForceDeleteModal = false"
-                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            :disabled="forceDeleting"
+                            class="px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button 
                             @click="forceDeleteProject"
-                            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                            :disabled="deleting"
+                            :disabled="forceDeleting"
+                            class="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 font-bold"
                         >
-                            {{ deleting ? 'Deletion...' : 'Permanently delete' }}
+                            {{ forceDeleting ? 'DELETING...' : 'DELETE FOREVER' }}
                         </button>
                     </div>
                 </div>
@@ -391,8 +485,9 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     projects: Array
@@ -409,6 +504,12 @@ const selectedProject = ref(null);
 const deleting = ref(false);
 const openingProject = ref(null);
 const flashMessage = ref(null);
+
+// ✅ NOUVEAUX ÉTATS pour la suppression forcée
+const showDependenciesModal = ref(false);
+const projectDependencies = ref({});
+const loadingDependencies = ref(false);
+const forceDeleting = ref(false);
 
 // Projets actifs (non supprimés)
 const activeProjects = computed(() => {
@@ -427,17 +528,16 @@ const getAccessIcon = (accessLevel) => {
     switch (accessLevel) {
         case 'owner':
         case 'admin':
-            return '👑'; // pour propriétaire/admin
+            return '👑';
         case 'write':
-            return '✏️'; // pour écriture
+            return '✏️';
         case 'read':
-            return '👁️'; // pour lecture seule
+            return '👁️';
         default:
             return '❓';
     }
 };
 
-// Fonction pour obtenir la couleur selon le niveau d'accès
 const getAccessColor = (accessLevel) => {
     switch (accessLevel) {
         case 'owner':
@@ -452,7 +552,6 @@ const getAccessColor = (accessLevel) => {
     }
 };
 
-// Fonction pour obtenir le texte du niveau d'accès
 const getAccessText = (accessLevel) => {
     switch (accessLevel) {
         case 'owner':
@@ -468,7 +567,6 @@ const getAccessText = (accessLevel) => {
     }
 };
 
-
 // Surveiller les messages flash
 watch(() => page.props.flash, (flash) => {
     if (flash) {
@@ -482,7 +580,6 @@ watch(() => page.props.flash, (flash) => {
             flashMessage.value = { type: 'info', message: flash.info };
         }
         
-        // Auto-hide après 8 secondes sauf pour les erreurs
         if (flashMessage.value && flashMessage.value.type !== 'error') {
             setTimeout(() => {
                 hideFlashMessage();
@@ -491,12 +588,10 @@ watch(() => page.props.flash, (flash) => {
     }
 }, { immediate: true, deep: true });
 
-// Fonction pour cacher le message flash
 const hideFlashMessage = () => {
     flashMessage.value = null;
 };
 
-// Fonction pour obtenir le nom formaté du type de base de données
 const getBdTypeName = (type) => {
     const types = {
         'mysql': 'MySQL',
@@ -506,7 +601,6 @@ const getBdTypeName = (type) => {
     return types[type] || type;
 };
 
-// Fonction pour formater les dates
 const formatDate = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -518,83 +612,85 @@ const formatDate = (dateString) => {
     });
 };
 
-// Fonction pour ouvrir un projet avec indicateur de chargement
 const openProject = async (project) => {
     openingProject.value = project.id;
     
     try {
-        // Faire une requête Inertia pour ouvrir le projet
-        const response = await fetch(route('projects.open', project.id), {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+        // ✅ OPTIMISATION 1: Utiliser Inertia directement (plus rapide que fetch)
+        router.get(route('projects.open', project.id), {}, {
+            preserveState: false,
+            preserveScroll: false,
+            onStart: () => {
+                // Feedback immédiat
+                console.log(`Opening project: ${project.name}`);
+            },
+            onSuccess: (page) => {
+                // Le succès est géré automatiquement par Inertia
+                console.log('Project opened successfully');
+            },
+            onError: (errors) => {
+                console.error('Error opening project:', errors);
+                
+                // Extraire le message d'erreur
+                let errorMessage = 'Failed to open project';
+                if (typeof errors === 'object' && errors !== null) {
+                    const firstError = Object.values(errors)[0];
+                    if (typeof firstError === 'string') {
+                        errorMessage = firstError;
+                    } else if (Array.isArray(firstError) && firstError.length > 0) {
+                        errorMessage = firstError[0];
+                    }
+                } else if (typeof errors === 'string') {
+                    errorMessage = errors;
+                }
+                
+                flashMessage.value = { 
+                    type: 'error', 
+                    message: errorMessage
+                };
+            },
+            onFinish: () => {
+                openingProject.value = null;
             }
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Si c'est une redirection, suivre la redirection
-        if (response.redirected) {
-            window.location.href = response.url;
-        } else {
-            // Sinon, naviguer vers le dashboard
-            window.location.href = route('dashboard');
-        }
     } catch (error) {
-        console.error('Error opening project:', error);
-        openingProject.value = null;
-        
-        // Afficher un message d'erreur spécifique
+        console.error('Error:', error);
         flashMessage.value = { 
             type: 'error', 
-            message: 'Error opening project. Please check if the database is accessible and contains data.' 
+            message: 'Unexpected error occurred while opening the project.' 
         };
+        openingProject.value = null;
     }
 };
 
-// Fonction améliorée pour gérer tous les types de messages flash
-const handleFlashMessages = () => {
-    const flash = page.props.flash;
+const openProjectWithPreload = async (project) => {
+    openingProject.value = project.id;
     
-    if (flash) {
-        let message = null;
+    try {
+        // Précharger la route dashboard en arrière-plan
+        router.preloadRoute('dashboard');
         
-        if (flash.success) {
-            message = { type: 'success', message: flash.success };
-        } else if (flash.error) {
-            message = { type: 'error', message: flash.error };
-        } else if (flash.warning) {
-            message = { type: 'warning', message: flash.warning };
-        } else if (flash.info) {
-            message = { type: 'info', message: flash.info };
-        }
-        
-        if (message) {
-            flashMessage.value = message;
-            
-            // Auto-hide après 10 secondes pour les warnings et infos sur les données vides
-            if (message.type === 'warning' || message.type === 'info') {
-                setTimeout(() => {
-                    hideFlashMessage();
-                }, 10000); // 10 secondes pour laisser le temps de lire
-            } else if (message.type === 'success') {
-                setTimeout(() => {
-                    hideFlashMessage();
-                }, 5000); // 5 secondes pour les succès
+        // Ouvrir le projet
+        router.get(route('projects.open', project.id), {}, {
+            preserveState: false,
+            preserveScroll: false,
+            onFinish: () => {
+                openingProject.value = null;
             }
-            // Les erreurs restent affichées jusqu'à ce que l'utilisateur les ferme
-        }
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Failed to open project.' 
+        };
+        openingProject.value = null;
     }
 };
 
-// Mettre à jour le watcher pour utiliser cette nouvelle fonction
-watch(() => page.props.flash, handleFlashMessages, { immediate: true, deep: true });
 
-// Charger les projets supprimés
 const loadDeletedProjects = async () => {
     showDeleted.value = true;
     
@@ -635,108 +731,205 @@ const loadDeletedProjects = async () => {
     }
 };
 
-// Confirmer la suppression
 const confirmDelete = (project) => {
     selectedProject.value = project;
     showDeleteModal.value = true;
 };
 
-// Confirmer la suppression définitive
-const confirmForceDelete = (project) => {
-    selectedProject.value = project;
-    showForceDeleteModal.value = true;
-};
-
-// Supprimer un projet (soft delete)
-const deleteProject = async () => {
-    deleting.value = true;
-    
+// ✅ NOUVELLE FONCTION: Afficher l'aperçu des dépendances avant suppression forcée
+const showProjectDependencies = async (project) => {
     try {
-        const response = await axios.delete(`/projects/${selectedProject.value.id}/soft`, {
+        selectedProject.value = project;
+        loadingDependencies.value = true;
+        showDependenciesModal.value = true;
+        
+        console.log('🔍 Chargement des dépendances pour le projet:', project.id);
+        
+        const response = await axios.get(`/admin/projects/${project.id}/deletion-preview`, {
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Accept': 'application/json'
             }
         });
         
         if (response.data.success) {
-            showDeleteModal.value = false;
-            selectedProject.value = null;
-            flashMessage.value = { 
-                type: 'success', 
-                message: 'Project successfully deleted' 
-            };
-            window.location.reload();
+            projectDependencies.value = response.data.dependencies || {};
+            console.log('📊 Dépendances chargées:', projectDependencies.value);
         } else {
-            throw new Error(response.data.error || 'Error while deleting');
+            throw new Error(response.data.error || 'Erreur lors du chargement des dépendances');
         }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des dépendances:', error);
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Erreur lors du chargement des dépendances: ' + (error.response?.data?.error || error.message)
+        };
+    } finally {
+        loadingDependencies.value = false;
+    }
+};
+
+// ✅ FONCTION CORRIGÉE: Confirmer la suppression définitive
+const confirmForceDelete = (project) => {
+    // D'abord afficher les dépendances
+    showProjectDependencies(project);
+};
+
+// ✅ FONCTION CORRIGÉE: Suppression forcée avec router Inertia
+const forceDeleteProject = async () => {
+    if (!selectedProject.value) {
+        flashMessage.value = { type: 'error', message: 'Aucun projet sélectionné' };
+        return;
+    }
+
+    // Triple confirmation
+    if (!confirm('⚠️ ATTENTION: Cette action supprimera DÉFINITIVEMENT le projet et TOUTES les données associées!\n\nCette action est IRRÉVERSIBLE!\n\nÊtes-vous absolument sûr?')) {
+        return;
+    }
+    
+    if (!confirm('Confirmation finale: Cela supprimera TOUT (tables, colonnes, triggers, relations, etc.).\n\nContinuer?')) {
+        return;
+    }
+    
+    const confirmText = prompt('Tapez "DELETE" pour confirmer cette suppression permanente:');
+    if (!confirmText || confirmText.toUpperCase() !== 'DELETE') {
+        flashMessage.value = { type: 'info', message: 'Suppression annulée - texte de confirmation incorrect.' };
+        return;
+    }
+
+    try {
+        forceDeleting.value = true;
+        console.log('🗑️ Début de la suppression forcée du projet:', selectedProject.value.id);
+        
+        // ✅ UTILISER LE ROUTER INERTIA au lieu d'axios
+        router.delete(`/projects/${selectedProject.value.id}/force`, {
+            preserveState: false,
+            onSuccess: (page) => {
+                console.log('✅ Projet supprimé avec succès');
+                showDependenciesModal.value = false;
+                showForceDeleteModal.value = false;
+                selectedProject.value = null;
+                projectDependencies.value = {};
+                
+                flashMessage.value = { 
+                    type: 'success', 
+                    message: 'Projet et toutes ses dépendances supprimés définitivement!' 
+                };
+                
+                // Recharger les projets supprimés si on est dans cette vue
+                if (showDeleted.value) {
+                    loadDeletedProjects();
+                } else {
+                    // Sinon recharger la page
+                    window.location.reload();
+                }
+            },
+            onError: (errors) => {
+                console.error('❌ Erreur lors de la suppression forcée:', errors);
+                
+                let errorMessage = 'Erreur lors de la suppression forcée';
+                if (typeof errors === 'object' && errors !== null) {
+                    // Extraire le premier message d'erreur
+                    const firstError = Object.values(errors)[0];
+                    if (typeof firstError === 'string') {
+                        errorMessage = firstError;
+                    } else if (Array.isArray(firstError) && firstError.length > 0) {
+                        errorMessage = firstError[0];
+                    }
+                } else if (typeof errors === 'string') {
+                    errorMessage = errors;
+                }
+                
+                flashMessage.value = { 
+                    type: 'error', 
+                    message: errorMessage
+                };
+            },
+            onFinish: () => {
+                forceDeleting.value = false;
+                console.log('🏁 Suppression forcée terminée');
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur lors de la suppression forcée:', error);
+        flashMessage.value = { 
+            type: 'error', 
+            message: 'Erreur: ' + (error.response?.data?.error || error.message) 
+        };
+        forceDeleting.value = false;
+    }
+};
+
+// ✅ FONCTION pour fermer le modal des dépendances
+const closeDependenciesModal = () => {
+    showDependenciesModal.value = false;
+    selectedProject.value = null;
+    projectDependencies.value = {};
+};
+
+// ✅ FONCTION pour procéder à la suppression depuis le modal des dépendances
+const proceedWithForceDelete = () => {
+    showDependenciesModal.value = false;
+    showForceDeleteModal.value = true;
+};
+
+const deleteProject = async () => {
+    deleting.value = true;
+    
+    try {
+        // ✅ Utiliser router Inertia pour la suppression soft
+        router.delete(`/projects/${selectedProject.value.id}`, {
+            preserveState: false,
+            onSuccess: () => {
+                showDeleteModal.value = false;
+                selectedProject.value = null;
+                flashMessage.value = { 
+                    type: 'success', 
+                    message: 'Project successfully deleted' 
+                };
+            },
+            onError: (errors) => {
+                console.error('Error while deleting:', errors);
+                flashMessage.value = { 
+                    type: 'error', 
+                    message: 'Error: ' + (Object.values(errors)[0] || 'Unknown error')
+                };
+            },
+            onFinish: () => {
+                deleting.value = false;
+            }
+        });
     } catch (error) {
         console.error('Error while deleting:', error);
         flashMessage.value = { 
             type: 'error', 
             message: 'Error: ' + (error.response?.data?.error || error.message) 
         };
-    } finally {
         deleting.value = false;
     }
 };
 
-// Supprimer définitivement un projet
-const forceDeleteProject = async () => {
-    deleting.value = true;
-    
-    try {
-        const response = await axios.delete(`/projects/${selectedProject.value.id}/force`, {
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.data.success) {
-            showForceDeleteModal.value = false;
-            selectedProject.value = null;
-            await loadDeletedProjects();
-            flashMessage.value = { 
-                type: 'success', 
-                message: 'Project definitively deleted' 
-            };
-        } else {
-            throw new Error(response.data.error || 'Error while definitive deletion');
-        }
-    } catch (error) {
-        console.error('Error while definitive deletion:', error);
-        flashMessage.value = { 
-            type: 'error', 
-            message: 'Error: ' + (error.response?.data?.error || error.message) 
-        };
-    } finally {
-        deleting.value = false;
-    }
-};
-
-// Restaurer un projet
 const restoreProject = async (project) => {
     try {
-        const response = await axios.post(`/projects/${project.id}/restore`, {}, {
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+        // ✅ Utiliser router Inertia pour la restauration
+        router.post(`/projects/${project.id}/restore`, {}, {
+            preserveState: false,
+            onSuccess: () => {
+                flashMessage.value = { 
+                    type: 'success', 
+                    message: 'Project successfully restored' 
+                };
+                loadDeletedProjects();
+            },
+            onError: (errors) => {
+                console.error('Error while restoring:', errors);
+                flashMessage.value = { 
+                    type: 'error', 
+                    message: 'Error: ' + (Object.values(errors)[0] || 'Unknown error')
+                };
             }
         });
-        
-        if (response.data.success) {
-            await loadDeletedProjects();
-            flashMessage.value = { 
-                type: 'success', 
-                message: 'Project successfully restored' 
-            };
-        } else {
-            throw new Error(response.data.error || 'Error while restoring');
-        }
     } catch (error) {
         console.error('Error while restoring:', error);
         flashMessage.value = { 
@@ -746,15 +939,12 @@ const restoreProject = async (project) => {
     }
 };
 
-// Computed pour vérifier si l'utilisateur est admin
 const isAdmin = computed(() => {
     return window.Laravel?.user?.role === 'admin' || 
            page.props.auth?.user?.role === 'admin';
 });
 
-// Montage du composant
 onMounted(() => {
-    // Initialisation si nécessaire
     console.log('Projects component mounted');
     console.log('Active projects:', activeProjects.value.length);
 });

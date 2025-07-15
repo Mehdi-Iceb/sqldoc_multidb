@@ -37,9 +37,9 @@ class Project extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function dbdescripion()
+    public function dbDescription()
     {
-        return $this->Hasmany(DbDescription::class);
+        return $this->hasOne(DbDescription::class, 'project_id');
     }
 
      public function scopeActive($query)
