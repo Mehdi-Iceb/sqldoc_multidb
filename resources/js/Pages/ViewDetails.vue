@@ -6,13 +6,7 @@
           <span class="text-gray-500 font-normal">View :</span> 
           {{ viewName }}
         </h2>
-        <button 
-          @click="saveAll"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          :disabled="saving"
-          >
-          {{ saving ? 'Enregistrement...' : 'Enregistrer toutes les descriptions' }}
-        </button>
+        
       </div>
     </template>
 
@@ -86,14 +80,37 @@
           <!-- Description de la vue -->
           <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <div class="flex justify-between items-center">
               <h3 class="text-lg font-medium text-gray-900">Description</h3>
+              <button 
+                v-if="viewDetails.can_edit"
+                  @click="saveViewStructure" 
+                  class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  :disabled="saving"
+                >
+                <span v-if="!saving">Save modification</span>
+                  <span v-else class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Recording...
+                  </span>
+              </button>
+              <span v-else class="text-sm text-gray-500 italic">
+                Read only access
+              </span>
+              </div>
             </div>
             <div class="p-6">
               <textarea
                 v-model="form.description"
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Description optionnelle (usage, environnement, contenu...)"
+                :class="{ 'opacity-50 cursor-not-allowed bg-gray-100': !viewDetails.can_edit }"
+                placeholder="Optionnal description (use, environnement, content...)"
+                :disabled="!viewDetails.can_edit || saving"
+                :readonly="!viewDetails.can_edit"
               ></textarea>
             </div>
           </div>
@@ -160,6 +177,15 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Range Value
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Release
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Historic
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -193,22 +219,21 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingColumnName || editingColumnName !== column.column_name">
+                        <span v-if="!editingDescription[column.column_name]" class="max-w-xs truncate">
                           {{ column.description || '-' }}
                         </span>
-                        <input
+                        <textarea
                           v-else
-                          v-model="editingColumnDescription"
-                          type="text"
+                          v-model="editingDescriptionValue"
                           class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          @keyup.enter="saveColumnDescription(column.column_name)"
-                          @keyup.esc="cancelEdit()"
-                        >
+                          :disabled="!viewDetails.can_edit"
+                          @keydown.ctrl.enter="saveDescription(column.column_name)"
+                          @keydown.esc="cancelEdit('description', column.column_name)"
+                        ></textarea>
                         <button
-                          v-if="!editingColumnName || editingColumnName !== column.column_name"
-                          @click="startEdit(column)"
+                          v-if="!editingDescription[column.column_name] && viewDetails.can_edit"
+                          @click="startEdit('description', column.column_name, column.description)"
                           class="p-1 text-gray-400 hover:text-gray-600"
-                          title="Modifier la description"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -216,18 +241,22 @@
                         </button>
                         <div v-else class="flex space-x-1">
                           <button
-                            @click="saveColumnDescription(column.column_name)"
+                            @click="saveDescription(column.column_name)"
                             class="p-1 text-green-600 hover:text-green-700"
-                            title="Sauvegarder"
+                            :disabled="savingDescription[column.column_name]"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </button>
                           <button
-                            @click="cancelEdit()"
+                            @click="cancelEdit('description', column.column_name)"
                             class="p-1 text-red-600 hover:text-red-700"
-                            title="Annuler"
+                            :disabled="savingDescription[column.column_name]"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -235,6 +264,96 @@
                           </button>
                         </div>
                       </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                      <div class="flex items-center space-x-2">
+                        <span v-if="!editingRangeValues[column.column_name]" class="max-w-xs truncate">
+                          {{ column.rangevalues || '-' }}
+                        </span>
+                        <textarea
+                          v-else
+                          v-model="editingRangeValuesValue"
+                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
+                          :disabled="!viewDetails.can_edit"
+                          @keyup.enter="saveRangeValues(column.column_name)"
+                          @keyup.esc="cancelEdit('rangeValues', column.column_name)"
+                        ></textarea>
+                        <button
+                          v-if="!editingRangeValues[column.column_name] && viewDetails.can_edit"
+                          @click="startEdit('rangeValues', column.column_name, column.possible_values)"
+                          class="p-1 text-gray-400 hover:text-gray-600"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <div v-else class="flex space-x-1">
+                          <button
+                            @click="saveRangeValues(column.column_name)"
+                            class="p-1 text-green-600 hover:text-green-700"
+                            :disabled="savingRangeValues[column.column_name]"
+                          >
+                            <svg v-if="!savingRangeValues[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            @click="cancelEdit('rangeValues', column.column_name)"
+                            class="p-1 text-red-600 hover:text-red-700"
+                            :disabled="savingRangeValues[column.column_name]"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                      <div class="flex items-center space-x-2 relative">
+                        <select 
+                          :value="column.release_id || ''"
+                          @change="updateColumnRelease(column, $event.target.value)"
+                          :disabled="!viewDetails.can_edit || updatingRelease[column.column_name]"
+                          :class="[
+                            'block w-full pl-2 pr-7 py-1 text-xs border-gray-300 rounded-md',
+                            column.release_id ? 'bg-blue-50 text-blue-800' : '',
+                            !viewDetails.can_edit ? 'opacity-50 cursor-not-allowed' : '',
+                            updatingRelease[column.column_name] ? 'opacity-50' : ''
+                          ]"
+                        >
+                          <option value="">None</option>
+                          <option v-for="release in availableReleases" :key="release.id" :value="release.id">
+                            {{ release.display_name }}
+                          </option>
+                        </select>
+                        <div v-if="updatingRelease[column.column_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          <svg class="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <SecondaryButton @click="showAuditLogs(column.column_name)" :disabled="loadingAuditLogs && currentColumn === column.column_name">
+                        <span v-if="!(loadingAuditLogs && currentColumn === column.column_name)">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                          </svg>
+                        </span>
+                        <span v-else>
+                          <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </span>
+                      </SecondaryButton>
                     </td>
                   </tr>
                   <tr v-if="!viewDetails.columns || viewDetails.columns.length === 0">
@@ -256,17 +375,6 @@
               <pre class="whitespace-pre-wrap text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded-lg">{{ viewDetails.definition }}</pre>
             </div>
           </div>
-
-          <!-- Bouton pour sauvegarder -->
-          <div class="flex justify-end mt-6">
-            <button 
-              @click="saveAll"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              :disabled="saving"
-            >
-              {{ saving ? 'Enregistrement...' : 'Enregistrer toutes les informations' }}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -277,6 +385,9 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { router } from '@inertiajs/vue3'
+import SecondaryButton from '@/Components/SecondaryButton.vue'
+import { Link } from '@inertiajs/vue3'
+import axios from 'axios'
 
 const props = defineProps({
   viewName: {
@@ -287,6 +398,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  availableReleases: {
+    type: Array,
+    default: () => []
+  },
   permissions: {
     type: Object,
     default: () => ({})
@@ -295,6 +410,18 @@ const props = defineProps({
     type: String,
     default: null
   }
+})
+
+const canEdit = computed(() => {
+  return props.viewDetails.can_edit || props.permissions.can_edit || false
+})
+
+const isOwner = computed(() => {
+  return props.viewDetails.is_owner || props.permissions.is_owner || false
+})
+
+const accessLevel = computed(() => {
+  return props.viewDetails.access_level || props.permissions.access_level || 'read'
 })
 
 // États locaux
@@ -308,6 +435,11 @@ const loading = ref(false)
 const saving = ref(false)
 const editingColumnName = ref(null)
 const editingColumnDescription = ref('')
+const editingColumnRangeValue = ref('')
+
+
+const savingDescription = ref({})
+const savingRangeValues = ref({})
 
 // Variable pour l'intervalle de progression
 let progressInterval = null
@@ -350,6 +482,14 @@ const startLoading = () => {
   simulateLoadingProgress()
 }
 
+const editingDescription = ref({})
+const editingDescriptionValue = ref('')
+const editingRangeValues = ref({})
+const editingRangeValuesValue = ref('')
+const updatingRelease = ref({})
+const loadingAuditLogs = ref(false)
+const currentColumn = ref('')
+
 // ✅ WATCHERS APRÈS LA DÉCLARATION DES FONCTIONS
 watch(
   () => props.viewDetails,
@@ -361,8 +501,10 @@ watch(
     form.value.description = newViewDetails.description || ''
     
     // Réinitialiser les états d'édition
-    editingColumnName.value = null
-    editingColumnDescription.value = ''
+    editingDescription.value = {}
+    editingRangeValues.value = {}
+    editingDescriptionValue.value = ''
+    editingRangeValuesValue.value = ''
     
     // Arrêter le chargement
     stopLoadingProgress()
@@ -380,82 +522,201 @@ watch(
       startLoading()
       
       // Réinitialiser les états d'édition
-      editingColumnName.value = null
-      editingColumnDescription.value = ''
+      editingDescription.value = {}
+      editingRangeValues.value = {}
+      editingDescriptionValue.value = ''
+      editingRangeValuesValue.value = ''
     }
   }
 )
 
+
 // Fonctions d'édition
-const startEdit = (column) => {
-  editingColumnName.value = column.column_name
-  editingColumnDescription.value = column.description || ''
-}
-
-const cancelEdit = () => {
-  editingColumnName.value = null
-  editingColumnDescription.value = ''
-}
-
-// Fonction pour sauvegarder la description d'une colonne
-const saveColumnDescription = async (columnName) => {
-  try {
-    saving.value = true
-    
-    router.post(`/view/${props.viewName}/column/${columnName}/description`, {
-      description: editingColumnDescription.value
-    }, {
-      onSuccess: () => {
-        // Mise à jour locale
-        const column = viewDetails.value.columns.find(c => c.column_name === columnName)
-        if (column) {
-          column.description = editingColumnDescription.value
-        }
-        alert('Description de la colonne enregistrée avec succès.')
-        cancelEdit()
-      },
-      onError: (errors) => {
-        console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde de la description de la colonne')
-      },
-      onFinish: () => {
-        saving.value = false
-      }
-    })
-  } catch (error) {
-    console.error('Erreur:', error)
-    saving.value = false
+const startEdit = (type, columnName, currentValue) => {
+  if (!canEdit.value) {
+    alert('Vous n\'avez pas les permissions pour modifier cette vue')
+    return
+  }
+  
+  if (type === 'description') {
+    editingDescription.value = { [columnName]: true }
+    editingDescriptionValue.value = currentValue || ''
+  } else if (type === 'rangeValues') {
+    editingRangeValues.value = { [columnName]: true }
+    editingRangeValuesValue.value = currentValue || ''
   }
 }
 
+const cancelEdit = (type, columnName) => {
+  if (type === 'description') {
+    editingDescription.value = { [columnName]: false }
+    editingDescriptionValue.value = ''
+  } else if (type === 'rangeValues') {
+    editingRangeValues.value = { [columnName]: false }
+    editingRangeValuesValue.value = ''
+  }
+}
+
+
+// Fonction pour sauvegarder la description d'une colonne
+// const saveColumnDescription = async (columnName) => {
+//   try {
+//     saving.value = true
+    
+//     router.post(`/view/${props.viewName}/column/${columnName}/description`, {
+//       description: editingColumnDescription.value
+//     }, {
+//       onSuccess: () => {
+//         // Mise à jour locale
+//         const column = viewDetails.value.columns.find(c => c.column_name === columnName)
+//         if (column) {
+//           column.description = editingColumnDescription.value
+//         }
+//         alert('Description de la colonne enregistrée avec succès.')
+//         cancelEdit()
+//       },
+//       onError: (errors) => {
+//         console.error('Erreur lors de la sauvegarde:', errors)
+//         alert('Erreur lors de la sauvegarde de la description de la colonne')
+//       },
+//       onFinish: () => {
+//         saving.value = false
+//       }
+//     })
+//   } catch (error) {
+//     console.error('Erreur:', error)
+//     saving.value = false
+//   }
+// }
+
 // Fonction pour sauvegarder toutes les informations
-const saveAll = async () => {
+const saveViewStructure = async () => {
+  if (!canEdit.value) {
+    alert('Vous n\'avez pas les permissions pour modifier cette vue')
+    return
+  }
+  
   try {
     saving.value = true
     
     const viewData = {
       description: form.value.description,
+      language: 'fr',
       columns: viewDetails.value.columns.map(column => ({
-        column_name: column.column_name,
-        description: column.description
+        column: column.column_name,
+        description: column.description || null,
+        rangevalues: column.rangevalues || null
       }))
     }
     
-    router.post(`/view/${props.viewName}/save-all`, viewData, {
-      onSuccess: () => {
-        alert('Les descriptions ont été enregistrées avec succès')
-      },
-      onError: (errors) => {
-        console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde')
-      },
-      onFinish: () => {
-        saving.value = false
-      }
-    })
+    const response = await axios.post(`/view/${props.viewName}/save-structure`, viewData)
+    
+    if (response.data.success) {
+      alert('Descriptions et range values saved with success')
+    } else {
+      throw new Error(response.data.error || 'Error while saving')
+    }
   } catch (error) {
-    console.error('Erreur:', error)
+    console.error('❌ Error While saving:', error)
+    alert('Error: ' + (error.response?.data?.error || error.message))
+  } finally {
     saving.value = false
+  }
+}
+
+const saveDescription = async (columnName) => {
+  try {
+    savingDescription.value[columnName] = true
+    
+    const response = await axios.post(`/view/${props.viewName}/column/${columnName}/description`, {
+      description: editingDescriptionValue.value
+    })
+    
+    if (response.data.success) {
+      const column = viewDetails.value.columns.find(c => c.column_name === columnName)
+      if (column) {
+        column.description = editingDescriptionValue.value
+      }
+      cancelEdit('description', columnName)
+    } else {
+      throw new Error(response.data.error)
+    }
+  } catch (error) {
+    console.error('❌ Error:', error)
+    alert('Error: ' + (error.response?.data?.error || error.message))
+  } finally {
+    savingDescription.value[columnName] = false
+  }
+}
+
+
+const saveRangeValues = async (columnName) => {
+  try {
+    savingRangeValues.value[columnName] = true
+    
+    const response = await axios.post(`/view/${props.viewName}/column/${columnName}/range-values`, {
+      rangevalues: editingRangeValuesValue.value
+    })
+    
+    if (response.data.success) {
+      const column = viewDetails.value.columns.find(c => c.column_name === columnName)
+      if (column) {
+        column.rangevalues = editingRangeValuesValue.value
+      }
+      cancelEdit('rangeValues', columnName)
+    } else {
+      throw new Error(response.data.error)
+    }
+  } catch (error) {
+    console.error('❌ Error:', error)
+    alert('Error: ' + (error.response?.data?.error || error.message))
+  } finally {
+    savingRangeValues.value[columnName] = false
+  }
+}
+
+const updateColumnRelease = async (column, releaseId) => {
+  if (!canEdit.value) {
+    alert('Vous n\'avez pas les permissions pour modifier cette vue')
+    return
+  }
+  
+  try {
+    updatingRelease.value[column.column_name] = true
+    
+    const finalReleaseId = releaseId === '' ? null : parseInt(releaseId)
+    
+    const response = await axios.post(`/view/${props.viewName}/column/${column.column_name}/release`, {
+      release_id: finalReleaseId
+    })
+    
+    if (response.data.success) {
+      column.release_id = finalReleaseId
+      const selectedRelease = props.availableReleases.find(r => r.id === finalReleaseId)
+      column.release_version = selectedRelease ? selectedRelease.version_number : ''
+    } else {
+      throw new Error(response.data.error)
+    }
+  } catch (error) {
+    console.error('❌ Error:', error)
+    alert('Error: ' + (error.response?.data?.error || error.message))
+  } finally {
+    updatingRelease.value[column.column_name] = false
+  }
+}
+
+const showAuditLogs = async (columnName) => {
+  loadingAuditLogs.value = true
+  currentColumn.value = columnName
+  
+  try {
+    const response = await axios.get(`/view/${props.viewName}/column/${columnName}/audit-logs`)
+    console.log('Audit logs:', response.data)
+  } catch (error) {
+    console.error('❌ Error:', error)
+    alert('Error loading audit logs')
+  } finally {
+    loadingAuditLogs.value = false
   }
 }
 
@@ -499,8 +760,11 @@ onUnmounted(() => {
 
 // Debug au montage
 onMounted(() => {
-  console.log('Props reçues:', props)
-  console.log('ViewDetails:', props.viewDetails)
-  console.log('Colonnes:', props.viewDetails.columns)
+  console.log('🔍 Props reçues:', props)
+  console.log('🔍 ViewDetails:', props.viewDetails)
+  console.log('🔍 Permissions:', props.permissions)
+  console.log('🔍 Can Edit:', canEdit.value)
+  console.log('🔍 Is Owner:', isOwner.value)
+  console.log('🔍 Access Level:', accessLevel.value)
 })
 </script>

@@ -545,91 +545,61 @@ class ProjectController extends Controller
     }
 
     public function open($id)
-    {
-
-        try {
-            Log::info('=== DÉBUT OUVERTURE PROJET ===', ['project_id' => $id, 'user_id' => auth()->id()]);
-            
-            // OPTIMISATION 1: Eager loading pour éviter les requêtes N+1
-            $project = Project::with(['user:id,name'])
-                ->withTrashed()
-                ->findOrFail($id);
-            
-            Log::info('Projet trouvé', ['project_name' => $project->name, 'db_type' => $project->db_type, 'owner_id' => $project->user_id]);
-            
-            // Vérifier si le projet est supprimé
-            if ($project->trashed()) {
-                return redirect()->route('projects.index')
-                    ->with('error', 'Ce projet a été supprimé et ne peut pas être ouvert.');
-            }
-            
-            // OPTIMISATION 2: Vérification rapide des permissions
-            $userCanAccess = $this->checkUserProjectAccessOptimized($project);
-            
-            if (!$userCanAccess['allowed']) {
-                return redirect()->route('projects.index')
-                    ->with('error', $userCanAccess['message']);
-            }
-            
-            $accessLevel = $userCanAccess['access_level'];
-            $isOwner = $userCanAccess['is_owner'];
-            
-            // OPTIMISATION 3: Une seule requête pour récupérer DbDescription
-            $dbDescription = DbDescription::where('project_id', $project->id)->first();
-            
-            if (!$dbDescription) {
-                if ($isOwner) {
-                    return redirect()->route('projects.connect', $project->id)
-                        ->with('info', "Project '{$project->name}' needs to be connected to a database.");
-                } else {
-                    return redirect()->route('projects.index')
-                        ->with('warning', "Project '{$project->name}' is not configured yet. Only the project owner can set up the database connection.");
-                }
-            }
-            
-            // OPTIMISATION 4: Préparation rapide des infos de connexion
-            $connectionInfo = $this->prepareConnectionInfoOptimized($project, $dbDescription);
-            
-            // OPTIMISATION 5: Mise à jour de session AVANT la vérification de DB (non-bloquant)
-            session([
-                'current_project' => [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'db_type' => $project->db_type,
-                    'connection' => $connectionInfo,
-                    'access_level' => $accessLevel,
-                    'is_owner' => $isOwner
-                ],
-                'current_db_id' => $dbDescription->id
-            ]);
-            
-            // OPTIMISATION 6: Vérification DB optionnelle et asynchrone
-            $messages = $this->quickDatabaseCheck($project, $dbDescription, $connectionInfo);
-            
-            Log::info('Session mise à jour et redirection');
-            
-            // Redirection immédiate avec message approprié
-            $redirectResponse = redirect()->route('dashboard');
-            
-            if (isset($messages['error'])) {
-                return $redirectResponse->with('error', $messages['error']);
-            } elseif (isset($messages['warning'])) {
-                return $redirectResponse->with('warning', $messages['warning']);
-            } else {
-                return $redirectResponse->with('success', $messages['success'] ?? "Project '{$project->name}' opened successfully.");
-            }
-                        
-        } catch (\Exception $e) {
-            Log::error('=== ERREUR LORS DE L\'OUVERTURE DU PROJET ===', [
-                'project_id' => $id,
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
-            
+{
+    // ✅ 1. Cache des vérifications coûteuses
+    $cacheKey = "project_quick_access_{$id}_" . auth()->id();
+    
+    $projectData = Cache::remember($cacheKey, 60, function() use ($id) {
+        return [
+            'project' => Project::with('user:id,name')->findOrFail($id),
+            'access' => $this->checkUserProjectAccessOptimized(Project::findOrFail($id)),
+            'db_description' => DbDescription::where('project_id', $id)->first()
+        ];
+    });
+    
+    extract($projectData);
+    
+    // ✅ 2. Vérifications rapides
+    if ($project->trashed()) {
+        return redirect()->route('projects.index')
+            ->with('error', 'Ce projet a été supprimé.');
+    }
+    
+    if (!$access['allowed']) {
+        return redirect()->route('projects.index')
+            ->with('error', $access['message']);
+    }
+    
+    if (!$db_description) {
+        if ($access['is_owner']) {
+            return redirect()->route('projects.connect', $project->id)
+                ->with('info', "Project needs database connection.");
+        } else {
             return redirect()->route('projects.index')
-                ->with('error', 'Unable to open project: ' . $e->getMessage());
+                ->with('warning', "Project not configured yet.");
         }
     }
+    
+    // ✅ 3. Session immédiate (pas de vérification DB)
+    $connectionInfo = $this->prepareConnectionInfoOptimized($project, $db_description);
+    
+    session([
+        'current_project' => [
+            'id' => $project->id,
+            'name' => $project->name,
+            'db_type' => $project->db_type,
+            'connection' => $connectionInfo,
+            'access_level' => $access['access_level'],
+            'is_owner' => $access['is_owner']
+        ],
+        'current_db_id' => $db_description->id
+    ]);
+    
+    // ✅ 4. Redirection immédiate sans vérification DB
+    return redirect()->route('dashboard')
+        ->with('success', "Project '{$project->name}' opened successfully.");
+}
+
 
     private function checkUserProjectAccessOptimized($project)
     {

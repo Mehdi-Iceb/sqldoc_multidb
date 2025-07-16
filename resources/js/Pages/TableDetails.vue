@@ -31,24 +31,24 @@
           <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
-                <h3 class="text-lg font-medium text-gray-900">Description de la table</h3>
+                <h3 class="text-lg font-medium text-gray-900">Table description</h3>
                 <button 
                   v-if="tableDetails.can_edit"
                   @click="saveTableStructure" 
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   :disabled="saving"
                 >
-                  <span v-if="!saving">Enregistrer les descriptions</span>
+                  <span v-if="!saving">Save modification</span>
                   <span v-else class="flex items-center">
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Enregistrement...
+                    Recording...
                   </span>
                 </button>
                 <span v-else class="text-sm text-gray-500 italic">
-                  Accès en lecture seule
+                  Read only access
                 </span>
               </div>
             </div>
@@ -58,7 +58,7 @@
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 :class="{ 'opacity-50 cursor-not-allowed bg-gray-100': !tableDetails.can_edit }"
-                placeholder="Description optionnelle (usage, environnement, contenu...)"
+                placeholder="Optionnal description (use, environnement, content...)"
                 :disabled="!tableDetails.can_edit || saving"
                 :readonly="!tableDetails.can_edit"
               ></textarea>
@@ -73,10 +73,13 @@
                   <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
                   </svg>
-                  Structure de la table
+                  Table structure
+                <span v-if="searchQuery" class="text-sm font-normal text-gray-600 ml-2">
+                    ({{ filteredColumns.length }}/{{ tableDetails.columns.length }})
+                  </span>
                 </h3>
                 <PrimaryButton v-if="tableDetails.can_add_columns" @click="showAddColumnModal = true">
-                  Ajouter une colonne
+                  Add a column
                 </PrimaryButton>
               </div>
             </div>
@@ -87,12 +90,12 @@
                 <div v-if="addingColumn" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
                   <div class="flex flex-col items-center">
                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                    <p class="text-gray-600 text-sm">Ajout de la colonne...</p>
+                    <p class="text-gray-600 text-sm">Adding column...</p>
                   </div>
                 </div>
 
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-medium text-gray-900">Ajouter une nouvelle colonne</h3>
+                  <h3 class="text-lg font-medium text-gray-900">Add new column</h3>
                   <button @click="showAddColumnModal = false" class="text-gray-400 hover:text-gray-500" :disabled="addingColumn">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -103,7 +106,7 @@
                 <form @submit.prevent="addNewColumn" :class="{ 'opacity-50 pointer-events-none': addingColumn }">
                   <div class="space-y-4">
                     <div>
-                      <label for="column_name" class="block text-sm font-medium text-gray-700">Nom de la colonne</label>
+                      <label for="column_name" class="block text-sm font-medium text-gray-700">Column name</label>
                       <input 
                         id="column_name" 
                         v-model="newColumn.column_name" 
@@ -115,7 +118,7 @@
                     </div>
                     
                     <div>
-                      <label for="data_type" class="block text-sm font-medium text-gray-700">Type de données</label>
+                      <label for="data_type" class="block text-sm font-medium text-gray-700">Data type</label>
                       <input 
                         id="data_type" 
                         v-model="newColumn.data_type" 
@@ -139,7 +142,7 @@
                     </div>
                     
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Type de clé</label>
+                      <label class="block text-sm font-medium text-gray-700">Key type</label>
                       <div class="mt-1 flex items-center space-x-4">
                         <div class="flex items-center">
                           <input 
@@ -150,7 +153,7 @@
                             :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="no_key" class="ml-2 block text-sm text-gray-700">Aucune</label>
+                          <label for="no_key" class="ml-2 block text-sm text-gray-700">None</label>
                         </div>
                         <div class="flex items-center">
                           <input 
@@ -161,7 +164,7 @@
                             :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="primary_key" class="ml-2 block text-sm text-gray-700">Clé primaire</label>
+                          <label for="primary_key" class="ml-2 block text-sm text-gray-700">Primary key</label>
                         </div>
                         <div class="flex items-center">
                           <input 
@@ -172,7 +175,7 @@
                             :disabled="addingColumn"
                             class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           >
-                          <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Clé étrangère</label>
+                          <label for="foreign_key" class="ml-2 block text-sm text-gray-700">Foreign key</label>
                         </div>
                       </div>
                     </div>
@@ -189,7 +192,7 @@
                     </div>
                     
                     <div>
-                      <label for="possible_values" class="block text-sm font-medium text-gray-700">Valeurs possibles</label>
+                      <label for="possible_values" class="block text-sm font-medium text-gray-700">Range value</label>
                       <textarea 
                         id="possible_values" 
                         v-model="newColumn.possible_values" 
@@ -200,14 +203,14 @@
                     </div>
                     
                     <div>
-                      <label for="release" class="block text-sm font-medium text-gray-700">Version</label>
+                      <label for="release" class="block text-sm font-medium text-gray-700">Release</label>
                       <select 
                         id="release" 
                         v-model="newColumn.release"
                         :disabled="addingColumn"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                       >
-                        <option value="">Aucune version</option>
+                        <option value="">None</option>
                         <option v-for="release in availableReleases" :key="release.id" :value="release.id">
                           {{ release.display_name }}
                         </option>
@@ -222,20 +225,20 @@
                       :disabled="addingColumn"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
-                      Annuler
+                      Cancel
                     </button>
                     <button 
                       type="submit"
                       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       :disabled="addingColumn"
                     >
-                      <span v-if="!addingColumn">Ajouter</span>
+                      <span v-if="!addingColumn">Add</span>
                       <span v-else class="flex items-center">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Ajout...
+                        Adding...
                       </span>
                     </button>
                   </div>
@@ -248,14 +251,14 @@
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colonne</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nullable</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clé</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeurs possibles</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Historique</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Range Value</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Realise</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Historic</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -326,8 +329,8 @@
                             updatingNullable[column.column_name] ? 'opacity-50' : ''
                           ]"
                         >
-                          <option value="true">Oui</option>
-                          <option value="false">Non</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
                         </select>
                         <div v-if="updatingNullable[column.column_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
                           <svg class="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -458,7 +461,7 @@
                             updatingRelease[column.column_name] ? 'opacity-50' : ''
                           ]"
                         >
-                          <option value="">Aucune version</option>
+                          <option value="">None</option>
                           <option v-for="release in availableReleases" :key="release.id" :value="release.id">
                             {{ release.display_name }}
                           </option>
@@ -507,10 +510,10 @@
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colonnes</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propriétés</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -530,7 +533,7 @@
                       <div class="flex gap-2">
                         <span v-if="index.is_primary_key" 
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          Clé primaire
+                          Primary Key
                         </span>
                         <span v-if="index.is_unique" 
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -541,7 +544,7 @@
                   </tr>
                   <tr v-if="!tableDetails.indexes?.length">
                     <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                      Aucun index trouvé
+                      No index found
                     </td>
                   </tr>
                 </tbody>
@@ -558,9 +561,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                   </svg>
                   Relations
+                <span v-if="searchQuery" class="text-sm font-normal text-gray-600 ml-2">
+                    ({{ filteredColumns.length }}/{{ tableDetails.columns.length }})
+                  </span>
                 </h3>
-                <PrimaryButton v-if="tableDetails.can_add_relations" @click="showAddRelationModal = true">
-                  Ajouter une relation
+                <PrimaryButton v-if="tableDetails.can_add_columns" @click="showAddColumnModal = true">
+                  Add a column
                 </PrimaryButton>
               </div>
             </div>
@@ -571,12 +577,12 @@
                 <div v-if="addingRelation" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
                   <div class="flex flex-col items-center">
                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                    <p class="text-gray-600 text-sm">Ajout de la relation...</p>
+                    <p class="text-gray-600 text-sm">Add relation...</p>
                   </div>
                 </div>
 
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-medium text-gray-900">Ajouter une relation</h3>
+                  <h3 class="text-lg font-medium text-gray-900">Add a relation</h3>
                   <button @click="showAddRelationModal = false" class="text-gray-400 hover:text-gray-500" :disabled="addingRelation">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -587,7 +593,7 @@
                 <form @submit.prevent="addNewRelation" :class="{ 'opacity-50 pointer-events-none': addingRelation }">
                   <div class="space-y-4">
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Nom de la contrainte</label>
+                      <label class="block text-sm font-medium text-gray-700">Constraint name</label>
                       <input 
                         v-model="newRelation.constraint_name" 
                         type="text" 
@@ -599,14 +605,14 @@
                     </div>
                     
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Colonne source</label>
+                      <label class="block text-sm font-medium text-gray-700">Column origin</label>
                       <select 
                         v-model="newRelation.column_name"
                         required
                         :disabled="addingRelation"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
-                        <option value="">Sélectionner une colonne</option>
+                        <option value="">Select a column</option>
                         <option v-for="column in tableDetails.columns" :key="column.column_name" :value="column.column_name">
                           {{ column.column_name }}
                         </option>
@@ -614,7 +620,7 @@
                     </div>
                     
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Table référencée</label>
+                      <label class="block text-sm font-medium text-gray-700">referenced table</label>
                       <input 
                         v-model="newRelation.referenced_table" 
                         type="text" 
@@ -625,7 +631,7 @@
                     </div>
                     
                     <div>
-                      <label class="block text-sm font-medium text-gray-700">Colonne référencée</label>
+                      <label class="block text-sm font-medium text-gray-700">Referenced Column</label>
                       <input 
                         v-model="newRelation.referenced_column" 
                         type="text" 
@@ -680,13 +686,13 @@
                       :disabled="addingRelation"
                       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
-                      <span v-if="!addingRelation">Ajouter</span>
+                      <span v-if="!addingRelation">Add</span>
                       <span v-else class="flex items-center">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Ajout...
+                        Adding...
                       </span>
                     </button>
                   </div>
@@ -698,10 +704,10 @@
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrainte</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colonne</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table référencée</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colonne référencée</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Constraint</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Refrenced table</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referenced column</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -739,7 +745,7 @@
                   </tr>
                   <tr v-if="!tableDetails.relations?.length">
                     <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                      Aucune relation trouvée
+                      No relation found
                     </td>
                   </tr>
                 </tbody>
@@ -755,7 +761,7 @@
       <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 shadow-lg rounded-md bg-white">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900">
-            Historique des modifications - {{ currentColumn }}
+            Modification historic - {{ currentColumn }}
           </h3>
           <button @click="closeAuditModal" class="text-gray-400 hover:text-gray-500">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -767,12 +773,12 @@
         <div v-if="loadingAuditLogs" class="text-center py-8">
           <div class="flex flex-col items-center">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-            <p class="text-gray-600">Chargement de l'historique...</p>
+            <p class="text-gray-600">Historic loading...</p>
           </div>
         </div>
         
         <div v-else-if="auditLogs.length === 0" class="text-center py-4 text-gray-500">
-          Aucune modification trouvée pour cette colonne
+          No modification found for this column
         </div>
         
         <div v-else class="overflow-y-auto max-h-96">
@@ -780,10 +786,10 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilisateur</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ancienne valeur</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nouvelle valeur</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Old value</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New value</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">

@@ -98,6 +98,7 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
     Route::get('/table/{tableName}/column/{columnName}/audit-logs', [TableController::class, 'getAuditLogs'])->name('table.audit.logs');
 
     Route::get('/view/{viewName}/details', [ViewController::class, 'details'])->name('view.details');
+    Route::get('/view/{viewName}/column/{columnName}/audit-logs', [ViewController::class, 'getAuditLogs'])->name('view.audit.logs');
 
     Route::get('/function/{functionName}/details', [FunctionController::class, 'details'])->name('function.details');
 
@@ -127,6 +128,10 @@ Route::middleware(['auth', 'project.permissions:write'])->group(function () {
     Route::post('/view/{viewName}/description', [ViewController::class, 'saveDescription'])->name('view.saveDescription');
     Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'saveColumnDescription'])->name('view.column.saveDescription');
     Route::post('/view/{viewName}/save-all', [ViewController::class, 'saveAll'])->name('view.saveAll');
+    Route::post('/view/{viewName}/save-structure', [ViewController::class, 'saveStructure'])->name('view.saveStructure');
+     Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'updateColumnDescription'])->name('view.column.updateDescription');
+     Route::post('/view/{viewName}/column/{columnName}/rangevalues', [ViewController::class, 'updateColumnRangeValues'])->name('view.column.updateRangeValues');
+     Route::post('/view/{viewName}/column/{columnName}/release', [ViewController::class, 'updateColumnRelease']);
 
     Route::post('/function/{functionName}/description', [FunctionController::class, 'saveDescription'])->name('function.saveDescription');
     Route::post('/function-parameter/{parameterId}/update-description', [FunctionController::class, 'saveParameterDescription'])->name('function.parameter.updateDescription');

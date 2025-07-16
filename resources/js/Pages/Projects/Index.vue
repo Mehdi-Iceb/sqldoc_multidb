@@ -612,57 +612,14 @@ const formatDate = (dateString) => {
     });
 };
 
-const openProject = async (project) => {
+const openProject = (project) => {
+    if (openingProject.value) return;
+    
     openingProject.value = project.id;
     
-    try {
-        // ✅ OPTIMISATION 1: Utiliser Inertia directement (plus rapide que fetch)
-        router.get(route('projects.open', project.id), {}, {
-            preserveState: false,
-            preserveScroll: false,
-            onStart: () => {
-                // Feedback immédiat
-                console.log(`Opening project: ${project.name}`);
-            },
-            onSuccess: (page) => {
-                // Le succès est géré automatiquement par Inertia
-                console.log('Project opened successfully');
-            },
-            onError: (errors) => {
-                console.error('Error opening project:', errors);
-                
-                // Extraire le message d'erreur
-                let errorMessage = 'Failed to open project';
-                if (typeof errors === 'object' && errors !== null) {
-                    const firstError = Object.values(errors)[0];
-                    if (typeof firstError === 'string') {
-                        errorMessage = firstError;
-                    } else if (Array.isArray(firstError) && firstError.length > 0) {
-                        errorMessage = firstError[0];
-                    }
-                } else if (typeof errors === 'string') {
-                    errorMessage = errors;
-                }
-                
-                flashMessage.value = { 
-                    type: 'error', 
-                    message: errorMessage
-                };
-            },
-            onFinish: () => {
-                openingProject.value = null;
-            }
-        });
-
-    } catch (error) {
-        console.error('Error:', error);
-        flashMessage.value = { 
-            type: 'error', 
-            message: 'Unexpected error occurred while opening the project.' 
-        };
-        openingProject.value = null;
-    }
+    window.location.href = route('projects.open', project.id);
 };
+
 
 const openProjectWithPreload = async (project) => {
     openingProject.value = project.id;
@@ -947,5 +904,7 @@ const isAdmin = computed(() => {
 onMounted(() => {
     console.log('Projects component mounted');
     console.log('Active projects:', activeProjects.value.length);
+    router.preloadRoute('dashboard');
+    openProjectWithPreload()
 });
 </script>
