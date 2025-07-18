@@ -11,7 +11,7 @@
     </template>
 
     <div class="py-12">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+      <div class="max-w-10xl mx-auto sm:px-6 lg:px-8 space-y-8">
         <!-- 🎯 SPINNER DE CHARGEMENT PRINCIPAL -->
         <div v-if="loading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center max-w-sm w-full mx-4">
@@ -378,6 +378,73 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal pour afficher les audit logs -->
+    <div v-if="showAuditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-medium text-gray-900">
+            Modification historic - {{ currentColumn }}
+          </h3>
+          <button @click="closeAuditModal" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div v-if="loadingAuditLogs" class="text-center py-8">
+          <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+            <p class="text-gray-600">Historic loading...</p>
+          </div>
+        </div>
+        
+        <div v-else-if="auditLogs.length === 0" class="text-center py-4 text-gray-500">
+          No modification found for this column
+        </div>
+        
+        <div v-else class="overflow-y-auto max-h-96">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Old value</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New value</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="log in auditLogs" :key="log.id" class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ formatDate(log.created_at) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ log.user?.name || 'N/A' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <span :class="[
+                    'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
+                    log.change_type === 'update' ? 'bg-yellow-100 text-yellow-800' :
+                    log.change_type === 'add' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  ]">
+                    {{ log.change_type }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                  {{ log.old_data || '-' }}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                  {{ log.new_data || '-' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
   
@@ -489,6 +556,17 @@ const editingRangeValuesValue = ref('')
 const updatingRelease = ref({})
 const loadingAuditLogs = ref(false)
 const currentColumn = ref('')
+const showAuditModal = ref(false)
+const auditLogs = ref([])
+
+
+// ✅ FONCTION pour fermer la modal
+const closeAuditModal = () => {
+  showAuditModal.value = false
+  auditLogs.value = []
+  currentColumn.value = ''
+  loadingAuditLogs.value = false
+}
 
 // ✅ WATCHERS APRÈS LA DÉCLARATION DES FONCTIONS
 watch(
@@ -654,7 +732,7 @@ const saveRangeValues = async (columnName) => {
   try {
     savingRangeValues.value[columnName] = true
     
-    const response = await axios.post(`/view/${props.viewName}/column/${columnName}/range-values`, {
+    const response = await axios.post(`/view/${props.viewName}/column/${columnName}/rangevalues`, {
       rangevalues: editingRangeValuesValue.value
     })
     
@@ -706,15 +784,50 @@ const updateColumnRelease = async (column, releaseId) => {
 }
 
 const showAuditLogs = async (columnName) => {
-  loadingAuditLogs.value = true
-  currentColumn.value = columnName
-  
   try {
+    console.log('🔍 Ouverture audit logs pour:', columnName)
+    
+    // Ouvrir la modal immédiatement
+    showAuditModal.value = true
+    loadingAuditLogs.value = true
+    currentColumn.value = columnName
+    auditLogs.value = [] // Réinitialiser les logs
+    
+    // Faire la requête
     const response = await axios.get(`/view/${props.viewName}/column/${columnName}/audit-logs`)
-    console.log('Audit logs:', response.data)
+    
+    console.log('📊 Audit logs reçus:', response.data)
+    
+    if (response.data && Array.isArray(response.data)) {
+      auditLogs.value = response.data
+    } else {
+      auditLogs.value = []
+      console.warn('Format de réponse inattendu:', response.data)
+    }
+    
   } catch (error) {
-    console.error('❌ Error:', error)
-    alert('Error loading audit logs')
+    console.error('❌ Erreur lors du chargement des audit logs:', error)
+    
+    // Afficher le message d'erreur selon le type d'erreur
+    let errorMessage = 'Erreur lors du chargement de l\'historique'
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorMessage = 'Vue ou colonne non trouvée'
+      } else if (error.response.status === 400) {
+        errorMessage = error.response.data.error || 'Requête invalide'
+      } else if (error.response.data && error.response.data.error) {
+        errorMessage = error.response.data.error
+      }
+    } else if (error.request) {
+      errorMessage = 'Erreur de réseau - impossible de contacter le serveur'
+    }
+    
+    alert(errorMessage)
+    
+    // Fermer la modal en cas d'erreur
+    showAuditModal.value = false
+    
   } finally {
     loadingAuditLogs.value = false
   }

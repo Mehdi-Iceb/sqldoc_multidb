@@ -51,4 +51,9 @@ class AuditLog extends Model
     {
         return $this->belongsTo(ViewDescription::class, 'id_view', 'id');
     }
+
+    public function funcDescription()
+    {
+        return $this->belongsTo(FunctionDescription::class, 'id_fc', 'id');
+    }
 }

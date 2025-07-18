@@ -252,7 +252,7 @@ class TableController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return response()->json($auditLogs);
+            return response()->json($auditLogs); 
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de la récupération des logs d\'audit: ' . $e->getMessage()], 500);

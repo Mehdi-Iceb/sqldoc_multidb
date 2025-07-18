@@ -17,7 +17,8 @@ class PsParameter extends Model
         'type',
         'output',
         'default_value',
-        'description'
+        'description',
+        'release_id'
     ];
 
     // Pas de timestamps pour cette table

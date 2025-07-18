@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Traits\HasProjectPermissions;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\FunctionDescription;
@@ -55,7 +56,9 @@ class FunctionController extends Controller
                         'parameter_name' => $param->name,
                         'data_type' => $param->type,
                         'is_output' => $param->output === 'OUTPUT',
-                        'description' => $param->description ?? null
+                        'description' => $param->description ?? null,
+                        'rangevalue' => $param->range_value, 
+                        'release_id' => $param->release_id,
                     ];
                 });
 
@@ -90,6 +93,18 @@ class FunctionController extends Controller
             return $error;
             }
 
+            // AJOUT MINIMAL : Récupérer les permissions
+            $currentProject = session('current_project', []);
+            $isOwner = $currentProject['is_owner'] ?? false;
+            $accessLevel = $currentProject['access_level'] ?? 'read';
+            $canEdit = $isOwner || in_array($accessLevel, ['owner', 'admin', 'write']);
+
+            Log::info('🔍 PERMISSIONS DEBUG', [
+                'is_owner' => $isOwner,
+                'access_level' => $accessLevel,
+                'can_edit' => $canEdit
+            ]);
+
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             Log::info('Récupération des détails pour functionName: ' . $functionName . ', dbId: ' . $dbId);
@@ -105,7 +120,13 @@ class FunctionController extends Controller
                         'create_date' => null,
                         'modify_date' => null,
                         'parameters' => [],
-                        'definition' => null
+                        'definition' => null,
+                        'can_edit' => $canEdit,
+                        'is_owner' => $isOwner,
+                    ],
+                    'permissions' => [
+                        'can_edit' => $canEdit,
+                        'is_owner' => $isOwner,
                     ],
                     'error' => 'Aucune base de données sélectionnée'
                 ]);
@@ -127,7 +148,13 @@ class FunctionController extends Controller
                         'create_date' => null,
                         'modify_date' => null,
                         'parameters' => [],
-                        'definition' => null
+                        'definition' => null,
+                        'can_edit' => $canEdit,
+                        'is_owner' => $isOwner,
+                    ],
+                    'permissions' => [
+                        'can_edit' => $canEdit,
+                        'is_owner' => $isOwner,
                     ],
                     'error' => 'Fonction non trouvée'
                 ]);
@@ -145,7 +172,9 @@ class FunctionController extends Controller
                         'parameter_name' => $param->name,
                         'data_type' => $param->type,
                         'is_output' => $param->output === 'OUTPUT',
-                        'description' => $param->description ?? null
+                        'description' => $param->description ?? null,
+                        'rangevalue' => $param->range_value, 
+                        'release_id' => $param->release_id,
                     ];
                 });
 
@@ -159,7 +188,13 @@ class FunctionController extends Controller
                     'create_date' => $functionInfo ? $functionInfo->creation_date : null,
                     'modify_date' => $functionInfo ? $functionInfo->last_change_date : null,
                     'parameters' => $parameters,
-                    'definition' => $functionInfo && $functionInfo->definition ? $functionInfo->definition : null
+                    'definition' => $functionInfo && $functionInfo->definition ? $functionInfo->definition : null,
+                    'can_edit' => $canEdit,
+                    'is_owner' => $isOwner,
+                ],
+                'permissions' => [
+                    'can_edit' => $canEdit,
+                    'is_owner' => $isOwner,
                 ]
             ]);
 
@@ -179,7 +214,13 @@ class FunctionController extends Controller
                     'create_date' => null,
                     'modify_date' => null,
                     'parameters' => [],
-                    'definition' => null
+                    'definition' => null,
+                    'can_edit' => $canEdit,
+                    'is_owner' => $isOwner,
+                ],
+                'permissions' => [
+                    'can_edit' => $canEdit,
+                    'is_owner' => $isOwner,
                 ],
                 'error' => 'Erreur lors de la récupération des détails de la fonction: ' . $e->getMessage()
             ]);
@@ -231,12 +272,236 @@ class FunctionController extends Controller
     /**
      * Sauvegarde la description d'un paramètre de fonction
      */
-    public function saveParameterDescription(Request $request, $parameterId)
+    public function saveColumnDescription(Request $request, $functionName, $columnName)
+    {
+        try {
+            // Valider les données
+            $validated = $request->validate([
+                'description' => 'nullable|string'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'No database selected'], 400);
+            }
+
+            // Récupérer la description de la function
+            $functionDesc = FunctionDescription::where('dbid', $dbId)
+                ->where('functionname', $functionName)
+                ->first();
+
+            if (!$functionDesc) {
+                return response()->json(['error' => 'Function not found'], 404);
+            }
+
+            // Mettre à jour la description de la colonne
+            $column = FuncParameter::where('id_ps', $functionDesc->id)
+                ->where('name', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Column not found'], 404);
+            }
+
+            $column->description = $validated['description'];
+            $column->save();
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la sauvegarde de la description de la colonne: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function logAudit($dbId, $fcId, $columnName, $changeType, $oldData, $newData)
+    {
+        try {
+            $userId = Auth::id() ?? null;
+            
+            AuditLog::create([
+                'user_id' => $userId,
+                'db_id' => $dbId,
+                'fc_id' => $fcId,
+                'column_name' => $columnName,
+                'change_type' => $changeType,
+                'old_data' => $oldData,
+                'new_data' => $newData
+            ]);
+            
+            Log::info('Audit log créé', [
+                'user_id' => $userId,
+                'db_id' => $dbId,
+                'fc_id' => $fcId,
+                'column_name' => $columnName,
+                'change_type' => $changeType
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error while creating Audit log', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    public function getAuditLogs(Request $request, $functionName, $columnName)
+    {
+        try {
+            Log::info('Récupération audit logs', [
+                'functionname' => $functionName,
+                'column_name' => $columnName,
+                'user_id' => auth()->id()
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                Log::warning('Aucune base de données sélectionnée dans la session');
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la procedure
+            $funcDesc = FunctionDescription::where('dbid', $dbId)
+                ->where('functionName', $functionName)
+                ->first();
+
+            if (!$funcDesc) {
+                Log::warning('procedure non trouvée', [
+                    'functionName' => $functionName,
+                    'db_id' => $dbId
+                ]);
+                return response()->json(['error' => 'function not found'], 404);
+            }
+
+            Log::info('function found', [
+                'fc_id' => $funcDesc->id,
+                'function' => $funcDesc->functionname
+            ]);
+
+            // Récupérer les logs d'audit liés à cette colonne
+            $auditLogs = AuditLog::where('db_id', $dbId)
+                ->where('fc_id', $funcDesc->id)
+                ->where('column_name', 'like', $columnName . '%')
+                ->with('user:id,name')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            Log::info('Audit logs récupérés', [
+                'count' => $auditLogs->count(),
+                'logs' => $auditLogs->toArray()
+            ]);
+
+            // Formatter les données pour le frontend
+            $formattedLogs = $auditLogs->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'created_at' => $log->created_at,
+                    'user' => [
+                        'id' => $log->user->id ?? null,
+                        'name' => $log->user->name ?? 'User deleted'
+                    ],
+                    'change_type' => $log->change_type ?? 'update',
+                    'old_data' => $log->old_data,
+                    'new_data' => $log->new_data,
+                    'column_name' => $log->column_name
+                ];
+            });
+
+            return response()->json($formattedLogs);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération des logs d\'audit', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'functionname' => $functionName,
+                'column_name' => $columnName
+            ]);
+            
+            return response()->json([
+                'error' => 'Erreur lors de la récupération des logs d\'audit: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateColumnRangeValues(Request $request, $functionName, $columnName)
     {
         try {
 
-            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update functions.')) {
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update possible values.')) {
             return $error;
+            }
+
+            // Valider les données
+            $validated = $request->validate([
+                'default_value' => 'nullable|string'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'No database selected'], 400);
+            }
+
+            // Récupérer la description de la table
+            $functionDesc = FunctionDescription::where('dbid', $dbId)
+                ->where('functionname', $functionName)
+                ->first();
+
+            if (!$functionDesc) {
+                return response()->json(['error' => 'Procedure not found'], 404);
+            }
+
+            // Mettre à jour les valeurs possibles de la colonne
+            $column = FuncParameter::where('id_func', $functionDesc->id)
+                ->where('name', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Column not found'], 404);
+            }
+
+            // Vérifier si les valeurs possibles ont changé
+            if ($column->range_value !== $validated['range_value']) {
+                $oldRangeValue = $column->range_value;
+                $column->range_value = $validated['range_value'];
+                $column->save();
+                
+                // Log pour déboguer le résultat de la sauvegarde
+                Log::info('Résultat de la sauvegarde', [
+                    'column' => $columnName,
+                    'range_value' => $column->range_value,
+                    'saveResult' => $column 
+                ]);
+                
+                //Log de l'audit pour les valeurs possibles
+                $this->logAudit(
+                    $dbId, 
+                    $functionDesc->id, 
+                    $columnName . 'range_value', 
+                    'update', 
+                    $oldRangeValue, 
+                    $validated['range_value']
+                );
+            }
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour des valeurs possibles', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Erreur lors de la mise à jour des valeurs possibles: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateColumnDescription(Request $request, $functionName, $columnName)
+    {
+        try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column descriptions.')) {
+                return $error;
             }
 
             // Valider les données
@@ -244,21 +509,196 @@ class FunctionController extends Controller
                 'description' => 'nullable|string'
             ]);
 
-            // Récupérer le paramètre
-            $parameter = FuncParameter::find($parameterId);
-
-            if (!$parameter) {
-                return response()->json(['error' => 'Paramètre non trouvé'], 404);
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'No database selected'], 400);
             }
 
-            // Mettre à jour la description
-            $parameter->description = $validated['description'];
-            $parameter->save();
+            // Récupérer la description de la procedure
+            $functionDesc = FunctionDescription::where('dbid', $dbId)
+                ->where('functionname', $functionName)
+                ->first();
+
+            if (!$functionDesc) {
+                return response()->json(['error' => 'Function not found'], 404);
+            }
+
+            // Mettre à jour la description de la colonne
+            $column = FuncParameter::where('id_func', $functionDesc->id)
+                ->where('name', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Column not found'], 404);
+            }
+
+            // Vérifier si la description a changé
+            if ($column->description !== $validated['description']) {
+                $oldDescription = $column->description;
+                $column->description = $validated['description'];
+                $column->save();
+                
+                // Log de l'audit pour la description de la colonne
+                $this->logAudit(
+                    $dbId, 
+                    $functionDesc->id, 
+                    $columnName . '_description', 
+                    'update', 
+                    $oldDescription, 
+                    $validated['description']
+                );
+            }
 
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la sauvegarde de la description du paramètre: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error while updating description: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateColumnRelease(Request $request, $functionName, $columnName)
+    {
+        try {
+
+            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column release.')) {
+            return $error;
+            }
+
+            // Valider les données
+            $validated = $request->validate([
+                'release_id' => 'nullable|exists:release,id'
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return response()->json(['error' => 'No database selected'], 400);
+            }
+
+            // Récupérer la description de la procedure
+            $functionDesc = FunctionDescription::where('dbid', $dbId)
+                ->where('functionname', $functionName)
+                ->first();
+
+            if (!$functionDesc) {
+                return response()->json(['error' => 'Function not found'], 404);
+            }
+
+            // Récupérer la colonne
+            $column = FuncParameter::where('id_func', $functionDesc->id)
+                ->where('name', $columnName)
+                ->first();
+
+            if (!$column) {
+                return response()->json(['error' => 'Column not found'], 404);
+            }
+
+            // Vérifier si la version a changé
+            $newReleaseId = $validated['release_id'];
+            if ($column->release_id != $newReleaseId) {
+                $oldReleaseId = $column->release_id;
+                
+                // Récupérer les informations des versions pour le log
+                $oldReleaseInfo = null;
+                $newReleaseInfo = null;
+                
+                if ($oldReleaseId) {
+                    $oldRelease = Release::find($oldReleaseId);
+                    $oldReleaseInfo = $oldRelease ? $oldRelease->version_number : 'Release deleted';
+                }
+                
+                if ($newReleaseId) {
+                    $newRelease = Release::find($newReleaseId);
+                    $newReleaseInfo = $newRelease ? $newRelease->version_number : 'Release unknow';
+                }
+                
+                // Mettre à jour la colonne
+                $column->release_id = $newReleaseId;
+                $column->save();
+                
+                // Log de l'audit pour la version
+                $this->logAudit(
+                    $dbId, 
+                    $functionDesc->id, 
+                    $columnName . '_release', 
+                    'update', 
+                    $oldReleaseInfo ?: 'null', 
+                    $newReleaseInfo ?: 'null'
+                );
+            }
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Error while updating release column', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Error while updating release: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function assignReleaseToColumn(Request $request)
+    {
+        try {
+            Log::info('Début de assignReleaseToColumn', [
+                'request_all' => $request->all()
+            ]);
+
+            // Valider les données
+            $validated = $request->validate([
+                'release_id' => 'nullable|exists:release,id', // nullable pour permettre la suppression
+                'fc_id' => 'required|integer',
+                'name' => 'required|string'
+            ]);
+
+            Log::info('Données validées', [
+                'validated' => $validated
+            ]);
+
+            // Récupérer les informations de la table
+            $functionDesc = DB::table('function_description')
+                ->where('id', $validated['fc_id'])
+                ->first();
+
+            if (!$functionDesc) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Procedure not found'
+                ], 404);
+            }
+
+            // Appeler la méthode du TableController pour la mise à jour avec audit
+            $FunctionController = new \App\Http\Controllers\FunctionController();
+            
+            // Créer une nouvelle requête avec les bonnes données
+            $updateRequest = new Request([
+                'release_id' => $validated['release_id']
+            ]);
+
+            // Appeler la méthode qui gère l'audit
+            $response = $FunctionController->updateColumnRelease(
+                $updateRequest, 
+                $functionDesc->functionname, 
+                $validated['name']
+            );
+
+            // Retourner la réponse de la méthode d'audit
+            return $response;
+
+        } catch (\Exception $e) {
+            Log::error('Error in ReleaseApiController::assignReleaseToColumn', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error while associating release to column: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

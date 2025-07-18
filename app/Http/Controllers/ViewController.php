@@ -11,6 +11,7 @@ use App\Models\ViewColumn;
 use Inertia\Inertia;
 use App\Http\Controllers\Traits\HasProjectPermissions;
 use App\Models\AuditLog;
+use Illuminate\Support\Facades\Auth;
 
 class ViewController extends Controller
 {
@@ -397,24 +398,23 @@ class ViewController extends Controller
                 return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
             }
 
-            // Récupérer la description de la table
+            // Récupérer la description de la vue
             $viewDesc = ViewDescription::where('dbid', $dbId)
                 ->where('viewname', $viewName)
                 ->first();
 
             if (!$viewDesc) {
-                return response()->json(['error' => 'View non trouvée'], 404);
+                return response()->json(['error' => 'Vue non trouvée'], 404);
             }
 
-            // Récupérer les logs d'audit liés à cette colonne
             $auditLogs = AuditLog::where('db_id', $dbId)
-                ->where('view_id', $viewDesc->id)
-                ->where('column_name', 'like', $columnName . '%')
+                ->where('view_id', $viewDesc->id)  
+                ->where('column_name', 'like', $columnName . '%') 
                 ->with('user')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return response()->json($auditLogs);
+            return response()->json($auditLogs); 
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de la récupération des logs d\'audit: ' . $e->getMessage()], 500);
@@ -614,7 +614,7 @@ class ViewController extends Controller
 
             // Valider les données
             $validated = $request->validate([
-                'possible_values' => 'nullable|string'
+                'rangevalues' => 'nullable|string'
             ]);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
@@ -633,7 +633,7 @@ class ViewController extends Controller
             }
 
             // Mettre à jour les valeurs possibles de la colonne
-            $column = ViewColumn::where('id_table', $viewDesc->id)
+            $column = ViewColumn::where('id_view', $viewDesc->id)
                 ->where('name', $columnName)
                 ->first();
 
@@ -786,7 +786,7 @@ class ViewController extends Controller
             if (!$viewDesc) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Table non trouvée'
+                    'error' => 'View not found'
                 ], 404);
             }
 

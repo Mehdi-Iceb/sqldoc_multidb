@@ -101,8 +101,10 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
     Route::get('/view/{viewName}/column/{columnName}/audit-logs', [ViewController::class, 'getAuditLogs'])->name('view.audit.logs');
 
     Route::get('/function/{functionName}/details', [FunctionController::class, 'details'])->name('function.details');
+    Route::get('/function/{functionName}/function/{parameterName}/audit-logs', [FunctionController::class, 'getAuditLogs'])->name('function.audit.logs');
 
     Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'details'])->name('procedure.details');
+    Route::get('/procedure/{procedureName}/parameter/{parameterName}/audit-logs', [ProcedureController::class, 'getAuditLogs'])->name('procedure.audit.logs');
 
     Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'details'])->name('trigger.details');
 
@@ -129,16 +131,22 @@ Route::middleware(['auth', 'project.permissions:write'])->group(function () {
     Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'saveColumnDescription'])->name('view.column.saveDescription');
     Route::post('/view/{viewName}/save-all', [ViewController::class, 'saveAll'])->name('view.saveAll');
     Route::post('/view/{viewName}/save-structure', [ViewController::class, 'saveStructure'])->name('view.saveStructure');
-     Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'updateColumnDescription'])->name('view.column.updateDescription');
-     Route::post('/view/{viewName}/column/{columnName}/rangevalues', [ViewController::class, 'updateColumnRangeValues'])->name('view.column.updateRangeValues');
-     Route::post('/view/{viewName}/column/{columnName}/release', [ViewController::class, 'updateColumnRelease']);
+    Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'updateColumnDescription'])->name('view.column.updateDescription');
+    Route::post('/view/{viewName}/column/{columnName}/rangevalues', [ViewController::class, 'updateColumnRangeValues'])->name('view.column.updateRangeValues');
+    Route::post('/view/{viewName}/column/{columnName}/release', [ViewController::class, 'updateColumnRelease']);
 
     Route::post('/function/{functionName}/description', [FunctionController::class, 'saveDescription'])->name('function.saveDescription');
     Route::post('/function-parameter/{parameterId}/update-description', [FunctionController::class, 'saveParameterDescription'])->name('function.parameter.updateDescription');
+    Route::post('/function/{functionName}/function/{parameterName}/description', [FunctionController::class, 'updateColumnDescription'])->name('function.column.updateDescription');
+    Route::post('/function/{functionName}/function/{parameterName}/rangevalues', [FunctionController::class, 'updateColumnRangeValues'])->name('function.column.updateRangeValues');
+    Route::post('/function/{functionName}/function/{parameterName}/release', [FunctionController::class, 'updateColumnRelease']);
 
     Route::post('/procedure/{procedureName}/description', [ProcedureController::class, 'saveDescription'])->name('procedure.saveDescription');
     Route::post('/procedure-parameter/{parameterId}/update-description', [ProcedureController::class, 'saveParameterDescription'])->name('procedure.parameter.updateDescription');
     Route::post('/procedure/{procedureName}/save-all', [ProcedureController::class, 'saveAll'])->name('procedure.saveAll');
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/description', [ProcedureController::class, 'updateColumnDescription'])->name('procedure.column.updateDescription');
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/rangevalues', [ProcedureController::class, 'updateColumnRangeValues'])->name('procedure.column.updateRangeValues');
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/release', [ProcedureController::class, 'updateColumnRelease']);
 
     Route::post('/trigger/{triggerName}/description', [TriggerController::class, 'saveDescription'])->name('trigger.description');
     Route::post('/trigger/{triggerName}/save-all', [TriggerController::class, 'saveAll'])->name('trigger.saveall');

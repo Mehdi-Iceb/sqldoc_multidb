@@ -32,4 +32,19 @@ class Release extends Model
     {
         return $this->hasMany(TableStructure::class, 'id', 'release_id');
     }
+
+    public function viewColumn()
+    {
+        return $this->hasMany(ViewColumn::class, 'id', 'release_id');
+    }
+
+    public function psParameter()
+    {
+        return $this->hasMany(PsParameter::class, 'id', 'release_id');
+    }
+
+    public function funcParameter()
+    {
+        return $this->hasMany(FuncParameter::class, 'id', 'release_id');
+    }
 }
