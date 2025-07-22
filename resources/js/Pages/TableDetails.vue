@@ -417,9 +417,9 @@
                             </button>
                           </div>
                         </template>
-
                       </div>
                     </td>
+                    
                     <!-- Possible Values -->
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">

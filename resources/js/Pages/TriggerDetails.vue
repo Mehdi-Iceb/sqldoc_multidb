@@ -53,7 +53,7 @@
             <!-- Informations générales -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Informations générales</h3>
+                <h3 class="text-lg font-medium text-gray-900">General information</h3>
               </div>
               <div class="p-6 grid grid-cols-2 gap-6">
                 <div>
@@ -85,7 +85,7 @@
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-600">État</p>
+                  <p class="text-sm text-gray-600">State</p>
                   <p class="mt-1">
                     <span :class="[
                       'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
@@ -98,7 +98,7 @@
                   </p>
                 </div>
                 <div v-if="triggerDetails.create_date">
-                  <p class="text-sm text-gray-600">Date de création</p>
+                  <p class="text-sm text-gray-600">Creation date</p>
                   <p class="mt-1 font-medium">{{ formatDate(triggerDetails.create_date) }}</p>
                 </div>
               </div>
@@ -107,12 +107,12 @@
             <!-- Définition SQL -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Définition SQL</h3>
+                <h3 class="text-lg font-medium text-gray-900">Definition SQL</h3>
               </div>
               <div class="p-6">
                 <pre v-if="triggerDetails.definition" 
                      class="whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded-lg text-gray-600">{{ triggerDetails.definition }}</pre>
-                <p v-else class="text-gray-400 italic">Aucune définition disponible</p>
+                <p v-else class="text-gray-400 italic">No definition available</p>
               </div>
             </div>
   
