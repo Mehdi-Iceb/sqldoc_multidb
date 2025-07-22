@@ -10,6 +10,7 @@ use App\Models\PsInformation;
 use App\Models\PsParameter;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class ProcedureController extends Controller
 {
@@ -464,139 +465,151 @@ class ProcedureController extends Controller
         }
     }
 
-    public function updateColumnRangeValues(Request $request, $procedureName, $columnName)
+    public function updateColumnRangeValues(Request $request, $procedureName, $parameterName)
     {
         try {
-
-            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update possible values.')) {
-            return $error;
-            }
-
-            // Valider les données
-            $validated = $request->validate([
-                'default_value' => 'nullable|string'
-            ]);
-
-            // Obtenir l'ID de la base de données actuelle depuis la session
-            $dbId = session('current_db_id');
-            if (!$dbId) {
-                return response()->json(['error' => 'No database selected'], 400);
-            }
-
-            // Récupérer la description de la table
-            $psDesc = PsDescription::where('dbid', $dbId)
-                ->where('psname', $procedureName)
-                ->first();
-
-            if (!$psDesc) {
-                return response()->json(['error' => 'Procedure not found'], 404);
-            }
-
-            // Mettre à jour les valeurs possibles de la colonne
-            $column = PsParameter::where('id_ps', $psDesc->id)
-                ->where('name', $columnName)
-                ->first();
-
-            if (!$column) {
-                return response()->json(['error' => 'Column not found'], 404);
-            }
-
-            // Vérifier si les valeurs possibles ont changé
-            if ($column->default_value !== $validated['default_value']) {
-                $oldDefaultValue = $column->default_value;
-                $column->default_value = $validated['default_value'];
-                $column->save();
-                
-                // Log pour déboguer le résultat de la sauvegarde
-                Log::info('Résultat de la sauvegarde', [
-                    'column' => $columnName,
-                    'default_value' => $column->default_value,
-                    'saveResult' => $column 
-                ]);
-                
-                //Log de l'audit pour les valeurs possibles
-                $this->logAudit(
-                    $dbId, 
-                    $psDesc->id, 
-                    $columnName . '_default_value', 
-                    'update', 
-                    $oldDefaultValue, 
-                    $validated['default_value']
-                );
-            }
-
-            return response()->json(['success' => true]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la mise à jour des valeurs possibles', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json(['error' => 'Erreur lors de la mise à jour des valeurs possibles: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function updateColumnDescription(Request $request, $procedureName, $columnName)
-    {
-        try {
-
-            if ($error = $this->requirePermission($request, 'write', 'You need write permissions to update column descriptions.')) {
+            if ($error = $this->requirePermission($request, 'write')) {
                 return $error;
             }
 
-            // Valider les données
-            $validated = $request->validate([
-                'description' => 'nullable|string'
+            $request->validate([
+                'default_value' => 'nullable|string|max:2000'
             ]);
 
-            // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             if (!$dbId) {
-                return response()->json(['error' => 'No database selected'], 400);
+                return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
             }
 
-            // Récupérer la description de la procedure
             $procedureDesc = PsDescription::where('dbid', $dbId)
                 ->where('psname', $procedureName)
                 ->first();
 
             if (!$procedureDesc) {
-                return response()->json(['error' => 'Procedure not found'], 404);
+                return back()->withErrors(['error' => 'Procédure non trouvée']);
             }
 
-            // Mettre à jour la description de la colonne
-            $column = PsParameter::where('id_ps', $procedureDesc->id)
-                ->where('name', $columnName)
+            $parameter = PsParameter::where('id_ps', $procedureDesc->id)
+                ->where('name', $parameterName)
                 ->first();
 
-            if (!$column) {
-                return response()->json(['error' => 'Column not found'], 404);
+            if (!$parameter) {
+                return back()->withErrors(['error' => 'Paramètre non trouvé']);
             }
 
-            // Vérifier si la description a changé
-            if ($column->description !== $validated['description']) {
-                $oldDescription = $column->description;
-                $column->description = $validated['description'];
-                $column->save();
-                
-                // Log de l'audit pour la description de la colonne
-                $this->logAudit(
-                    $dbId, 
-                    $procedureDesc->id, 
-                    $columnName . '_description', 
-                    'update', 
-                    $oldDescription, 
-                    $validated['description']
-                );
+            $currentProject = session('current_project', []);
+            $canEdit = $currentProject['is_owner'] ?? false;
+            
+            if (!$canEdit) {
+                return back()->withErrors(['error' => 'Permissions insuffisantes']);
             }
 
-            return response()->json(['success' => true]);
+            $oldDefaultValue = $parameter->default_value;
+            $parameter->default_value = $request->input('default_value');
+            $parameter->save();
+
+            $this->logAudit(
+                $dbId, 
+                $procedureDesc->id, 
+                $parameterName . '_default_value', 
+                'update', 
+                $oldDefaultValue, 
+                $request->input('default_value')
+            );
+
+            return back()->with('success', 'Range values du paramètre mises à jour avec succès');
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error while updating description: ' . $e->getMessage()], 500);
+            Log::error('Erreur lors de la mise à jour des range values', [
+                'procedure_name' => $procedureName,
+                'parameter_name' => $parameterName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
         }
     }
+
+    public function updateColumnDescription(Request $request, $procedureName, $parameterName)
+    {
+        try {
+            if ($error = $this->requirePermission($request, 'write')) {
+                return $error;
+            }
+
+            $request->validate([
+                'description' => 'nullable|string|max:2000'
+            ]);
+
+            $parameterName = urldecode($parameterName);
+
+            Log::info('🔍 UPDATE PARAMETER DESCRIPTION (Inertia)', [
+                'procedure_name' => $procedureName,
+                'parameter_name' => $parameterName,
+                'description' => $request->input('description')
+            ]);
+
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
+            }
+
+            $procedureDesc = PsDescription::where('dbid', $dbId)
+                ->where('psname', $procedureName)
+                ->first();
+
+            if (!$procedureDesc) {
+                return back()->withErrors(['error' => 'Procédure non trouvée']);
+            }
+
+            $parameter = PsParameter::where('id_ps', $procedureDesc->id)
+                ->where('name', $parameterName)
+                ->first();
+
+            if (!$parameter) {
+                Log::error('Paramètre non trouvé', [
+                    'procedure_id' => $procedureDesc->id,
+                    'parameter_name' => $parameterName,
+                    'available_parameters' => PsParameter::where('id_ps', $procedureDesc->id)->get(['id', 'name'])->toArray()
+                ]);
+                
+                return back()->withErrors(['error' => 'Paramètre non trouvé: ' . $parameterName]);
+            }
+
+            $currentProject = session('current_project', []);
+            $canEdit = $currentProject['is_owner'] ?? false;
+            
+            if (!$canEdit) {
+                return back()->withErrors(['error' => 'Permissions insuffisantes']);
+            }
+
+            $oldDescription = $parameter->description;
+            $parameter->description = $request->input('description');
+            $parameter->save();
+
+            $this->logAudit(
+                $dbId, 
+                $procedureDesc->id, 
+                $parameterName . '_description', 
+                'update', 
+                $oldDescription, 
+                $request->input('description')
+            );
+
+            return back()->with('success', 'Description du paramètre mise à jour avec succès');
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de la description du paramètre', [
+                'procedure_name' => $procedureName,
+                'parameter_name' => $parameterName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
+        }
+    }
+
 
     public function updateColumnRelease(Request $request, $procedureName, $columnName)
     {
@@ -781,4 +794,128 @@ class ProcedureController extends Controller
             ], 500);
         }
     }
+
+    public function updateDescription(Request $request, $procedureName)
+    {
+        try {
+            if ($error = $this->requirePermission($request, 'write')) {
+                return $error;
+            }
+
+            $request->validate([
+                'description' => 'nullable|string|max:2000'
+            ]);
+
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
+            }
+
+            $procedureDesc = PsDescription::where('dbid', $dbId)
+                ->where('psname', $procedureName)
+                ->first();
+
+            if (!$procedureDesc) {
+                return back()->withErrors(['error' => 'Procédure non trouvée']);
+            }
+
+            $currentProject = session('current_project', []);
+            $canEdit = $currentProject['is_owner'] ?? false;
+            
+            if (!$canEdit) {
+                return back()->withErrors(['error' => 'Permissions insuffisantes']);
+            }
+
+            $oldDescription = $procedureDesc->description;
+            $procedureDesc->description = $request->input('description');
+            $procedureDesc->save();
+
+            $this->logAudit(
+                $dbId, 
+                $procedureDesc->id, 
+                'description', 
+                'update', 
+                $oldDescription, 
+                $request->input('description')
+            );
+
+            return back()->with('success', 'Description de la procédure mise à jour avec succès');
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de la description de la procédure', [
+                'procedure_name' => $procedureName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
+        }
+    }
+
+    public function updateParameterRelease(Request $request, $procedureName, $parameterName)
+    {
+        try {
+            if ($error = $this->requirePermission($request, 'write')) {
+                return $error;
+            }
+
+            $request->validate([
+                'release_id' => 'nullable|exists:release,id'
+            ]);
+
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
+            }
+
+            $procedureDesc = PsDescription::where('dbid', $dbId)
+                ->where('psname', $procedureName)
+                ->first();
+
+            if (!$procedureDesc) {
+                return back()->withErrors(['error' => 'Procédure non trouvée']);
+            }
+
+            $parameter = PsParameter::where('id_ps', $procedureDesc->id)
+                ->where('name', $parameterName)
+                ->first();
+
+            if (!$parameter) {
+                return back()->withErrors(['error' => 'Paramètre non trouvé']);
+            }
+
+            $currentProject = session('current_project', []);
+            $canEdit = $currentProject['is_owner'] ?? false;
+            
+            if (!$canEdit) {
+                return back()->withErrors(['error' => 'Permissions insuffisantes']);
+            }
+
+            $oldReleaseId = $parameter->release_id;
+            $newReleaseId = $request->input('release_id');
+            
+            $parameter->release_id = $newReleaseId;
+            $parameter->save();
+
+            $this->logAudit(
+                $dbId, 
+                $procedureDesc->id, 
+                $parameterName . '_release', 
+                'update', 
+                $oldReleaseId, 
+                $newReleaseId
+            );
+
+            return back()->with('success', 'Release du paramètre mise à jour avec succès');
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de la release', [
+                'procedure_name' => $procedureName,
+                'parameter_name' => $parameterName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
+        }
+    }
+    
 }

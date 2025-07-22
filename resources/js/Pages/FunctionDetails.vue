@@ -195,113 +195,141 @@
                       <!-- Description -->
                       <td class="px-6 py-4 text-sm text-gray-500">
                         <div class="flex items-center space-x-2">
-                          <!-- Mode lecture -->
-                           <div v-if="!editingParamId || editingParamId !== param.parameter_id" class="max-w-xs truncate">
-                          <span class="max-w-xs truncate flex-1">
-                            {{ param.description || '-' }}
-                          </span>
-                          <button
-                            v-if="canEdit"
-                            @click="startEdit(param)"
-                            class="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
-                            title="Edit description"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        </div>
-
-                          <!-- Mode édition -->
-                          <div v-else class="flex items-center space-x-2 w-full">
-                          <textarea
-                            v-model="editingValue"
-                            class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 overflow-auto resize-none max-h-24"
-                            :disabled="!canEdit"
-                            @keydown.ctrl.enter="saveParameterDescription(param)"
-                            @keydown.esc="cancelEdit"
-                            rows="2"
-                          ></textarea>
                           
-                          <!-- Boutons sauvegarder/annuler -->
-                          <div class="flex space-x-1 flex-shrink-0">
-                            <button
-                              @click="saveParameterDescription(param)"
-                              class="p-1 text-green-600 hover:text-green-700"
-                              :disabled="saving"
+                          <!-- Mode lecture -->
+                          <template v-if="!editingParamId || editingParamId !== param.parameter_id">
+                            <span
+                              v-if="param.description"
+                              class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
                             >
-                              <svg v-if="!saving" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                              </svg>
-                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                            </button>
+                              {{ param.description }}
+                            </span>
+                            <span v-else class="text-gray-400">-</span>
+
+                            <!-- Bouton édition -->
                             <button
-                              @click="cancelEdit"
-                              class="p-1 text-red-600 hover:text-red-700"
-                              :disabled="saving"
+                              v-if="canEdit"
+                              @click="startEdit(param)"
+                              class="p-1 text-gray-400 hover:text-gray-600"
+                              title="Edit description"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                               </svg>
                             </button>
-                          </div>
-                        </div>
+                          </template>
+
+                          <!-- Mode édition -->
+                          <template v-else>
+                            <textarea
+                              v-model="editingValue"
+                              class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                              :disabled="!canEdit"
+                              @keydown.ctrl.enter="saveParameterDescription(param)"
+                              @keydown.esc="cancelEdit"
+                            ></textarea>
+
+                            <!-- Boutons sauvegarde/annulation -->
+                            <div class="flex space-x-1">
+                              <button
+                                @click="saveParameterDescription(param)"
+                                class="p-1 text-green-600 hover:text-green-700"
+                                :disabled="saving"
+                              >
+                                <svg v-if="!saving" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                </svg>
+                              </button>
+                              <button
+                                @click="cancelEdit"
+                                class="p-1 text-red-600 hover:text-red-700"
+                                :disabled="saving"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                              </button>
+                            </div>
+                          </template>
+
                         </div>
                       </td>
 
                       <!-- Range Values -->
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingRangeValues[param.parameter_name]" class="max-w-xs truncate">
-                          {{ param.rangevalues || '-' }}
-                        </span>
-                        <textarea
-                          v-else
-                          v-model="editingRangeValuesValue"
-                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          :disabled="!canEdit"
-                          @keyup.enter="saveRangeValues(param.parameter_name)"
-                          @keyup.esc="cancelEditAdvanced('rangeValue', param.parameter_name)"
-                        ></textarea>
-                        <button
-                          v-if="!editingRangeValues[param.parameter_name] && canEdit"
-                          @click="startEditAdvanced('rangeValue', param.parameter_name, param.rangevalue)"
-                          class="p-1 text-gray-400 hover:text-gray-600"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <div v-else-if="canEdit" class="flex space-x-1">
-                          <button
-                            @click="saveRangeValues(param.parameter_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
-                            :disabled="savingRangeValues[param.parameter_name]"
+
+                        <!-- Mode lecture -->
+                        <template v-if="!editingRangeValues[param.parameter_id]">
+                          <span
+                            v-if="param.rangevalues"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
                           >
-                            <svg v-if="!savingRangeValues[param.parameter_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </button>
+                            {{ param.rangevalues }}
+                          </span>
+                          <span v-else class="text-gray-400">-</span>
+
+                          <!-- Bouton édition -->
                           <button
-                            @click="cancelEditAdvanced('rangeValues', param.parameter_name)"
-                            class="p-1 text-red-600 hover:text-red-700"
-                            :disabled="savingRangeValues[param.parameter_name]"
+                            v-if="canEdit"
+                            @click="startEditAdvanced('rangeValue', param.parameter_id, param.rangevalues)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Edit range values"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
-                        </div>
+                        </template>
+
+                        <!-- Mode édition -->
+                        <template v-else>
+                          <textarea
+                            v-model="editingRangeValuesValue"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            :disabled="!canEdit"
+                            @keydown.ctrl.enter="saveRangeValues(param.parameter_name)"
+                            @keydown.esc="cancelEditAdvanced('rangeValue', param.parameter_name)"
+                          ></textarea>
+
+                          <!-- Boutons sauvegarde/annulation -->
+                          <div v-if="canEdit" class="flex space-x-1">
+                            <button
+                              @click="saveRangeValues(param.parameter_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              :disabled="savingRangeValues[param.parameter_name]"
+                            >
+                              <svg v-if="!savingRangeValues[param.parameter_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEditAdvanced('rangeValues', param.parameter_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              :disabled="savingRangeValues[param.parameter_name]"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+
                       </div>
                     </td>
-
+                    
                     <!-- Release -->
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2 relative">
@@ -655,6 +683,14 @@ const saveParameterDescription = async (param) => {
       description: editingValue.value
     }, {
       onSuccess: () => {
+
+        router.reload({ 
+          only: ['functionDetails'],
+          preserveScroll: true,
+          onSuccess: () => {
+            
+          }
+        })
         const index = functionData.value.parameters.findIndex(p => p.parameter_id === parameterIdentifier)
         if (index !== -1) {
           functionData.value.parameters[index].description = editingValue.value
@@ -738,7 +774,7 @@ const updateColumnRelease = async (parameter, releaseId) => {
     
     const finalReleaseId = releaseId === '' ? null : parseInt(releaseId)
     
-    const response = await axios.post(`/function/${props.functionName}/function/${parameter.parameter_name}/release`, {
+    const response = await axios.post(`/function/${props.functionName}/parameter/${parameter.parameter_name}/release`, {
       release_id: finalReleaseId
     })
     

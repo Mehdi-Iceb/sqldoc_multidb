@@ -219,100 +219,134 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingDescription[column.column_name]" class="max-w-xs truncate">
-                          {{ column.description || '-' }}
-                        </span>
-                        <textarea
-                          v-else
-                          v-model="editingDescriptionValue"
-                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          :disabled="!viewDetails.can_edit"
-                          @keydown.ctrl.enter="saveDescription(column.column_name)"
-                          @keydown.esc="cancelEdit('description', column.column_name)"
-                        ></textarea>
-                        <button
-                          v-if="!editingDescription[column.column_name] && viewDetails.can_edit"
-                          @click="startEdit('description', column.column_name, column.description)"
-                          class="p-1 text-gray-400 hover:text-gray-600"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <div v-else class="flex space-x-1">
-                          <button
-                            @click="saveDescription(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
-                            :disabled="savingDescription[column.column_name]"
+
+                        <!-- Mode lecture -->
+                        <template v-if="!editingDescription[column.column_name]">
+                          <span
+                            v-if="column.description"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
                           >
-                            <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </button>
+                            {{ column.description }}
+                          </span>
+                          <span v-else class="text-gray-400">-</span>
+
+                          <!-- Bouton édition -->
                           <button
-                            @click="cancelEdit('description', column.column_name)"
-                            class="p-1 text-red-600 hover:text-red-700"
-                            :disabled="savingDescription[column.column_name]"
+                            v-if="viewDetails.can_edit"
+                            @click="startEdit('description', column.column_name, column.description)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
-                        </div>
+                        </template>
+
+                        <!-- Mode édition -->
+                        <template v-else>
+                          <textarea
+                            v-model="editingDescriptionValue"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            :disabled="!viewDetails.can_edit"
+                            @keydown.ctrl.enter="saveDescription(column.column_name)"
+                            @keydown.esc="cancelEdit('description', column.column_name)"
+                          ></textarea>
+
+                          <!-- Boutons sauvegarde/annulation -->
+                          <div class="flex space-x-1">
+                            <button
+                              @click="saveDescription(column.column_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              :disabled="savingDescription[column.column_name]"
+                            >
+                              <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEdit('description', column.column_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              :disabled="savingDescription[column.column_name]"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
                       </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
-                        <span v-if="!editingRangeValues[column.column_name]" class="max-w-xs truncate">
-                          {{ column.rangevalues || '-' }}
-                        </span>
-                        <textarea
-                          v-else
-                          v-model="editingRangeValuesValue"
-                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          :disabled="!viewDetails.can_edit"
-                          @keyup.enter="saveRangeValues(column.column_name)"
-                          @keyup.esc="cancelEdit('rangeValues', column.column_name)"
-                        ></textarea>
-                        <button
-                          v-if="!editingRangeValues[column.column_name] && viewDetails.can_edit"
-                          @click="startEdit('rangeValues', column.column_name, column.possible_values)"
-                          class="p-1 text-gray-400 hover:text-gray-600"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <div v-else class="flex space-x-1">
-                          <button
-                            @click="saveRangeValues(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
-                            :disabled="savingRangeValues[column.column_name]"
+
+                        <!-- Mode lecture -->
+                        <template v-if="!editingRangeValues[column.column_name]">
+                          <span
+                            v-if="column.rangevalues"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
                           >
-                            <svg v-if="!savingRangeValues[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </button>
+                            {{ column.rangevalues }}
+                          </span>
+                          <span v-else class="text-gray-400">-</span>
+
+                          <!-- Bouton édition -->
                           <button
-                            @click="cancelEdit('rangeValues', column.column_name)"
-                            class="p-1 text-red-600 hover:text-red-700"
-                            :disabled="savingRangeValues[column.column_name]"
+                            v-if="viewDetails.can_edit"
+                            @click="startEdit('rangeValues', column.column_name, column.possible_values)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
-                        </div>
+                        </template>
+
+                        <!-- Mode édition -->
+                        <template v-else>
+                          <textarea
+                            v-model="editingRangeValuesValue"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            :disabled="!viewDetails.can_edit"
+                            @keyup.enter="saveRangeValues(column.column_name)"
+                            @keyup.esc="cancelEdit('rangeValues', column.column_name)"
+                          ></textarea>
+
+                          <!-- Boutons sauvegarde/annulation -->
+                          <div class="flex space-x-1">
+                            <button
+                              @click="saveRangeValues(column.column_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              :disabled="savingRangeValues[column.column_name]"
+                            >
+                              <svg v-if="!savingRangeValues[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEdit('rangeValues', column.column_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              :disabled="savingRangeValues[column.column_name]"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+
                       </div>
                     </td>
+                    
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2 relative">
                         <select 

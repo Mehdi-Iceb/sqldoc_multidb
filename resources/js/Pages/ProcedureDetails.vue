@@ -51,7 +51,7 @@
                   <span v-else class="flex items-center">
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 8 18-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 7 14 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Saving...
                   </span>
@@ -126,7 +126,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Output
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
                       Description
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -169,47 +169,55 @@
                     <!-- Description -->
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
+                        
                         <!-- Mode lecture -->
-                        <div v-if="editingParamId !== param.parameter_name" class="max-w-xs truncate">
-                          <span class="max-w-xs truncate flex-1">
-                            {{ param.description || '-' }}
+                        <template v-if="editingParamId !== param.parameter_name">
+                          <span
+                            v-if="param.description"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
+                          >
+                            {{ param.description }}
                           </span>
+                          <span v-else class="text-gray-400">-</span>
+
+                          <!-- Bouton édition -->
                           <button
                             v-if="canEdit"
                             @click="startEdit(param)"
-                            class="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                            class="p-1 text-gray-400 hover:text-gray-600"
                             title="Edit description"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                           </button>
-                        </div>
-                        
+                        </template>
+
                         <!-- Mode édition -->
-                        <div v-else class="flex items-center space-x-2 w-full">
+                        <template v-else>
                           <textarea
                             v-model="editingValue"
-                            class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 overflow-auto resize-none max-h-24"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
                             :disabled="!canEdit"
                             @keydown.ctrl.enter="saveParameterDescription(param)"
                             @keydown.esc="cancelEdit"
-                            rows="2"
                           ></textarea>
-                          
-                          <!-- Boutons sauvegarder/annuler -->
-                          <div class="flex space-x-1 flex-shrink-0">
+
+                          <!-- Boutons sauvegarde/annulation -->
+                          <div class="flex space-x-1">
                             <button
                               @click="saveParameterDescription(param)"
                               class="p-1 text-green-600 hover:text-green-700"
                               :disabled="saving"
                             >
                               <svg v-if="!saving" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                               </svg>
                               <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                               </svg>
                             </button>
                             <button
@@ -218,61 +226,80 @@
                               :disabled="saving"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </div>
+                    </td>
+
+                    <!-- Range Values -->
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                      <div class="flex items-center space-x-2">
+
+                        <!-- Mode lecture -->
+                        <template v-if="!editingRangeValues[param.parameter_name]">
+                          <span
+                            v-if="param.rangevalues"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
+                          >
+                            {{ param.rangevalues }}
+                          </span>
+                          <span v-else class="text-gray-400">-</span>
+
+                          <!-- Bouton édition -->
+                          <button
+                            v-if="canEdit"
+                            @click="startEditAdvanced('rangeValues', param.parameter_name, param.rangevalues)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Edit range values"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                          </button>
+                        </template>
+
+                        <!-- Mode édition -->
+                        <template v-else>
+                          <textarea
+                            v-model="editingRangeValuesValue"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            :disabled="!canEdit"
+                            @keydown.ctrl.enter="saveRangeValues(param.parameter_name)"
+                            @keydown.esc="cancelEditAdvanced('rangeValues', param.parameter_name)"
+                          ></textarea>
+
+                          <!-- Boutons sauvegarde/annulation -->
+                          <div class="flex space-x-1">
+                            <button
+                              @click="saveRangeValues(param.parameter_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              :disabled="savingRangeValues[param.parameter_name]"
+                            >
+                              <svg v-if="!savingRangeValues[param.parameter_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEditAdvanced('rangeValues', param.parameter_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              :disabled="savingRangeValues[param.parameter_name]"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             </button>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <!-- Range Values -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
-                      <div class="flex items-center space-x-2">
-                        <span v-if="!editingRangeValues[param.parameter_name]" class="max-w-xs truncate">
-                          {{ param.rangevalues || '-' }}
-                        </span>
-                        <textarea
-                          v-else
-                          v-model="editingRangeValuesValue"
-                          class="flex-1 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
-                          :disabled="!canEdit"
-                          @keyup.enter="saveRangeValues(param.parameter_name)"
-                          @keyup.esc="cancelEditAdvanced('rangeValues', param.parameter_name)"
-                        ></textarea>
-                        <button
-                          v-if="!editingRangeValues[param.parameter_name] && canEdit"
-                          @click="startEditAdvanced('rangeValues', param.parameter_name, param.rangevalues)"
-                          class="p-1 text-gray-400 hover:text-gray-600"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <div v-else-if="canEdit" class="flex space-x-1">
-                          <button
-                            @click="saveRangeValues(param.parameter_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
-                            :disabled="savingRangeValues[param.parameter_name]"
-                          >
-                            <svg v-if="!savingRangeValues[param.parameter_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            @click="cancelEditAdvanced('rangeValues', param.parameter_name)"
-                            class="p-1 text-red-600 hover:text-red-700"
-                            :disabled="savingRangeValues[param.parameter_name]"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
+                        </template>
+
                       </div>
                     </td>
                     
@@ -298,7 +325,7 @@
                         <div v-if="updatingRelease[param.parameter_name]" class="absolute right-2 top-1/2 transform -translate-y-1/2">
                           <svg class="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 8 18-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 7 14 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                         </div>
                       </div>
@@ -316,7 +343,7 @@
                         <span v-else>
                           <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 8 18-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 7 14 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                         </span>
                       </SecondaryButton>
@@ -584,12 +611,25 @@ const saveDescription = async () => {
       description: procedureForm.value.description
     }, {
       onSuccess: () => {
-        alert('Description de la procédure enregistrée avec succès!')
-        procedureData.value.description = procedureForm.value.description
+        console.log('✅ Description de la procédure sauvegardée')
+        
+        // ✅ FORCER LE RECHARGEMENT des données Inertia
+        router.reload({ 
+          only: ['procedureDetails'],
+          preserveScroll: true,
+          onSuccess: () => {
+            alert('Description de la procédure mise à jour avec succès')
+          }
+        })
       },
       onError: (errors) => {
-        console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde de la description')
+        console.error('❌ Erreur lors de la sauvegarde:', errors)
+        
+        let errorMessage = 'Erreur lors de la sauvegarde de la description'
+        if (errors.error) {
+          errorMessage = errors.error
+        }
+        alert(errorMessage)
       },
       onFinish: () => {
         saving.value = false
@@ -601,7 +641,8 @@ const saveDescription = async () => {
   }
 }
 
-// ✅ FONCTION DE SAUVEGARDE PARAMÈTRE (votre version existante)
+
+// FONCTION DE SAUVEGARDE PARAMÈTRE (votre version existante)
 const saveParameterDescription = async (param) => {
   try {
     const parameterIdentifier = param.parameter_name
@@ -610,22 +651,40 @@ const saveParameterDescription = async (param) => {
       return
     }
 
+    console.log('🔍 Sauvegarde paramètre description:', {
+      procedureName: props.procedureName,
+      parameterName: parameterIdentifier,
+      description: editingValue.value
+    })
+
     saving.value = true
 
-    router.post(`/procedure/${props.procedureName}/parameters/${encodeURIComponent(parameterIdentifier)}/description`, {
+    router.post(`/procedure/${props.procedureName}/parameter/${encodeURIComponent(parameterIdentifier)}/description`, {
       description: editingValue.value
     }, {
       onSuccess: () => {
-        const index = procedureData.value.parameters.findIndex(p => p.parameter_name === parameterIdentifier)
-        if (index !== -1) {
-          procedureData.value.parameters[index].description = editingValue.value
-        }
-        alert('Description du paramètre enregistrée avec succès!')
+        console.log('✅ Description du paramètre sauvegardée')
+        
+        // ✅ FERMER L'ÉDITION avant le rechargement
         cancelEdit()
+        
+        // ✅ FORCER LE RECHARGEMENT des données Inertia
+        router.reload({ 
+          only: ['procedureDetails'],
+          preserveScroll: true,
+          onSuccess: () => {
+            alert('Description du paramètre mise à jour avec succès')
+          }
+        })
       },
       onError: (errors) => {
-        console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde de la description du paramètre')
+        console.error('❌ Erreur lors de la sauvegarde:', errors)
+        
+        let errorMessage = 'Erreur lors de la sauvegarde de la description du paramètre'
+        if (errors.error) {
+          errorMessage = errors.error
+        }
+        alert(errorMessage)
       },
       onFinish: () => {
         saving.value = false
@@ -637,53 +696,50 @@ const saveParameterDescription = async (param) => {
   }
 }
 
-// ✅ NOUVELLES FONCTIONS pour l'édition avancée avec axios
-const saveDescriptionAdvanced = async (parameterName) => {
-  try {
-    savingDescription.value[parameterName] = true
-    
-    const response = await axios.post(`/procedure/${props.procedureName}/parameter/${parameterName}/description`, {
-      description: editingDescriptionValue.value
-    })
-    
-    if (response.data.success) {
-      const parameter = procedureData.value.parameters.find(p => p.parameter_name === parameterName)
-      if (parameter) {
-        parameter.description = editingDescriptionValue.value
-      }
-      cancelEditAdvanced('description', parameterName)
-    } else {
-      throw new Error(response.data.error)
-    }
-  } catch (error) {
-    console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
-  } finally {
-    savingDescription.value[parameterName] = false
-  }
-}
-
 const saveRangeValues = async (parameterName) => {
   try {
     savingRangeValues.value[parameterName] = true
     
-    const response = await axios.post(`/procedure/${props.procedureName}/parameter/${parameterName}/range-values`, {
+    console.log('🔍 Sauvegarde range values:', {
+      procedureName: props.procedureName,
+      parameterName: parameterName,
       rangevalues: editingRangeValuesValue.value
     })
     
-    if (response.data.success) {
-      const parameter = procedureData.value.parameters.find(p => p.parameter_name === parameterName)
-      if (parameter) {
-        parameter.rangevalues = editingRangeValuesValue.value
+    router.post(`/procedure/${props.procedureName}/parameter/${parameterName}/rangevalues`, {
+      default_value: editingRangeValuesValue.value
+    }, {
+      onSuccess: () => {
+        console.log('✅ Range values sauvegardées')
+        
+        // ✅ FERMER L'ÉDITION avant le rechargement
+        cancelEditAdvanced('rangeValues', parameterName)
+        
+        // ✅ FORCER LE RECHARGEMENT des données Inertia
+        router.reload({ 
+          only: ['procedureDetails'],
+          preserveScroll: true,
+          onSuccess: () => {
+            alert('Range values mises à jour avec succès')
+          }
+        })
+      },
+      onError: (errors) => {
+        console.error('❌ Erreur lors de la sauvegarde:', errors)
+        
+        let errorMessage = 'Erreur lors de la sauvegarde des range values'
+        if (errors.error) {
+          errorMessage = errors.error
+        }
+        alert(errorMessage)
+      },
+      onFinish: () => {
+        savingRangeValues.value[parameterName] = false
       }
-      cancelEditAdvanced('rangeValues', parameterName)
-    } else {
-      throw new Error(response.data.error)
-    }
+    })
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
-  } finally {
+    alert('Erreur: ' + error.message)
     savingRangeValues.value[parameterName] = false
   }
 }
@@ -699,21 +755,43 @@ const updateColumnRelease = async (parameter, releaseId) => {
     
     const finalReleaseId = releaseId === '' ? null : parseInt(releaseId)
     
-    const response = await axios.post(`/procedure/${props.procedureName}/parameter/${parameter.parameter_name}/release`, {
-      release_id: finalReleaseId
+    console.log('🔍 Update release:', {
+      procedureName: props.procedureName,
+      parameterName: parameter.parameter_name,
+      releaseId: finalReleaseId
     })
     
-    if (response.data.success) {
-      parameter.release_id = finalReleaseId
-      const selectedRelease = props.availableReleases.find(r => r.id === finalReleaseId)
-      parameter.release_version = selectedRelease ? selectedRelease.version_number : ''
-    } else {
-      throw new Error(response.data.error)
-    }
+    router.post(`/procedure/${props.procedureName}/parameter/${parameter.parameter_name}/release`, {
+      release_id: finalReleaseId
+    }, {
+      onSuccess: () => {
+        console.log('✅ Release mise à jour')
+        
+        // ✅ FORCER LE RECHARGEMENT des données Inertia
+        router.reload({ 
+          only: ['procedureDetails'],
+          preserveScroll: true,
+          onSuccess: () => {
+            alert('Release mise à jour avec succès')
+          }
+        })
+      },
+      onError: (errors) => {
+        console.error('❌ Erreur lors de la mise à jour de la release:', errors)
+        
+        let errorMessage = 'Erreur lors de la mise à jour de la release'
+        if (errors.error) {
+          errorMessage = errors.error
+        }
+        alert(errorMessage)
+      },
+      onFinish: () => {
+        updatingRelease.value[parameter.parameter_name] = false
+      }
+    })
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
-  } finally {
+    alert('Erreur: ' + error.message)
     updatingRelease.value[parameter.parameter_name] = false
   }
 }
@@ -797,4 +875,28 @@ onMounted(() => {
   console.log('🔍 [PROCEDURE] Can Edit:', canEdit.value)
   console.log('🔍 [PROCEDURE] Is Owner:', isOwner.value)
 })
+
+const successMessage = ref('')
+const errorMessage = ref('')
+const showMessages = ref(false)
+
+const showSuccessMessage = (message) => {
+  successMessage.value = message
+  errorMessage.value = ''
+  showMessages.value = true
+  setTimeout(() => {
+    showMessages.value = false
+    successMessage.value = ''
+  }, 3000)
+}
+
+const showErrorMessage = (message) => {
+  errorMessage.value = message
+  successMessage.value = ''
+  showMessages.value = true
+  setTimeout(() => {
+    showMessages.value = false
+    errorMessage.value = ''
+  }, 5000)
+}
 </script>

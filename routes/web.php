@@ -104,7 +104,7 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
     Route::get('/function/{functionName}/function/{parameterName}/audit-logs', [FunctionController::class, 'getAuditLogs'])->name('function.audit.logs');
 
     Route::get('/procedure/{procedureName}/details', [ProcedureController::class, 'details'])->name('procedure.details');
-    Route::get('/procedure/{procedureName}/parameter/{parameterName}/audit-logs', [ProcedureController::class, 'getAuditLogs'])->name('procedure.audit.logs');
+    Route::get('/procedure/{procedureName}/parameter/{parameterName}/audit-logs', [ProcedureController::class, 'getAuditLogs'])->name('procedure.parameter.audit-logs');
 
     Route::get('/trigger/{triggerName}/details', [TriggerController::class, 'details'])->name('trigger.details');
 
@@ -137,16 +137,32 @@ Route::middleware(['auth', 'project.permissions:write'])->group(function () {
 
     Route::post('/function/{functionName}/description', [FunctionController::class, 'saveDescription'])->name('function.saveDescription');
     Route::post('/function-parameter/{parameterId}/update-description', [FunctionController::class, 'saveParameterDescription'])->name('function.parameter.updateDescription');
-    Route::post('/function/{functionName}/function/{parameterName}/description', [FunctionController::class, 'updateColumnDescription'])->name('function.column.updateDescription');
-    Route::post('/function/{functionName}/function/{parameterName}/rangevalues', [FunctionController::class, 'updateColumnRangeValues'])->name('function.column.updateRangeValues');
-    Route::post('/function/{functionName}/function/{parameterName}/release', [FunctionController::class, 'updateColumnRelease']);
+    // Route::post('/function/{functionName}/function/{parameterName}/description', [FunctionController::class, 'updateColumnDescription'])->name('function.column.updateDescription');
+    // Route::post('/function/{functionName}/function/{parameterName}/rangevalues', [FunctionController::class, 'updateColumnRangeValues'])->name('function.column.updateRangeValues');
+    // Route::post('/function/{functionName}/function/{parameterName}/release', [FunctionController::class, 'updateColumnRelease']);
+    Route::post('/function/{functionName}/description', [FunctionController::class, 'updateDescription'])
+    ->name('function.update-description');
+    Route::post('/function/{functionName}/function/{parameterId}/description', [FunctionController::class, 'updateParameterDescription'])
+    ->name('function.update-parameter-description');
+// Routes AJAX pour les fonctions (retournent du JSON)
+    Route::post('/function/{functionName}/function/{parameterName}/range-values', [FunctionController::class, 'updateParameterRangeValues'])
+    ->name('function.update-parameter-range-values');
+    Route::post('/function/{functionName}/function/{parameterName}/release', [FunctionController::class, 'updateParameterRelease'])
+    ->name('function.update-parameter-release');
 
     Route::post('/procedure/{procedureName}/description', [ProcedureController::class, 'saveDescription'])->name('procedure.saveDescription');
     Route::post('/procedure-parameter/{parameterId}/update-description', [ProcedureController::class, 'saveParameterDescription'])->name('procedure.parameter.updateDescription');
     Route::post('/procedure/{procedureName}/save-all', [ProcedureController::class, 'saveAll'])->name('procedure.saveAll');
-    Route::post('/procedure/{procedureName}/parameter/{parameterName}/description', [ProcedureController::class, 'updateColumnDescription'])->name('procedure.column.updateDescription');
-    Route::post('/procedure/{procedureName}/parameter/{parameterName}/rangevalues', [ProcedureController::class, 'updateColumnRangeValues'])->name('procedure.column.updateRangeValues');
-    Route::post('/procedure/{procedureName}/parameter/{parameterName}/release', [ProcedureController::class, 'updateColumnRelease']);
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/description', [ProcedureController::class, 'updateColumnDescription'])
+    ->name('procedure.column.updateDescription');
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/rangevalues', [ProcedureController::class, 'updateColumnRangeValues'])
+    ->name('procedure.column.updateRangeValues');
+    Route::post('/procedure/{procedureName}/parameter/{parameterName}/release', [ProcedureController::class, 'updateParameterRelease'])
+    ->name('procedure.parameter.updateRelease');
+
+    Route::post('/procedure/{procedureName}/description', [ProcedureController::class, 'updateDescription'])
+    ->name('procedure.update-description');
+
 
     Route::post('/trigger/{triggerName}/description', [TriggerController::class, 'saveDescription'])->name('trigger.description');
     Route::post('/trigger/{triggerName}/save-all', [TriggerController::class, 'saveAll'])->name('trigger.saveall');

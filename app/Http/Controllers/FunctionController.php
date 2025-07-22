@@ -315,34 +315,34 @@ class FunctionController extends Controller
     }
 
     private function logAudit($dbId, $fcId, $columnName, $changeType, $oldData, $newData)
-    {
-        try {
-            $userId = Auth::id() ?? null;
-            
-            AuditLog::create([
-                'user_id' => $userId,
-                'db_id' => $dbId,
-                'fc_id' => $fcId,
-                'column_name' => $columnName,
-                'change_type' => $changeType,
-                'old_data' => $oldData,
-                'new_data' => $newData
-            ]);
-            
-            Log::info('Audit log créé', [
-                'user_id' => $userId,
-                'db_id' => $dbId,
-                'fc_id' => $fcId,
-                'column_name' => $columnName,
-                'change_type' => $changeType
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error while creating Audit log', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
+{
+    try {
+        $userId = auth()->id() ?? null;
+        
+        AuditLog::create([
+            'user_id' => $userId,
+            'db_id' => $dbId,
+            'fc_id' => $fcId,
+            'column_name' => $columnName,
+            'change_type' => $changeType,
+            'old_data' => $oldData,
+            'new_data' => $newData
+        ]);
+        
+        Log::info('Audit log créé pour fonction', [
+            'user_id' => $userId,
+            'db_id' => $dbId,
+            'fc_id' => $fcId,
+            'column_name' => $columnName,
+            'change_type' => $changeType
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de la création de l\'audit log', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
     }
+}
 
     public function getAuditLogs(Request $request, $functionName, $columnName)
     {
@@ -701,4 +701,261 @@ class FunctionController extends Controller
             ], 500);
         }
     }
+
+    public function updateDescription(Request $request, $functionName)
+{
+    try {
+        if ($error = $this->requirePermission($request, 'write')) {
+            return $error;
+        }
+
+        $request->validate([
+            'description' => 'nullable|string|max:2000'
+        ]);
+
+        $dbId = session('current_db_id');
+        if (!$dbId) {
+            return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
+        }
+
+        // Récupérer la description de la fonction
+        $functionDesc = FunctionDescription::where('dbid', $dbId)
+            ->where('functionname', $functionName)
+            ->first();
+
+        if (!$functionDesc) {
+            return back()->withErrors(['error' => 'Fonction non trouvée']);
+        }
+
+        // Vérifier les permissions
+        $currentProject = session('current_project', []);
+        $canEdit = $currentProject['is_owner'] ?? false;
+        
+        if (!$canEdit) {
+            return back()->withErrors(['error' => 'Permissions insuffisantes']);
+        }
+
+        // Mettre à jour la description
+        $oldDescription = $functionDesc->description;
+        $functionDesc->description = $request->input('description');
+        $functionDesc->save();
+
+        // Log de l'audit
+        $this->logAudit(
+            $dbId, 
+            $functionDesc->id, 
+            'description', 
+            'update', 
+            $oldDescription, 
+            $request->input('description')
+        );
+
+        return back()->with('success', 'Description de la fonction mise à jour avec succès');
+
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de la mise à jour de la description de la fonction', [
+            'function_name' => $functionName,
+            'error' => $e->getMessage()
+        ]);
+        
+        return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Mise à jour de la description d'un paramètre (pour Inertia)
+ */
+public function updateParameterDescription(Request $request, $functionName, $parameterId)
+{
+    try {
+        if ($error = $this->requirePermission($request, 'write')) {
+            return $error;
+        }
+
+        $request->validate([
+            'description' => 'nullable|string|max:2000'
+        ]);
+
+        $dbId = session('current_db_id');
+        if (!$dbId) {
+            return back()->withErrors(['error' => 'Aucune base de données sélectionnée']);
+        }
+
+        // Récupérer la fonction
+        $functionDesc = FunctionDescription::where('dbid', $dbId)
+            ->where('functionname', $functionName)
+            ->first();
+
+        if (!$functionDesc) {
+            return back()->withErrors(['error' => 'Fonction non trouvée']);
+        }
+
+        // Récupérer le paramètre
+        $parameter = FuncParameter::where('id_func', $functionDesc->id)
+            ->where('id', $parameterId)
+            ->first();
+
+        if (!$parameter) {
+            return back()->withErrors(['error' => 'Paramètre non trouvé']);
+        }
+
+        // Vérifier les permissions
+        $currentProject = session('current_project', []);
+        $canEdit = $currentProject['is_owner'] ?? false;
+        
+        if (!$canEdit) {
+            return back()->withErrors(['error' => 'Permissions insuffisantes']);
+        }
+
+        // Sauvegarder l'ancienne valeur pour l'audit
+        $oldDescription = $parameter->description;
+
+        // Mettre à jour la description
+        $parameter->description = $request->input('description');
+        $parameter->save();
+
+        // Log de l'audit
+        $this->logAudit(
+            $dbId, 
+            $functionDesc->id, 
+            $parameter->name . '_description', 
+            'update', 
+            $oldDescription, 
+            $request->input('description')
+        );
+
+        return back()->with('success', 'Description du paramètre mise à jour avec succès');
+
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de la mise à jour de la description du paramètre', [
+            'function_name' => $functionName,
+            'parameter_id' => $parameterId,
+            'error' => $e->getMessage()
+        ]);
+        
+        return back()->withErrors(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()]);
+    }
+}
+
+
+// ✅ AJOUTEZ aussi ces méthodes pour Range Values et Release (versions axios)
+public function updateParameterRangeValues(Request $request, $functionName, $parameterName)
+{
+    try {
+        if ($error = $this->requirePermission($request, 'write')) {
+            return response()->json(['error' => 'Permissions insuffisantes'], 403);
+        }
+
+        $request->validate([
+            'rangevalues' => 'nullable|string|max:2000'
+        ]);
+
+        $dbId = session('current_db_id');
+        if (!$dbId) {
+            return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+        }
+
+        $functionDesc = FunctionDescription::where('dbid', $dbId)
+            ->where('functionname', $functionName)
+            ->first();
+
+        if (!$functionDesc) {
+            return response()->json(['error' => 'Fonction non trouvée'], 404);
+        }
+
+        $parameter = FuncParameter::where('id_func', $functionDesc->id)
+            ->where('name', $parameterName)
+            ->first();
+
+        if (!$parameter) {
+            return response()->json(['error' => 'Paramètre non trouvé'], 404);
+        }
+
+        $oldRangeValues = $parameter->range_value;
+        $parameter->range_value = $request->input('rangevalues');
+        $parameter->save();
+
+        // Log de l'audit
+        $this->logAudit(
+            $dbId, 
+            $functionDesc->id, 
+            $parameterName . '_rangevalues', 
+            'update', 
+            $oldRangeValues, 
+            $request->input('rangevalues')
+        );
+
+        return response()->json(['success' => true]);
+
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de la mise à jour des range values', [
+            'function_name' => $functionName,
+            'parameter_name' => $parameterName,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()], 500);
+    }
+}
+
+public function updateParameterRelease(Request $request, $functionName, $parameterName)
+{
+    try {
+        if ($error = $this->requirePermission($request, 'write')) {
+            return response()->json(['error' => 'Permissions insuffisantes'], 403);
+        }
+
+        $request->validate([
+            'release_id' => 'nullable|exists:release,id'
+        ]);
+
+        $dbId = session('current_db_id');
+        if (!$dbId) {
+            return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+        }
+
+        $functionDesc = FunctionDescription::where('dbid', $dbId)
+            ->where('functionname', $functionName)
+            ->first();
+
+        if (!$functionDesc) {
+            return response()->json(['error' => 'Fonction non trouvée'], 404);
+        }
+
+        $parameter = FuncParameter::where('id_func', $functionDesc->id)
+            ->where('name', $parameterName)
+            ->first();
+
+        if (!$parameter) {
+            return response()->json(['error' => 'Paramètre non trouvé'], 404);
+        }
+
+        $oldReleaseId = $parameter->release_id;
+        $newReleaseId = $request->input('release_id');
+        
+        $parameter->release_id = $newReleaseId;
+        $parameter->save();
+
+        // Log de l'audit
+        $this->logAudit(
+            $dbId, 
+            $functionDesc->id, 
+            $parameterName . '_release', 
+            'update', 
+            $oldReleaseId, 
+            $newReleaseId
+        );
+
+        return response()->json(['success' => true]);
+
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de la mise à jour de la release', [
+            'function_name' => $functionName,
+            'parameter_name' => $parameterName,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()], 500);
+    }
+}
 }
