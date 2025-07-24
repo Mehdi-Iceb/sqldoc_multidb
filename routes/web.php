@@ -43,7 +43,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     
     // Routes existantes pour les projets supprimés 
     Route::get('/projects/deleted', [AdminController::class, 'getDeletedProjects'])->name('admin.projects.deleted');
-    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject'])->name('admin.projects.restore');;
+    Route::post('/projects/{id}/restore', [AdminController::class, 'restoreProject'])->name('admin.projects.restore');
     Route::get('/projects/stats', [AdminController::class, 'getProjectStats'])->name('admin.projects.stats');
     Route::get('/admin/projects/all', [AdminController::class, 'getAllProjects']);
     Route::get('/projects/{id}/deletion-preview', [ProjectController::class, 'getProjectDeletionPreview']);
