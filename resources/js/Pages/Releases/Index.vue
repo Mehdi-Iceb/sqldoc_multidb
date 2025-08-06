@@ -406,7 +406,7 @@ const saveRelease = async () => {
     let response;
     if (editingReleaseId.value) {
       // Mise à jour d'une version existante
-      response = await axios.put(`/api/releases/${editingReleaseId.value}`, newRelease.value);
+      response = await axios.post(`/api/releases/${editingReleaseId.value}`, newRelease.value);
     } else {
       // Création d'une nouvelle version
       response = await axios.post('/api/releases', newRelease.value);

@@ -172,7 +172,7 @@ Route::middleware(['auth', 'project.permissions:write'])->group(function () {
         Route::get('/create', [ReleaseController::class, 'create'])->name('create');
         Route::post('/', [ReleaseController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [ReleaseController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [ReleaseController::class, 'update'])->name('update');
+        Route::post('/{id}', [ReleaseController::class, 'update'])->name('update');
         Route::delete('/{id}', [ReleaseController::class, 'destroy'])->name('destroy');
     });
 });
@@ -198,7 +198,7 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::middleware('project.permissions:write')->group(function () {
         Route::post('/table/{tableName}/column/{columnName}/release', [TableController::class, 'updateColumnRelease']);
         Route::post('/releases', [ReleaseApiController::class, 'store'])->name('api.releases.store');
-        Route::put('/releases/{id}', [ReleaseApiController::class, 'update'])->name('api.releases.update');
+        Route::post('/releases/{id}', [ReleaseApiController::class, 'update'])->name('api.releases.update');
         Route::delete('/releases/{id}', [ReleaseApiController::class, 'destroy'])->name('api.releases.destroy');
         Route::post('/releases/assign-to-column', [ReleaseApiController::class, 'assignReleaseToColumn'])->name('api.releases.assign');
         Route::post('/releases/remove-from-column', [ReleaseApiController::class, 'removeReleaseFromColumn'])->name('api.releases.remove');
