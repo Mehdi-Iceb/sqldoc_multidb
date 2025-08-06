@@ -16,13 +16,13 @@
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
         <!-- Message si aucun projet sélectionné -->
-        <div v-if="!currentProject" class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-sm">
+        <div v-if="!loading && !currentProject" class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-sm">
           <div class="flex items-center">
             <svg class="h-5 w-5 text-yellow-400 mr-3" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
             </svg>
             <div class="text-yellow-700">
-              Aucun projet sélectionné. Veuillez vous connecter à un projet pour gérer ses versions.
+              No project selected. Please select a project to access the release page.
             </div>
           </div>
         </div>
@@ -304,10 +304,16 @@
 import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+import { useToast } from '@/Composables/useToast'
+
+// Utilisation du toast - renommage pour éviter les conflits
+const { success, error: showError, warning, info } = useToast()
+
+// Variable réactive pour les erreurs de chargement
+const error = ref(null);
 
 // États
 const loading = ref(true);
-const error = ref(null);
 const releases = ref([]);
 const uniqueVersions = ref([]);
 const currentProject = ref(null); // Projet actuel depuis la session
@@ -337,7 +343,7 @@ onMounted(async () => {
     await loadReleases();
   } catch (err) {
     console.error('Erreur lors du chargement des données:', err);
-    error.value = `Erreur: ${err.response?.data?.error || err.message}`;
+    error(`Erreur de chargement: ${err.response?.data?.error || err.message}`);
   } finally {
     loading.value = false;
   }
@@ -346,19 +352,29 @@ onMounted(async () => {
 // Fonction pour charger les versions
 const loadReleases = async () => {
   try {
-    console.log('Tentative de chargement des releases...');
+    console.log('🔍 DÉBUT loadReleases');
     const response = await axios.get('/api/releases');
-    console.log('Réponse reçue:', response.data);
+    console.log('🔍 Réponse complète:', response.data);
     
     if (response.data && typeof response.data === 'object') {
       releases.value = response.data.releases || [];
       uniqueVersions.value = response.data.uniqueVersions || [];
       currentProject.value = response.data.currentProject || null;
+
+      // DEBUG TRÈS DÉTAILLÉ
+      console.log('🔍 APRÈS ASSIGNATION:');
+      console.log('  - currentProject.value:', currentProject.value);
+      console.log('  - Type:', typeof currentProject.value);
+      console.log('  - === null:', currentProject.value === null);
+      console.log('  - === undefined:', currentProject.value === undefined);
+      console.log('  - Truthy/Falsy:', !!currentProject.value);
+      console.log('  - JSON stringify:', JSON.stringify(currentProject.value));
+      
     } else {
       throw new Error('Format de réponse inattendu');
     }
   } catch (err) {
-    console.error('Erreur détaillée:', err);
+    console.error('🔍 ERREUR dans loadReleases:', err);
     throw err;
   }
 };
@@ -385,6 +401,7 @@ const editRelease = (release) => {
     created_at: release.created_at
   };
   showAddReleaseModal.value = true;
+  info(`Édition de la release ${release.version_number}`);
 };
 
 // Fonction pour fermer le modal
@@ -403,6 +420,12 @@ const saveRelease = async () => {
   try {
     savingRelease.value = true;
     
+    // Validation simple
+    if (!newRelease.value.version_number?.trim()) {
+      warning('Le numéro de version est requis');
+      return;
+    }
+    
     let response;
     if (editingReleaseId.value) {
       // Mise à jour d'une version existante
@@ -419,14 +442,22 @@ const saveRelease = async () => {
       // Fermer le modal
       closeReleaseModal();
       
-      // Notification de succès
-      alert(editingReleaseId.value ? 'Release updated successfully' : 'Release created successfully');
+      // Toast de succès avec emoji et message personnalisé
+      success(
+        editingReleaseId.value 
+          ? `🎯 Release ${newRelease.value.version_number} mise à jour avec succès!`
+          : `🚀 Release ${newRelease.value.version_number} créée avec succès!`
+      );
     } else {
       throw new Error(response.data.error || 'Erreur lors de l\'opération');
     }
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
-    alert('Error: ' + (error.response?.data?.error || error.message));
+  } catch (err) {
+    console.error('Erreur lors de la sauvegarde:', err);
+    
+    // Toast d'erreur avec message détaillé
+    showError(
+      `❌ Erreur lors de la sauvegarde: ${err.response?.data?.error || err.message}`
+    );
   } finally {
     savingRelease.value = false;
   }
@@ -436,6 +467,7 @@ const saveRelease = async () => {
 const confirmDeleteRelease = (release) => {
   releaseToDelete.value = release;
   showDeleteConfirmModal.value = true;
+  warning(`Vous êtes sur le point de supprimer la release ${release.version_number}`);
 };
 
 // Fonction pour supprimer une version
@@ -446,6 +478,8 @@ const deleteRelease = async () => {
     const response = await axios.delete(`/api/releases/${releaseToDelete.value.id}`);
     
     if (response.data.success) {
+      const deletedVersion = releaseToDelete.value.version_number;
+      
       // Recharger les données
       await loadReleases();
       
@@ -453,16 +487,27 @@ const deleteRelease = async () => {
       showDeleteConfirmModal.value = false;
       releaseToDelete.value = null;
       
-      // Notification de succès
-      alert('Release deleted successfully');
+      // Toast de succès pour la suppression
+      success(`🗑️ Release ${deletedVersion} supprimée avec succès`);
     } else {
       throw new Error(response.data.error || 'Erreur lors de la suppression');
     }
-  } catch (error) {
-    console.error('Erreur lors de la suppression:', error);
-    alert('Error: ' + (error.response?.data?.error || error.message));
+  } catch (err) {
+    console.error('Erreur lors de la suppression:', err);
+    
+    // Toast d'erreur pour la suppression
+    error(
+      `❌ Erreur lors de la suppression: ${err.response?.data?.error || err.message}`
+    );
   } finally {
     deletingRelease.value = false;
   }
+};
+
+// Fonction pour annuler la suppression
+const cancelDelete = () => {
+  showDeleteConfirmModal.value = false;
+  releaseToDelete.value = null;
+  info('Suppression annulée');
 };
 </script>

@@ -20,18 +20,13 @@
       </div>
     </div>
   </div>
+  <ToastContainer />
 </template>
 
 <script setup>
 import Navigation from './Navigation.vue';
 import TopMenu from "./TopMenu.vue";
 import NavigationMobile from './NavigationMobile.vue';
+import ToastContainer from '@/Components/ToastContainer.vue'
 
-// SUPPRESSION COMPLÈTE de la logique de chargement AJAX
-// Les données sont maintenant fournies par AppServiceProvider via les props partagées
-
-// Si vous avez besoin de debug, ajoutez ceci temporairement :
-// import { usePage } from '@inertiajs/vue3'
-// const page = usePage()
-// console.log('AuthenticatedLayout - Navigation data available:', !!page.props.navigationData)
 </script>
