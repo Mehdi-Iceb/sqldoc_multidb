@@ -168,7 +168,7 @@ class ReleaseController extends Controller
             // Valider les données
             $validated = $request->validate([
                 'id_table_structure' => 'required|exists:table_structure,id',
-                'version_number' => 'required|string|max:10'
+                'version_number' => 'required|string'
             ]);
 
             // Vérifier si cette colonne a déjà une version identique
