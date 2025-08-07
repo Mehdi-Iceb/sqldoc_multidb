@@ -48,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
                     ] : null,
                 ];
             },
+
+            'currentProject' => function () {
+                return session('current_project');
+            },
             
             // Structure de navigation (SIMPLIFIÉE)
             'navigationData' => function () {

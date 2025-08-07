@@ -384,8 +384,88 @@ class TableController extends Controller
         }
     }
 
+    public function saveDescription(Request $request, $tableName)
+    {
+        try {
+            // Debug - voir ce qui arrive dans la requête
+            Log::info('Données reçues:', [
+                'tableName' => $tableName,
+                'request_data' => $request->all(),
+                'description' => $request->input('description'),
+                'session_db_id' => session('current_db_id')
+            ]);
+
+            // Valider les données
+            $validated = $request->validate([
+                'description' => 'nullable|string|max:5000' // Ajout d'une limite
+            ]);
+
+            // Obtenir l'ID de la base de données actuelle depuis la session
+            $dbId = session('current_db_id');
+            if (!$dbId) {
+                Log::error('Aucune base de données dans la session');
+                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+            }
+
+            // Récupérer la description de la table
+            $tableDesc = TableDescription::where('dbid', $dbId)
+                ->where('tablename', $tableName)
+                ->first();
+
+            if (!$tableDesc) {
+                Log::error('Table non trouvée:', ['dbid' => $dbId, 'tablename' => $tableName]);
+                
+                // Créer une nouvelle entrée si elle n'existe pas
+                $tableDesc = new TableDescription();
+                $tableDesc->dbid = $dbId;
+                $tableDesc->tablename = $tableName;
+            }
+
+            // Log de l'état avant modification
+            Log::info('Avant modification:', [
+                'ancien_description' => $tableDesc->description,
+                'nouveau_description' => $validated['description']
+            ]);
+
+            // Mettre à jour la description de la table
+            $tableDesc->description = $validated['description'];
+            $result = $tableDesc->save();
+
+            // Log du résultat
+            Log::info('Résultat sauvegarde:', [
+                'save_result' => $result,
+                'description_finale' => $tableDesc->description,
+                'table_id' => $tableDesc->id ?? 'nouveau'
+            ]);
+
+            if ($result) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Description sauvegardée avec succès',
+                    'description' => $tableDesc->description,
+                    'tableDetails' => [
+                        'description' => $tableDesc->description,
+                        // Ajoutez d'autres champs si nécessaire
+                    ]
+                ]);
+            } else {
+                return response()->json(['error' => 'Échec de la sauvegarde'], 500);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Erreur de validation:', $e->errors());
+            return response()->json(['error' => 'Données invalides: ' . implode(', ', $e->errors()['description'] ?? [])], 422);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la sauvegarde:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Erreur lors de la sauvegarde de la description: ' . $e->getMessage()], 500);
+        }
+    }
+
     /**
-     * Met à jour la description d'une colonne spécifique
+     * Mise à jour la description d'une colonne spécifique
      */
     public function updateColumnDescription(Request $request, $tableName, $columnName)
     {
@@ -803,7 +883,7 @@ class TableController extends Controller
         try {
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
-            \Log::info('API - Récupération des détails pour tableName: ' . $tableName . ', dbId: ' . $dbId);
+            Log::info('API - Récupération des détails pour tableName: ' . $tableName . ', dbId: ' . $dbId);
             
             if (!$dbId) {
                 return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
@@ -884,7 +964,7 @@ class TableController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur dans TableController::apiDetails', [
+            Log::error('Erreur dans TableController::apiDetails', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

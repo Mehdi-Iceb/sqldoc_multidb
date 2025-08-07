@@ -28,7 +28,7 @@
         <div class="space-y-8">
 
           <!-- Description de la table -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6" :key="`description-${tableName}`">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">Table description</h3>
@@ -42,7 +42,7 @@
                   <span v-else class="flex items-center">
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Recording...
                   </span>
@@ -55,6 +55,7 @@
             <div class="p-6">
               <textarea
                 v-model="form.description"
+                :key="`textarea-${tableName}`"
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 :class="{ 'opacity-50 cursor-not-allowed bg-gray-100': !tableDetails.can_edit }"
@@ -847,10 +848,10 @@
                     {{ log.change_type }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs overflow-y-auto whitespace-pre-wrap break-words"> 
                   {{ log.old_data || '-' }}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs overflow-y-auto whitespace-pre-wrap break-words">
                   {{ log.new_data || '-' }}
                 </td>
               </tr>
@@ -863,9 +864,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'  // ✅ Ajout de router
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import axios from 'axios'
@@ -954,14 +955,125 @@ const loadingAuditLogs = ref(false)
 const auditLogs = ref([])
 const currentColumn = ref('')
 
-// ✅ Initialisation simplifiée
+// ✅ Fonction de réinitialisation complète
+const resetComponent = () => {
+  console.log('🔄 Réinitialisation complète du composant pour table:', props.tableName)
+  
+  // Réinitialiser le formulaire
+  form.value = {
+    description: props.tableDetails.description || ''
+  }
+  
+  // Réinitialiser tous les états d'édition
+  editingDescription.value = {}
+  editingPossibleValues.value = {}
+  editingDataType.value = {}
+  editingDescriptionValue.value = ''
+  editingPossibleValuesValue.value = ''
+  editingDataTypeValue.value = ''
+  
+  // Réinitialiser les états de sauvegarde
+  savingDataType.value = {}
+  savingDescription.value = {}
+  savingPossibleValues.value = {}
+  updatingNullable.value = {}
+  updatingRelease.value = {}
+  
+  // Fermer tous les modaux
+  showAddColumnModal.value = false
+  showAddRelationModal.value = false
+  showAuditModal.value = false
+  
+  // Réinitialiser les nouveaux objets
+  newColumn.value = {
+    column_name: '',
+    data_type: '',
+    is_nullable: false,
+    key_type: 'none',
+    description: '',
+    possible_values: '',
+    release: ''
+  }
+  
+  newRelation.value = {
+    constraint_name: '',
+    column_name: '',
+    referenced_table: '',
+    referenced_column: '',
+    delete_rule: 'NO ACTION',
+    update_rule: 'NO ACTION'
+  }
+  
+  // Réinitialiser l'audit
+  auditLogs.value = []
+  currentColumn.value = ''
+  
+  console.log('✅ Composant réinitialisé avec description:', form.value.description)
+}
+
+// ✅ Initialisation avec Inertia
 onMounted(() => {
   form.value.description = props.tableDetails.description || ''
   console.log('🔍 [TABLE] Composant monté avec les données:', props.tableDetails)
-  console.log('🔍 [TABLE] Releases disponibles:', props.availableReleases)
+  console.log('🔍 [TABLE] Table name:', props.tableName)
 })
 
-// ✅ Fonctions d'édition
+// ✅ IMPORTANT: Surveiller les changements de table pour Inertia
+watch(() => props.tableName, (newTableName, oldTableName) => {
+  console.log('🔄 Changement de table Inertia:', { ancien: oldTableName, nouveau: newTableName })
+  
+  if (newTableName !== oldTableName && oldTableName !== undefined) {
+    resetComponent()
+  }
+}, { immediate: false })
+
+// ✅ Surveiller les changements des détails de la table
+watch(() => props.tableDetails, (newTableDetails) => {
+  console.log('🔄 Détails de table mis à jour via Inertia:', newTableDetails)
+  form.value.description = newTableDetails.description || ''
+}, { deep: true, immediate: true })
+
+// ✅ Fonction de sauvegarde avec Inertia
+const saveTableStructure = async () => {
+  try {
+    saving.value = true
+    
+    const tableData = {
+      description: form.value.description || null,
+    }
+    
+    const response = await axios.post(`/table/${props.tableName}/save-description`, tableData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    
+    if (response.data.success) {
+      // ✅ Recharger les données avec Inertia
+      router.reload({
+        only: ['tableDetails'], // Ne recharger que les détails de la table
+        preserveScroll: true,
+        onSuccess: () => {
+          console.log('✅ Données rechargées avec succès')
+          alert('Description enregistrée avec succès')
+        },
+        onError: (errors) => {
+          console.error('❌ Erreur lors du rechargement:', errors)
+        }
+      })
+    } else {
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde:', error)
+    alert('Erreur: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+// ✅ Reste de vos fonctions (ne changent pas)
 const startEdit = (type, columnName, currentValue) => {
   if (!props.tableDetails.can_edit) {
     alert('Vous n\'avez pas les permissions pour modifier cette table')
@@ -990,36 +1102,6 @@ const cancelEdit = (type, columnName) => {
   } else if (type === 'dataType') {
     editingDataType.value = { [columnName]: false }
     editingDataTypeValue.value = ''
-  }
-}
-
-// ✅ Fonctions de sauvegarde
-const saveTableStructure = async () => {
-  try {
-    saving.value = true
-    
-    const tableData = {
-      description: form.value.description,
-      language: 'fr',
-      columns: props.tableDetails.columns.map(column => ({
-        column: column.column_name,
-        description: column.description || null,
-        rangevalues: column.possible_values || null
-      }))
-    }
-    
-    const response = await axios.post(`/table/${props.tableName}/save-structure`, tableData)
-    
-    if (response.data.success) {
-      alert('Descriptions et valeurs possibles enregistrées avec succès')
-    } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
-    }
-  } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
-  } finally {
-    saving.value = false
   }
 }
 
@@ -1160,7 +1242,6 @@ const updateColumnRelease = async (column, releaseId) => {
   }
 }
 
-// ✅ Fonctions pour les modaux
 const addNewColumn = async () => {
   try {
     if (!props.tableDetails.can_add_columns) {
@@ -1194,8 +1275,11 @@ const addNewColumn = async () => {
         possible_values: '',
         release: ''
       }
-      // Recharger la page pour voir la nouvelle colonne
-      window.location.reload()
+      // ✅ Utiliser Inertia au lieu de window.location.reload()
+      router.reload({
+        only: ['tableDetails'],
+        preserveScroll: true
+      })
     } else {
       throw new Error(response.data.error)
     }
@@ -1228,8 +1312,11 @@ const addNewRelation = async () => {
         delete_rule: 'NO ACTION',
         update_rule: 'NO ACTION'
       }
-      // Recharger la page pour voir la nouvelle relation
-      window.location.reload()
+      // ✅ Utiliser Inertia au lieu de window.location.reload()
+      router.reload({
+        only: ['tableDetails'],
+        preserveScroll: true
+      })
     } else {
       throw new Error(response.data.error)
     }
@@ -1241,7 +1328,6 @@ const addNewRelation = async () => {
   }
 }
 
-// ✅ Fonctions pour l'audit
 const showAuditLogs = async (columnName) => {
   showAuditModal.value = true
   loadingAuditLogs.value = true

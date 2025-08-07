@@ -119,7 +119,7 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
 // ROUTES AVEC PERMISSIONS D'ÉCRITURE
 
 Route::middleware(['auth', 'project.permissions:write'])->group(function () {
-    Route::post('/table/{tableName}/save-structure', [TableController::class, 'saveStructure'])->name('table.saveStructure');
+    Route::post('/table/{tableName}/save-description', [TableController::class, 'saveDescription'])->name('table.savedescription');
     Route::post('/table/{tableName}/column/{columnName}/description', [TableController::class, 'updateColumnDescription'])->name('table.column.updateDescription');
     Route::post('/table/{tableName}/column/{columnName}/possible-values', [TableController::class, 'updateColumnPossibleValues'])->name('table.column.updatePossibleValues');
     Route::post('/table/{tableName}/column/{columnName}/properties', [TableController::class, 'updateColumnProperties'])->name('table.column.properties');

@@ -22,12 +22,25 @@
           </NavLink>
         </li>
 
-        <li v-if="$page.props.auth.user.role === 'admin'" class="relative px-6 py-3">
+        <li
+          v-if="$page.props.auth.user.role === 'admin' && $page.props.currentProject"
+          class="relative px-6 py-3"
+        >
           <NavLink :href="route('releases.index')" :active="route().current('releases.index')">
             <template #icon>
-              <svg class="w-5 h-5" aria-hidden="true" fill="none" stroke-linecap="round"
-                  stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              <svg
+                class="w-5 h-5"
+                aria-hidden="true"
+                fill="none"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
               </svg>
             </template>
             Releases
@@ -133,7 +146,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2" flex-shrink-0 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
                   <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
                   <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
@@ -276,7 +289,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import NavLink from '@/Components/NavLink.vue'
 import { Link, router } from '@inertiajs/vue3'
 import { usePage } from '@inertiajs/vue3'
@@ -298,7 +311,7 @@ const isOpen = ref({
 })
 
 // État pour la recherche et filtres
-const searchQuery = ref('')
+const searchQuery = ref(new URLSearchParams(window.location.search).get('search') || '')
 const activeFilters = ref(['tables', 'views', 'functions', 'procedures', 'triggers'])
 
 // Mode debug (à activer en développement)
@@ -414,6 +427,15 @@ const filteredTriggers = computed(() => {
   }
   
   return triggers
+})
+
+watch(searchQuery, (newValue) => {
+  router.get(window.location.pathname, { search: newValue }, {
+    preserveScroll: true,
+    preserveState: true,
+    replace: true,
+    only: ['navigationData'], // si tu veux limiter la charge
+  })
 })
 
 // Fonction pour rafraîchir la navigation
