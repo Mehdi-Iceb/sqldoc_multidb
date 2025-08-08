@@ -866,12 +866,16 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Link, router } from '@inertiajs/vue3'  // ✅ Ajout de router
+import { Link, router } from '@inertiajs/vue3'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios'
 
-// ✅ Props optimisés avec valeurs par défaut
+//  Utilisation du toast - renommage pour éviter les conflits
+const { success, error: showError, warning, info } = useToast()
+
+//  Props optimisés avec valeurs par défaut
 const props = defineProps({
   tableName: {
     type: String,
@@ -904,7 +908,7 @@ const props = defineProps({
   }
 })
 
-// ✅ Variables réactives simplifiées
+//  Variables réactives simplifiées
 const saving = ref(false)
 const form = ref({
   description: props.tableDetails.description || ''
@@ -955,7 +959,7 @@ const loadingAuditLogs = ref(false)
 const auditLogs = ref([])
 const currentColumn = ref('')
 
-// ✅ Fonction de réinitialisation complète
+//  Fonction de réinitialisation complète
 const resetComponent = () => {
   console.log('🔄 Réinitialisation complète du composant pour table:', props.tableName)
   
@@ -1011,14 +1015,14 @@ const resetComponent = () => {
   console.log('✅ Composant réinitialisé avec description:', form.value.description)
 }
 
-// ✅ Initialisation avec Inertia
+//  Initialisation avec Inertia
 onMounted(() => {
   form.value.description = props.tableDetails.description || ''
   console.log('🔍 [TABLE] Composant monté avec les données:', props.tableDetails)
   console.log('🔍 [TABLE] Table name:', props.tableName)
 })
 
-// ✅ IMPORTANT: Surveiller les changements de table pour Inertia
+//  IMPORTANT: Surveiller les changements de table pour Inertia
 watch(() => props.tableName, (newTableName, oldTableName) => {
   console.log('🔄 Changement de table Inertia:', { ancien: oldTableName, nouveau: newTableName })
   
@@ -1027,13 +1031,13 @@ watch(() => props.tableName, (newTableName, oldTableName) => {
   }
 }, { immediate: false })
 
-// ✅ Surveiller les changements des détails de la table
+//  Surveiller les changements des détails de la table
 watch(() => props.tableDetails, (newTableDetails) => {
   console.log('🔄 Détails de table mis à jour via Inertia:', newTableDetails)
   form.value.description = newTableDetails.description || ''
 }, { deep: true, immediate: true })
 
-// ✅ Fonction de sauvegarde avec Inertia
+//  Fonction de sauvegarde avec Inertia et Toast
 const saveTableStructure = async () => {
   try {
     saving.value = true
@@ -1050,16 +1054,18 @@ const saveTableStructure = async () => {
     })
     
     if (response.data.success) {
-      // ✅ Recharger les données avec Inertia
+      //  Recharger les données avec Inertia
       router.reload({
-        only: ['tableDetails'], // Ne recharger que les détails de la table
+        only: ['tableDetails'],
         preserveScroll: true,
         onSuccess: () => {
           console.log('✅ Données rechargées avec succès')
-          alert('Description enregistrée avec succès')
+          //  Toast de succès avec emoji
+          success(`📝 Description de la table ${props.tableName} enregistrée avec succès!`)
         },
         onError: (errors) => {
           console.error('❌ Erreur lors du rechargement:', errors)
+          showError('❌ Erreur lors du rechargement des données')
         }
       })
     } else {
@@ -1067,28 +1073,33 @@ const saveTableStructure = async () => {
     }
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur au lieu d'alert
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     saving.value = false
   }
 }
 
-// ✅ Reste de vos fonctions (ne changent pas)
+//  Fonctions d'édition avec Toast
 const startEdit = (type, columnName, currentValue) => {
   if (!props.tableDetails.can_edit) {
-    alert('Vous n\'avez pas les permissions pour modifier cette table')
+    //  Toast de warning au lieu d'alert
+    warning('🚫 Vous n\'avez pas les permissions pour modifier cette table')
     return
   }
   
   if (type === 'description') {
     editingDescription.value = { [columnName]: true }
     editingDescriptionValue.value = currentValue || ''
+    info(`✏️ Édition de la description de la colonne ${columnName}`)
   } else if (type === 'possibleValues') {
     editingPossibleValues.value = { [columnName]: true }
     editingPossibleValuesValue.value = currentValue || ''
+    info(`📋 Édition des valeurs possibles de la colonne ${columnName}`)
   } else if (type === 'dataType') {
     editingDataType.value = { [columnName]: true }
     editingDataTypeValue.value = currentValue || ''
+    info(`🔧 Édition du type de données de la colonne ${columnName}`)
   }
 }
 
@@ -1103,6 +1114,7 @@ const cancelEdit = (type, columnName) => {
     editingDataType.value = { [columnName]: false }
     editingDataTypeValue.value = ''
   }
+  info('↩️ Édition annulée')
 }
 
 const saveDescription = async (columnName) => {
@@ -1119,12 +1131,15 @@ const saveDescription = async (columnName) => {
         column.description = editingDescriptionValue.value
       }
       cancelEdit('description', columnName)
+      //  Toast de succès
+      success(`✅ Description de la colonne ${columnName} mise à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingDescription.value[columnName] = false
   }
@@ -1144,12 +1159,15 @@ const savePossibleValues = async (columnName) => {
         column.possible_values = editingPossibleValuesValue.value
       }
       cancelEdit('possibleValues', columnName)
+      //  Toast de succès
+      success(` Valeurs possibles de la colonne ${columnName} mises à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingPossibleValues.value[columnName] = false
   }
@@ -1173,12 +1191,15 @@ const saveDataType = async (columnName) => {
         column.data_type = editingDataTypeValue.value
       }
       cancelEdit('dataType', columnName)
+      //  Toast de succès
+      success(`🔧 Type de données de la colonne ${columnName} mis à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingDataType.value[columnName] = false
   }
@@ -1206,12 +1227,15 @@ const updateNullable = async (column, isNullable) => {
     
     if (response.data.success) {
       column.is_nullable = isNullable
+      //  Toast de succès discret
+      success(`✅ Propriété nullable de ${column.column_name} mise à jour`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de la mise à jour: ${error.response?.data?.error || error.message}`)
   } finally {
     updatingNullable.value[column.column_name] = false
   }
@@ -1231,12 +1255,17 @@ const updateColumnRelease = async (column, releaseId) => {
       column.release_id = finalReleaseId
       const selectedRelease = props.availableReleases.find(r => r.id === finalReleaseId)
       column.release_version = selectedRelease ? selectedRelease.version_number : ''
+      
+      //  Toast de succès avec info de la release
+      const releaseInfo = selectedRelease ? selectedRelease.version_number : 'aucune'
+      success(`🚀 Release de ${column.column_name} mise à jour: ${releaseInfo}`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de la mise à jour: ${error.response?.data?.error || error.message}`)
   } finally {
     updatingRelease.value[column.column_name] = false
   }
@@ -1245,7 +1274,19 @@ const updateColumnRelease = async (column, releaseId) => {
 const addNewColumn = async () => {
   try {
     if (!props.tableDetails.can_add_columns) {
-      alert('Permissions insuffisantes pour ajouter une colonne')
+      //  Toast de warning
+      warning('🚫 Permissions insuffisantes pour ajouter une colonne')
+      return
+    }
+    
+    //  Validation avec toast
+    if (!newColumn.value.column_name?.trim()) {
+      warning('📝 Le nom de la colonne est requis')
+      return
+    }
+    
+    if (!newColumn.value.data_type?.trim()) {
+      warning('🔧 Le type de données est requis')
       return
     }
     
@@ -1266,6 +1307,7 @@ const addNewColumn = async () => {
     
     if (response.data.success) {
       showAddColumnModal.value = false
+      const columnName = newColumn.value.column_name
       newColumn.value = {
         column_name: '',
         data_type: '',
@@ -1275,7 +1317,11 @@ const addNewColumn = async () => {
         possible_values: '',
         release: ''
       }
-      // ✅ Utiliser Inertia au lieu de window.location.reload()
+      
+      //  Toast de succès avant le rechargement
+      success(`✨ Colonne ${columnName} ajoutée avec succès!`)
+      
+      //  Utiliser Inertia au lieu de window.location.reload()
       router.reload({
         only: ['tableDetails'],
         preserveScroll: true
@@ -1285,7 +1331,8 @@ const addNewColumn = async () => {
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de l'ajout: ${error.response?.data?.error || error.message}`)
   } finally {
     addingColumn.value = false
   }
@@ -1294,7 +1341,29 @@ const addNewColumn = async () => {
 const addNewRelation = async () => {
   try {
     if (!props.tableDetails.can_add_relations) {
-      alert('Permissions insuffisantes pour ajouter une relation')
+      //  Toast de warning
+      warning('🚫 Permissions insuffisantes pour ajouter une relation')
+      return
+    }
+    
+    //  Validation avec toast
+    if (!newRelation.value.constraint_name?.trim()) {
+      warning('📝 Le nom de la contrainte est requis')
+      return
+    }
+    
+    if (!newRelation.value.column_name?.trim()) {
+      warning('📝 La colonne source est requise')
+      return
+    }
+    
+    if (!newRelation.value.referenced_table?.trim()) {
+      warning('📝 La table référencée est requise')
+      return
+    }
+    
+    if (!newRelation.value.referenced_column?.trim()) {
+      warning('📝 La colonne référencée est requise')
       return
     }
     
@@ -1304,6 +1373,7 @@ const addNewRelation = async () => {
     
     if (response.data.success) {
       showAddRelationModal.value = false
+      const constraintName = newRelation.value.constraint_name
       newRelation.value = {
         constraint_name: '',
         column_name: '',
@@ -1312,7 +1382,11 @@ const addNewRelation = async () => {
         delete_rule: 'NO ACTION',
         update_rule: 'NO ACTION'
       }
-      // ✅ Utiliser Inertia au lieu de window.location.reload()
+      
+      //  Toast de succès avant le rechargement
+      success(`🔗 Relation ${constraintName} ajoutée avec succès!`)
+      
+      //  Utiliser Inertia au lieu de window.location.reload()
       router.reload({
         only: ['tableDetails'],
         preserveScroll: true
@@ -1322,7 +1396,8 @@ const addNewRelation = async () => {
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    //  Toast d'erreur
+    showError(`❌ Erreur lors de l'ajout: ${error.response?.data?.error || error.message}`)
   } finally {
     addingRelation.value = false
   }
@@ -1333,12 +1408,23 @@ const showAuditLogs = async (columnName) => {
   loadingAuditLogs.value = true
   currentColumn.value = columnName
   
+  //  Toast d'info pour le chargement
+  info(`📋 Chargement de l'historique de ${columnName}...`)
+  
   try {
     const response = await axios.get(`/table/${props.tableName}/column/${columnName}/audit-logs`)
     auditLogs.value = response.data
+    
+    //  Toast de succès discret
+    if (response.data.length > 0) {
+      success(`📊 ${response.data.length} modification(s) trouvée(s) pour ${columnName}`)
+    } else {
+      info(`📋 Aucune modification trouvée pour ${columnName}`)
+    }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur lors du chargement de l\'historique')
+    // Toast d'erreur
+    showError('❌ Erreur lors du chargement de l\'historique')
   } finally {
     loadingAuditLogs.value = false
   }

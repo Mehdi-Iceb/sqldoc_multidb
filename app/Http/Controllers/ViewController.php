@@ -231,33 +231,79 @@ class ViewController extends Controller
     public function saveDescription(Request $request, $viewName)
     {
         try {
+            // Debug - voir ce qui arrive dans la requête
+            Log::info('Données reçues:', [
+                'viewName' => $viewName,
+                'request_data' => $request->all(),
+                'description' => $request->input('description'),
+                'session_db_id' => session('current_db_id')
+            ]);
+
             // Valider les données
             $validated = $request->validate([
-                'description' => 'nullable|string'
+                'description' => 'nullable|string|max:5000' // Ajout d'une limite
             ]);
 
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             if (!$dbId) {
+                Log::error('Aucune base de données dans la session');
                 return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
             }
 
-            // Récupérer la description de la vue
+            // Récupérer la description de la table
             $viewDesc = ViewDescription::where('dbid', $dbId)
-                ->where('viewname', $viewName)
+                ->where('viewName', $viewName)
                 ->first();
 
             if (!$viewDesc) {
-                return response()->json(['error' => 'Vue non trouvée'], 404);
+                Log::error('View not found:', ['dbid' => $dbId, 'viewName' => $viewName]);
+                
+                // Créer une nouvelle entrée si elle n'existe pas
+                $viewDesc = new ViewDescription();
+                $viewDesc->dbid = $dbId;
+                $viewDesc->viewName = $viewName;
             }
 
-            // Mettre à jour la description de la vue
+            // Log de l'état avant modification
+            Log::info('Avant modification:', [
+                'ancien_description' => $viewDesc->description,
+                'nouveau_description' => $validated['description']
+            ]);
+
+            // Mettre à jour la description de la table
             $viewDesc->description = $validated['description'];
-            $viewDesc->save();
+            $result = $viewDesc->save();
 
-            return response()->json(['success' => true]);
+            // Log du résultat
+            Log::info('Résultat sauvegarde:', [
+                'save_result' => $result,
+                'description_finale' => $viewDesc->description,
+                'view_id' => $viewDesc->id ?? 'nouveau'
+            ]);
 
+            if ($result) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Description sauvegardée avec succès',
+                    'description' => $viewDesc->description,
+                    'viewDetails' => [
+                        'description' => $viewDesc->description,
+                        // Ajoutez d'autres champs si nécessaire
+                    ]
+                ]);
+            } else {
+                return response()->json(['error' => 'Échec de la sauvegarde'], 500);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Erreur de validation:', $e->errors());
+            return response()->json(['error' => 'Données invalides: ' . implode(', ', $e->errors()['description'] ?? [])], 422);
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la sauvegarde:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Erreur lors de la sauvegarde de la description: ' . $e->getMessage()], 500);
         }
     }

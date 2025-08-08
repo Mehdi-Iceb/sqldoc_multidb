@@ -488,7 +488,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { router } from '@inertiajs/vue3'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios'
+
+// ✅ Utilisation du toast - renommage pour éviter les conflits
+const { success, error: showError, warning, info } = useToast()
 
 const props = defineProps({
   viewName: {
@@ -537,7 +541,6 @@ const saving = ref(false)
 const editingColumnName = ref(null)
 const editingColumnDescription = ref('')
 const editingColumnRangeValue = ref('')
-
 
 const savingDescription = ref({})
 const savingRangeValues = ref({})
@@ -593,7 +596,6 @@ const currentColumn = ref('')
 const showAuditModal = ref(false)
 const auditLogs = ref([])
 
-
 // ✅ FONCTION pour fermer la modal
 const closeAuditModal = () => {
   showAuditModal.value = false
@@ -642,20 +644,22 @@ watch(
   }
 )
 
-
-// Fonctions d'édition
+// ✅ Fonctions d'édition avec Toast
 const startEdit = (type, columnName, currentValue) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette vue')
+    // ✅ Toast de warning au lieu d'alert
+    warning('🚫 Vous n\'avez pas les permissions pour modifier cette vue')
     return
   }
   
   if (type === 'description') {
     editingDescription.value = { [columnName]: true }
     editingDescriptionValue.value = currentValue || ''
+    info(`✏️ Édition de la description de la colonne ${columnName}`)
   } else if (type === 'rangeValues') {
     editingRangeValues.value = { [columnName]: true }
     editingRangeValuesValue.value = currentValue || ''
+    info(`📋 Édition des valeurs de plage de la colonne ${columnName}`)
   }
 }
 
@@ -667,70 +671,47 @@ const cancelEdit = (type, columnName) => {
     editingRangeValues.value = { [columnName]: false }
     editingRangeValuesValue.value = ''
   }
+  info('↩️ Édition annulée')
 }
 
-
-// Fonction pour sauvegarder la description d'une colonne
-// const saveColumnDescription = async (columnName) => {
-//   try {
-//     saving.value = true
-    
-//     router.post(`/view/${props.viewName}/column/${columnName}/description`, {
-//       description: editingColumnDescription.value
-//     }, {
-//       onSuccess: () => {
-//         // Mise à jour locale
-//         const column = viewDetails.value.columns.find(c => c.column_name === columnName)
-//         if (column) {
-//           column.description = editingColumnDescription.value
-//         }
-//         alert('Description de la colonne enregistrée avec succès.')
-//         cancelEdit()
-//       },
-//       onError: (errors) => {
-//         console.error('Erreur lors de la sauvegarde:', errors)
-//         alert('Erreur lors de la sauvegarde de la description de la colonne')
-//       },
-//       onFinish: () => {
-//         saving.value = false
-//       }
-//     })
-//   } catch (error) {
-//     console.error('Erreur:', error)
-//     saving.value = false
-//   }
-// }
-
-// Fonction pour sauvegarder toutes les informations
+// ✅ Fonction pour sauvegarder avec Toast
 const saveViewStructure = async () => {
-  if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette vue')
-    return
-  }
-  
   try {
     saving.value = true
     
     const viewData = {
-      description: form.value.description,
-      language: 'fr',
-      columns: viewDetails.value.columns.map(column => ({
-        column: column.column_name,
-        description: column.description || null,
-        rangevalues: column.rangevalues || null
-      }))
+      description: form.value.description || null,
     }
     
-    const response = await axios.post(`/view/${props.viewName}/save-structure`, viewData)
+    const response = await axios.post(`/view/${props.viewName}/save-description`, viewData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
     
     if (response.data.success) {
-      alert('Descriptions et range values saved with success')
+      // ✅ Recharger les données avec Inertia
+      router.reload({
+        only: ['viewDetails'],
+        preserveScroll: true,
+        onSuccess: () => {
+          console.log('✅ Données rechargées avec succès')
+          // ✅ Toast de succès avec emoji
+          success(`👁️ Description de la vue ${props.viewName} enregistrée avec succès!`)
+        },
+        onError: (errors) => {
+          console.error('❌ Erreur lors du rechargement:', errors)
+          showError('❌ Erreur lors du rechargement des données')
+        }
+      })
     } else {
-      throw new Error(response.data.error || 'Error while saving')
+      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
     }
   } catch (error) {
-    console.error('❌ Error While saving:', error)
-    alert('Error: ' + (error.response?.data?.error || error.message))
+    console.error('❌ Erreur lors de la sauvegarde:', error)
+    // ✅ Toast d'erreur au lieu d'alert
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     saving.value = false
   }
@@ -750,17 +731,19 @@ const saveDescription = async (columnName) => {
         column.description = editingDescriptionValue.value
       }
       cancelEdit('description', columnName)
+      // ✅ Toast de succès
+      success(`✅ Description de la colonne ${columnName} mise à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Error:', error)
-    alert('Error: ' + (error.response?.data?.error || error.message))
+    // ✅ Toast d'erreur
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingDescription.value[columnName] = false
   }
 }
-
 
 const saveRangeValues = async (columnName) => {
   try {
@@ -776,12 +759,15 @@ const saveRangeValues = async (columnName) => {
         column.rangevalues = editingRangeValuesValue.value
       }
       cancelEdit('rangeValues', columnName)
+      // ✅ Toast de succès
+      success(`📋 Valeurs de plage de la colonne ${columnName} mises à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Error:', error)
-    alert('Error: ' + (error.response?.data?.error || error.message))
+    // ✅ Toast d'erreur
+    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingRangeValues.value[columnName] = false
   }
@@ -789,7 +775,8 @@ const saveRangeValues = async (columnName) => {
 
 const updateColumnRelease = async (column, releaseId) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette vue')
+    // ✅ Toast de warning
+    warning('🚫 Vous n\'avez pas les permissions pour modifier cette vue')
     return
   }
   
@@ -806,12 +793,17 @@ const updateColumnRelease = async (column, releaseId) => {
       column.release_id = finalReleaseId
       const selectedRelease = props.availableReleases.find(r => r.id === finalReleaseId)
       column.release_version = selectedRelease ? selectedRelease.version_number : ''
+      
+      // ✅ Toast de succès avec info de la release
+      const releaseInfo = selectedRelease ? selectedRelease.version_number : 'aucune'
+      success(`🚀 Release de ${column.column_name} mise à jour: ${releaseInfo}`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
     console.error('❌ Error:', error)
-    alert('Error: ' + (error.response?.data?.error || error.message))
+    // ✅ Toast d'erreur
+    showError(`❌ Erreur lors de la mise à jour: ${error.response?.data?.error || error.message}`)
   } finally {
     updatingRelease.value[column.column_name] = false
   }
@@ -827,6 +819,9 @@ const showAuditLogs = async (columnName) => {
     currentColumn.value = columnName
     auditLogs.value = [] // Réinitialiser les logs
     
+    // ✅ Toast d'info pour le chargement
+    info(`📋 Chargement de l'historique de ${columnName}...`)
+    
     // Faire la requête
     const response = await axios.get(`/view/${props.viewName}/column/${columnName}/audit-logs`)
     
@@ -834,30 +829,44 @@ const showAuditLogs = async (columnName) => {
     
     if (response.data && Array.isArray(response.data)) {
       auditLogs.value = response.data
+      
+      // ✅ Toast de succès avec compteur
+      if (response.data.length > 0) {
+        success(`📊 ${response.data.length} modification(s) trouvée(s) pour ${columnName}`)
+      } else {
+        info(`📋 Aucune modification trouvée pour ${columnName}`)
+      }
     } else {
       auditLogs.value = []
       console.warn('Format de réponse inattendu:', response.data)
+      warning('⚠️ Format de données inattendu pour l\'historique')
     }
     
   } catch (error) {
     console.error('❌ Erreur lors du chargement des audit logs:', error)
     
-    // Afficher le message d'erreur selon le type d'erreur
+    // ✅ Toast d'erreur personnalisé selon le type d'erreur
     let errorMessage = 'Erreur lors du chargement de l\'historique'
     
     if (error.response) {
       if (error.response.status === 404) {
-        errorMessage = 'Vue ou colonne non trouvée'
+        errorMessage = '🔍 Vue ou colonne non trouvée'
+        showError(errorMessage)
       } else if (error.response.status === 400) {
-        errorMessage = error.response.data.error || 'Requête invalide'
+        errorMessage = `📝 ${error.response.data.error || 'Requête invalide'}`
+        showError(errorMessage)
       } else if (error.response.data && error.response.data.error) {
-        errorMessage = error.response.data.error
+        errorMessage = `❌ ${error.response.data.error}`
+        showError(errorMessage)
+      } else {
+        showError(`❌ ${errorMessage}`)
       }
     } else if (error.request) {
-      errorMessage = 'Erreur de réseau - impossible de contacter le serveur'
+      errorMessage = '🌐 Erreur de réseau - impossible de contacter le serveur'
+      showError(errorMessage)
+    } else {
+      showError(`❌ ${errorMessage}: ${error.message}`)
     }
-    
-    alert(errorMessage)
     
     // Fermer la modal en cas d'erreur
     showAuditModal.value = false

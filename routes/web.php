@@ -127,7 +127,7 @@ Route::middleware(['auth', 'project.permissions:write'])->group(function () {
     Route::post('/table/{tableName}/column/add', [TableController::class, 'addColumn'])->name('table.column.add');
     Route::post('/table/{tableName}/relation/add', [TableController::class, 'addRelation'])->name('table.relation.add');
 
-    Route::post('/view/{viewName}/description', [ViewController::class, 'saveDescription'])->name('view.saveDescription');
+    Route::post('/view/{viewName}/save-description', [ViewController::class, 'saveDescription'])->name('view.saveDescription');
     Route::post('/view/{viewName}/column/{columnName}/description', [ViewController::class, 'saveColumnDescription'])->name('view.column.saveDescription');
     Route::post('/view/{viewName}/save-all', [ViewController::class, 'saveAll'])->name('view.saveAll');
     Route::post('/view/{viewName}/save-structure', [ViewController::class, 'saveStructure'])->name('view.saveStructure');

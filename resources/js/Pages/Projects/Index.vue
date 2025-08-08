@@ -489,6 +489,7 @@ import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 
+
 const props = defineProps({
     projects: Array
 });
@@ -622,29 +623,32 @@ const openProject = (project) => {
 
 
 const openProjectWithPreload = async (project) => {
-    openingProject.value = project.id;
-    
-    try {
-        // Précharger la route dashboard en arrière-plan
-        router.preloadRoute('dashboard');
-        
-        // Ouvrir le projet
-        router.get(route('projects.open', project.id), {}, {
-            preserveState: false,
-            preserveScroll: false,
-            onFinish: () => {
-                openingProject.value = null;
-            }
-        });
+  if (!project) {
+    console.warn('Aucun projet fourni à openProjectWithPreload');
+    return;
+  }
 
-    } catch (error) {
-        console.error('Error:', error);
-        flashMessage.value = { 
-            type: 'error', 
-            message: 'Failed to open project.' 
-        };
+  openingProject.value = project.id;
+
+  try {
+    preloadDashboard();
+
+    router.get(route('projects.open', project.id), {}, {
+      preserveState: false,
+      preserveScroll: false,
+      onFinish: () => {
         openingProject.value = null;
-    }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    flashMessage.value = {
+      type: 'error',
+      message: 'Failed to open project.'
+    };
+    openingProject.value = null;
+  }
 };
 
 
@@ -869,7 +873,7 @@ const deleteProject = async () => {
 
 const restoreProject = async (project) => {
     try {
-        // ✅ Utiliser router Inertia pour la restauration
+        // Utilise router Inertia pour la restauration
         router.post(`/projects/${project.id}/restore`, {}, {
             preserveState: false,
             onSuccess: () => {
@@ -901,10 +905,14 @@ const isAdmin = computed(() => {
            page.props.auth?.user?.role === 'admin';
 });
 
+const preloadDashboard = () => import('@/Pages/Dashboard.vue');
+
 onMounted(() => {
-    console.log('Projects component mounted');
-    console.log('Active projects:', activeProjects.value.length);
-    router.preloadRoute('dashboard');
-    openProjectWithPreload()
+  console.log('Projects component mounted');
+  console.log('Active projects:', activeProjects.value.length);
+
+  preloadDashboard(); 
+
+  openProjectWithPreload();
 });
 </script>
