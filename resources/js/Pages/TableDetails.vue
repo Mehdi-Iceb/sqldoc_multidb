@@ -1114,7 +1114,7 @@ const cancelEdit = (type, columnName) => {
     editingDataType.value = { [columnName]: false }
     editingDataTypeValue.value = ''
   }
-  info('↩️ Édition annulée')
+  // info('↩️ Édition annulée')
 }
 
 const saveDescription = async (columnName) => {

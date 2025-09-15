@@ -671,7 +671,7 @@ const cancelEdit = (type, columnName) => {
     editingRangeValues.value = { [columnName]: false }
     editingRangeValuesValue.value = ''
   }
-  info('↩️ Édition annulée')
+  // info('↩️ Édition annulée')
 }
 
 // ✅ Fonction pour sauvegarder avec Toast
