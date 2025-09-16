@@ -484,7 +484,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { router } from '@inertiajs/vue3'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios'
+
+const { success, error: showError, warning, info } = useToast()
 
 // ✅ PROPS pour FunctionDetails (basé sur ProcedureDetails)
 const props = defineProps({
@@ -599,7 +602,7 @@ watch(
 // ✅ FONCTIONS D'ÉDITION (adaptées pour les fonctions)
 const startEdit = (param) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
     return
   }
   editingParamId.value = param.parameter_id
@@ -609,7 +612,7 @@ const startEdit = (param) => {
 // ✅ NOUVELLES FONCTIONS pour l'édition avancée
 const startEditAdvanced = (type, parameterName, currentValue) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
     return
   }
   
@@ -640,7 +643,7 @@ const cancelEditAdvanced = (type, parameterName) => {
 // ✅ FONCTION DE SAUVEGARDE DESCRIPTION (adaptée pour les fonctions)
 const saveDescription = async () => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
     return
   }
   
@@ -651,12 +654,12 @@ const saveDescription = async () => {
       description: procedureForm.value.description
     }, {
       onSuccess: () => {
-        alert('Description de la fonction enregistrée avec succès!')
+        success('Description de la fonction enregistrée avec succès!')
         functionData.value.description = procedureForm.value.description
       },
       onError: (errors) => {
         console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde de la description')
+        showError('Erreur lors de la sauvegarde de la description')
       },
       onFinish: () => {
         saving.value = false
@@ -673,7 +676,7 @@ const saveParameterDescription = async (param) => {
   try {
     const parameterIdentifier = param.parameter_id
     if (!parameterIdentifier) {
-      alert("Impossible de sauvegarder : identifiant du paramètre manquant.")
+      warning("Impossible de sauvegarder : identifiant du paramètre manquant.")
       return
     }
 
@@ -695,12 +698,12 @@ const saveParameterDescription = async (param) => {
         if (index !== -1) {
           functionData.value.parameters[index].description = editingValue.value
         }
-        alert('Description du paramètre enregistrée avec succès!')
+        success('Description du paramètre enregistrée avec succès!')
         cancelEdit()
       },
       onError: (errors) => {
         console.error('Erreur lors de la sauvegarde:', errors)
-        alert('Erreur lors de la sauvegarde de la description du paramètre')
+        showError('Erreur lors de la sauvegarde de la description du paramètre')
       },
       onFinish: () => {
         saving.value = false
@@ -732,7 +735,7 @@ const saveDescriptionAdvanced = async (parameterName) => {
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    showError('Erreur: ' + (error.response?.data?.error || error.message))
   } finally {
     savingDescription.value[parameterName] = false
   }
@@ -757,7 +760,7 @@ const saveRangeValues = async (parameterName) => {
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    showError('Erreur: ' + (error.response?.data?.error || error.message))
   } finally {
     savingRangeValues.value[parameterName] = false
   }
@@ -765,7 +768,7 @@ const saveRangeValues = async (parameterName) => {
 
 const updateColumnRelease = async (parameter, releaseId) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
     return
   }
   
@@ -787,7 +790,7 @@ const updateColumnRelease = async (parameter, releaseId) => {
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + (error.response?.data?.error || error.message))
+    showError('Erreur: ' + (error.response?.data?.error || error.message))
   } finally {
     updatingRelease.value[parameter.parameter_name] = false
   }
@@ -831,7 +834,7 @@ const showAuditLogs = async (parameterName) => {
       errorMessage = 'Erreur de réseau - impossible de contacter le serveur'
     }
     
-    alert(errorMessage)
+    showError(errorMessage)
     showAuditModal.value = false
     
   } finally {

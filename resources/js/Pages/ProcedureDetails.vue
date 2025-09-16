@@ -451,7 +451,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { router } from '@inertiajs/vue3'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios'
+
+const { success, error: showError, warning, info } = useToast()
 
 // ✅ Définition des props (basé sur votre version existante)
 const props = defineProps({
@@ -558,7 +561,7 @@ watch(
 // ✅ FONCTIONS D'ÉDITION (votre version + améliorations)
 const startEdit = (param) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette procédure')
+    warning('Vous n\'avez pas les permissions pour modifier cette procédure')
     return
   }
   editingParamId.value = param.parameter_name
@@ -569,7 +572,7 @@ const startEdit = (param) => {
 // ✅ NOUVELLES FONCTIONS pour l'édition avancée
 const startEditAdvanced = (type, parameterName, currentValue) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette procédure')
+    warning('Vous n\'avez pas les permissions pour modifier cette procédure')
     return
   }
   
@@ -600,7 +603,7 @@ const cancelEditAdvanced = (type, parameterName) => {
 // ✅ FONCTION DE SAUVEGARDE (votre version existante)
 const saveDescription = async () => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette procédure')
+    warning('Vous n\'avez pas les permissions pour modifier cette procédure')
     return
   }
   
@@ -618,7 +621,7 @@ const saveDescription = async () => {
           only: ['procedureDetails'],
           preserveScroll: true,
           onSuccess: () => {
-            alert('Description de la procédure mise à jour avec succès')
+            success('Description de la procédure mise à jour avec succès')
           }
         })
       },
@@ -629,7 +632,7 @@ const saveDescription = async () => {
         if (errors.error) {
           errorMessage = errors.error
         }
-        alert(errorMessage)
+        showError(errorMessage)
       },
       onFinish: () => {
         saving.value = false
@@ -647,7 +650,7 @@ const saveParameterDescription = async (param) => {
   try {
     const parameterIdentifier = param.parameter_name
     if (!parameterIdentifier) {
-      alert("Impossible de sauvegarder : identifiant du paramètre manquant.")
+      warning("Impossible de sauvegarder : identifiant du paramètre manquant.")
       return
     }
 
@@ -673,7 +676,7 @@ const saveParameterDescription = async (param) => {
           only: ['procedureDetails'],
           preserveScroll: true,
           onSuccess: () => {
-            alert('Description du paramètre mise à jour avec succès')
+            success('Description du paramètre mise à jour avec succès')
           }
         })
       },
@@ -684,7 +687,7 @@ const saveParameterDescription = async (param) => {
         if (errors.error) {
           errorMessage = errors.error
         }
-        alert(errorMessage)
+        showError(errorMessage)
       },
       onFinish: () => {
         saving.value = false
@@ -720,7 +723,7 @@ const saveRangeValues = async (parameterName) => {
           only: ['procedureDetails'],
           preserveScroll: true,
           onSuccess: () => {
-            alert('Range values mises à jour avec succès')
+            success('Range values mises à jour avec succès')
           }
         })
       },
@@ -731,7 +734,7 @@ const saveRangeValues = async (parameterName) => {
         if (errors.error) {
           errorMessage = errors.error
         }
-        alert(errorMessage)
+        showError(errorMessage)
       },
       onFinish: () => {
         savingRangeValues.value[parameterName] = false
@@ -739,14 +742,14 @@ const saveRangeValues = async (parameterName) => {
     })
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + error.message)
+    showError('Erreur: ' + error.message)
     savingRangeValues.value[parameterName] = false
   }
 }
 
 const updateColumnRelease = async (parameter, releaseId) => {
   if (!canEdit.value) {
-    alert('Vous n\'avez pas les permissions pour modifier cette procédure')
+    warning('Vous n\'avez pas les permissions pour modifier cette procédure')
     return
   }
   
@@ -772,7 +775,7 @@ const updateColumnRelease = async (parameter, releaseId) => {
           only: ['procedureDetails'],
           preserveScroll: true,
           onSuccess: () => {
-            alert('Release mise à jour avec succès')
+            success('Release mise à jour avec succès')
           }
         })
       },
@@ -783,7 +786,7 @@ const updateColumnRelease = async (parameter, releaseId) => {
         if (errors.error) {
           errorMessage = errors.error
         }
-        alert(errorMessage)
+        showError(errorMessage)
       },
       onFinish: () => {
         updatingRelease.value[parameter.parameter_name] = false
@@ -791,7 +794,7 @@ const updateColumnRelease = async (parameter, releaseId) => {
     })
   } catch (error) {
     console.error('❌ Erreur:', error)
-    alert('Erreur: ' + error.message)
+    showError('Erreur: ' + error.message)
     updatingRelease.value[parameter.parameter_name] = false
   }
 }
@@ -834,7 +837,7 @@ const showAuditLogs = async (parameterName) => {
       errorMessage = 'Erreur de réseau - impossible de contacter le serveur'
     }
     
-    alert(errorMessage)
+    showError(errorMessage)
     showAuditModal.value = false
     
   } finally {
