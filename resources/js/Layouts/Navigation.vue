@@ -146,7 +146,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" flex-shrink-0 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" flex-shrink-0 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
                   <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
                   <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
@@ -185,7 +185,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                   <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
@@ -215,7 +215,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M10 20l4-16m4 4l4 4-4 4M4 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
                 {{ func.name }}
@@ -243,7 +243,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" 
                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
@@ -272,7 +272,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
                 {{ trigger.name }}
