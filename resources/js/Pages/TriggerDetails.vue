@@ -135,7 +135,10 @@
   <script setup>
 import { ref, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios'
+
+const { success, error: showError, warning, info } = useToast()
 
 // ✅ Props définies avec des valeurs par défaut
 const props = defineProps({
@@ -196,7 +199,7 @@ onMounted(() => {
 // ✅ Fonction de sauvegarde de la description
 const saveDescription = async () => {
   if (!props.triggerName) {
-    alert('Erreur: nom du trigger manquant');
+    warning('Erreur: nom du trigger manquant');
     return;
   }
 
@@ -216,7 +219,7 @@ const saveDescription = async () => {
     }
   } catch (error) {
     console.error('❌ [TRIGGER] Erreur lors de la sauvegarde de la description:', error)
-    alert('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
+    showError('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
   } finally {
     saving.value = false
   }
@@ -225,7 +228,7 @@ const saveDescription = async () => {
 // ✅ Fonction de sauvegarde complète
 const saveAll = async () => {
   if (!props.triggerName) {
-    alert('Erreur: nom du trigger manquant');
+    warning('Erreur: nom du trigger manquant');
     return;
   }
 
@@ -240,13 +243,13 @@ const saveAll = async () => {
     const response = await axios.post(`/api/trigger/${encodeURIComponent(props.triggerName)}/save-all`, triggerData) 
     
     if (response.data.success) {
-      alert('Description du trigger enregistrée avec succès')
+      success('Description du trigger enregistrée avec succès')
     } else {
       throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
     }
   } catch (error) {
     console.error('❌ [TRIGGER] Erreur lors de la sauvegarde globale:', error)
-    alert('Erreur lors de la sauvegarde des informations du trigger: ' + (error.response?.data?.error || error.message))
+    showError('Erreur lors de la sauvegarde des informations du trigger: ' + (error.response?.data?.error || error.message))
   } finally {
     saving.value = false
   }
