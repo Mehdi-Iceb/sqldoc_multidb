@@ -840,7 +840,7 @@ const deleteProject = async () => {
     
     try {
         // ✅ Utiliser router Inertia pour la suppression soft
-        router.delete(`/projects/${selectedProject.value.id}`, {
+        router.delete(`/projects/${selectedProject.value.id}/soft`, {
             preserveState: false,
             onSuccess: () => {
                 showDeleteModal.value = false;

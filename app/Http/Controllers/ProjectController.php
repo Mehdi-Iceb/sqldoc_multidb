@@ -1173,17 +1173,11 @@ class ProjectController extends Controller
                 ->first();
 
             if (!$project) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Projet non trouvé'
-                ], 404);
+                return redirect()->back()->with('error', 'Project not found');
             }
 
             if ($project->trashed()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Ce projet est déjà supprimé'
-                ], 400);
+                return redirect()->back()->with('error', 'This project has already been deleted');
             }
 
             
@@ -1196,10 +1190,8 @@ class ProjectController extends Controller
 
             if ($result) {
                 Log::info('Projet supprimé avec succès', ['project_id' => $id]);
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Projet supprimé avec succès'
-                ]);
+                return redirect()->back()->with('success', 'Project deleted with success');
+
             } else {
                 throw new \Exception('Échec de la mise à jour');
             }
@@ -1210,10 +1202,7 @@ class ProjectController extends Controller
                 'project_id' => $id
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Erreur serveur: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Erreur serveur: ' . $e->getMessage());
         }
     }
 
