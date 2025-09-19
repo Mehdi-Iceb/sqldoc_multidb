@@ -624,7 +624,7 @@ const openProject = (project) => {
 
 const openProjectWithPreload = async (project) => {
   if (!project) {
-    console.warn('Aucun projet fourni à openProjectWithPreload');
+    console.warn('No projects provided to openProjectWithPreload');
     return;
   }
 

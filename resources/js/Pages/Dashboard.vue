@@ -457,8 +457,8 @@
 	  dashboardData.value = response.data;
 	  loading.value = false;
 	} catch (err) {
-	  console.error('Erreur lors du chargement des données du dashboard:', err);
-	  error.value = err.response?.data?.error || 'Erreur lors du chargement des données';
+	  console.error('Error loading dashboard data:', err);
+	  error.value = err.response?.data?.error || 'Error loading data';
 	  loading.value = false;
 	}
   });

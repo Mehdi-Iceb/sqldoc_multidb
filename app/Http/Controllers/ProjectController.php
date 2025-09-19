@@ -14,6 +14,7 @@ use App\Services\DatabaseStructureService;
 use App\Models\UserProjectAccess;
 use Illuminate\Support\Facades\Cache;
 
+
 class ProjectController extends Controller
 {
     use HasProjectPermissions;

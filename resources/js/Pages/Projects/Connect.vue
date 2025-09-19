@@ -73,7 +73,7 @@ const submit = () => {
             
             // IMPORTANT: Vérifier s'il y a des erreurs dans flash
             if (page.props.flash?.error) {
-                console.log('Erreur détectée dans onSuccess:', page.props.flash.error);
+                console.log('Error detected in onSuccess:', page.props.flash.error);
                 showErrorToast(page.props.flash.error);
                 return; // NE PAS afficher le succès
             }
@@ -119,7 +119,7 @@ const submit = () => {
             }
         },
         onFinish: () => {
-            console.log('onFinish: Requête terminée');
+            console.log('onFinish: Request done');
         }
     });
 };
@@ -287,7 +287,7 @@ const getToastIconAndColor = computed(() => {
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Connexion au projet: {{ project.name }}
+                Connection to the project: {{ project.name }}
             </h2>
         </template>
 
@@ -297,15 +297,15 @@ const getToastIconAndColor = computed(() => {
                     <div class="mb-6">
                         <div class="flex items-center mb-4">
                             <div class="flex-1">
-                                <h3 class="text-lg font-medium text-gray-900">Informations de connexion</h3>
-                                <p class="text-sm text-gray-600">Type de base de données: {{ getDbTypeName(project.db_type) }}</p>
+                                <h3 class="text-lg font-medium text-gray-900">Login information</h3>
+                                <p class="text-sm text-gray-600">Database type: {{ getDbTypeName(project.db_type) }}</p>
                             </div>
                             <Link
                                 :href="route('projects.index')"
                                 class="inline-flex items-center px-3 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                                 :class="{ 'pointer-events-none opacity-50': form.processing }"
                             >
-                                Retour aux projets
+                                Back to project
                             </Link>
                         </div>
                         
