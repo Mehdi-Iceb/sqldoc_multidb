@@ -145,11 +145,12 @@
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {{ user.email }}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" style="min-width: 180px;">
                     <select 
                       v-model="user.role_id"
                       @change="updateUserRole(user)"
-                      class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      class="mt-1 block w-full py-2 px-3 pr-6 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
                     >
                       <option v-for="role in roles" :key="role.id" :value="role.id">
                         {{ role.name }}
@@ -226,7 +227,8 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700">Project</label>
                   <select 
-                    v-model="newProjectAccess.project_id"
+                    v-model="newProjectAccess.project_ids"
+                    multiple
                     required
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   >
@@ -259,7 +261,7 @@
               <div class="flex justify-end">
                 <button 
                   type="submit"
-                  :disabled="!newProjectAccess.project_id || loadingProjects"
+                  :disabled="!newProjectAccess.project_ids.length === 0 || loadingProjects"
                   class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50"
                 >
                   Grant access
@@ -333,7 +335,7 @@ const currentUserAccesses = ref([])
 const availableProjects = ref([])
 const loadingProjects = ref(false)
 const newProjectAccess = ref({
-  project_id: '',
+  project_ids: [],
   access_level: 'read'
 })
 

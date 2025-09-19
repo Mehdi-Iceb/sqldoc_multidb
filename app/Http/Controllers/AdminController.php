@@ -27,14 +27,16 @@ class AdminController extends Controller
 
     public function createUser(Request $request)
     {
+        $messages = [
+            'password.min' => 'Password must contain at least 8 characters.'
+        ];
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'role_id' => 'required|exists:roles,id'
-        ], [
-            'password.min' => 'Password must contain at least 8 characters.'
-        ]);
+        ], $messages);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -97,41 +99,47 @@ class AdminController extends Controller
             if (!$this->isUserAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Accès non autorisé. Privilèges administrateur requis.'
+                    'error' => 'Unauthorized access. Administrator privileges required..'
                 ], 403);
             }
 
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'project_id' => 'required|exists:projects,id',
+                'project_ids' => 'required|array',
+                'project_ids.*' => 'exists:projects,id',
                 'access_level' => 'required|in:read,write,admin'
             ]);
 
-            // Vérifier si l'accès existe déjà
-            $existingAccess = UserProjectAccess::where('user_id', $validated['user_id'])
-                ->where('project_id', $validated['project_id'])
-                ->first();
+            $userId = $validated['user_id'];
+            $accessLevel = $validated['access_level'];
+            $projectIds = $validated['project_ids'];
 
-            if ($existingAccess) {
-                // Mettre à jour le niveau d'accès
-                $existingAccess->update(['access_level' => $validated['access_level']]);
-                $message = 'Niveau d\'accès mis à jour avec succès';
-            } else {
-                // Créer un nouvel accès
-                UserProjectAccess::create($validated);
-                $message = 'Accès accordé avec succès';
+            foreach ($projectIds as $projectId) {
+                $existingAccess = UserProjectAccess::where('user_id', $userId)
+                    ->where('project_id', $projectId)
+                    ->first();
+
+                if ($existingAccess) {
+                    $existingAccess->update(['access_level' => $accessLevel]);
+                } else {
+                    UserProjectAccess::create([
+                        'user_id' => $userId,
+                        'project_id' => $projectId,
+                        'access_level' => $accessLevel,
+                    ]);
+                }
+
+                Log::info('Admin - Accès projet accordé/modifié', [
+                    'user_id' => $userId,
+                    'project_id' => $projectId,
+                    'access_level' => $accessLevel,
+                    'admin_id' => auth()->id()
+                ]);
             }
-
-            Log::info('Admin - Accès projet accordé/modifié', [
-                'user_id' => $validated['user_id'],
-                'project_id' => $validated['project_id'],
-                'access_level' => $validated['access_level'],
-                'admin_id' => auth()->id()
-            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => $message
+                'message' => 'Access granted/updated successfully'
             ]);
 
         } catch (\Exception $e) {
@@ -142,7 +150,7 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de l\'attribution de l\'accès: ' . $e->getMessage()
+                'error' => 'Error granting access: ' . $e->getMessage()
             ], 500);
         }
     }
