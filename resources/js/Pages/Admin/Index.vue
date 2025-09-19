@@ -306,6 +306,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { useToast } from '@/Composables/useToast'
+
+const { success, error: showError, warning, info } = useToast()
 
 // Props existants
 const props = defineProps({
@@ -366,11 +369,11 @@ const createUser = async () => {
         role_id: ''
       }
       window.location.reload()
-      alert('User created successfully!')
+      info('User created successfully!')
     }
   } catch (error) {
     console.error('Error while creating user:', error)
-    alert('Error while creating user: ' + (error.response?.data?.error || error.message))
+    showError('Error while creating user: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -396,10 +399,10 @@ const saveRolePermissions = async (role) => {
     await axios.put(`/admin/roles/${role.id}/permissions`, {
       permissions: role.permissions.map(p => p.id)
     })
-    alert('Permissions updated successfully!')
+    info('Permissions updated successfully!')
   } catch (error) {
     console.error('Error while updating permissions:', error)
-    alert('Error while updating permissions!')
+    showError('Error while updating permissions!')
   }
 }
 
@@ -408,10 +411,10 @@ const updateUserRole = async (user) => {
     await axios.post(`/admin/users/${user.id}/role`, {
       role_id: user.role_id
     })
-    alert('Role updated successfully!')
+    info('Role updated successfully!')
   } catch (error) {
     console.error('Error while updating role:', error)
-    alert('Error while updating role!')
+    showError('Error while updating role!')
   }
 }
 
@@ -505,7 +508,7 @@ const grantProjectAccess = async () => {
     })
     
     if (response.data.success) {
-      alert('Project access granted successfully!')
+      info('Project access granted successfully!')
       await loadUserProjectAccesses(selectedUser.value.id)
       newProjectAccess.value = {
         project_id: '',
@@ -515,7 +518,7 @@ const grantProjectAccess = async () => {
     }
   } catch (error) {
     console.error('Error granting project access:', error)
-    alert('Error granting project access: ' + (error.response?.data?.error || error.message))
+    showError('Error granting project access: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -531,7 +534,7 @@ const revokeProjectAccess = async (userId, projectId) => {
     })
     
     if (response.data.success) {
-      alert('Project access revoked successfully!')
+      info('Project access revoked successfully!')
       
       if (showProjectAccessModal.value && selectedUser.value?.id === userId) {
         await loadUserProjectAccesses(userId)
@@ -541,7 +544,7 @@ const revokeProjectAccess = async (userId, projectId) => {
     }
   } catch (error) {
     console.error('Error revoking project access:', error)
-    alert('Error revoking project access: ' + (error.response?.data?.error || error.message))
+    showError('Error revoking project access: ' + (error.response?.data?.error || error.message))
   }
 }
 </script>

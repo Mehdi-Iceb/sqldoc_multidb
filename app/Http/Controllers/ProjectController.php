@@ -13,7 +13,7 @@ use App\Models\DbDescription;
 use App\Services\DatabaseStructureService;
 use App\Models\UserProjectAccess;
 use Illuminate\Support\Facades\Cache;
-
+use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -89,12 +89,21 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
+        $messages = [
+            'name.unique' => 'You already have a project with this name.',
+        ];
+
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                        'required','string','max:255',
+                        Rule::unique('projects')->where(function ($query) use ($request) {
+                            return $query->where('user_id', $request->user()->id);
+                        }),
+            ],
             'db_type' => 'required|in:sqlserver,mysql,pgsql',
             'description' => 'nullable|string|max:1000'
             
-        ]);
+        ], $messages);
 
         $project = $request->user()->projects()->create($validated);
 
