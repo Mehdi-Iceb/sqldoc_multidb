@@ -160,18 +160,31 @@ class TableController extends Controller
     private function getAvailableReleases()
     {
         try {
-            return Release::select('id', 'version_number', 'project_id')
+            $currentProject = session('current_project');
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return [];
+            }
+            
+            // Récupérer les releases du projet actuel
+            $releases = \App\Models\Release::where('project_id', $currentProject['id'])
+                ->orderBy('version_number', 'desc')
                 ->get()
                 ->map(function ($release) {
                     return [
                         'id' => $release->id,
                         'version_number' => $release->version_number,
-                        'display_name' => $release->version_number,
-                        'project_id' => $release->project_id
+                        'display_name' => $release->version_number . ' - ' . ($release->description ?? 'No description'),
+                        'description' => $release->description
                     ];
                 });
+            
+            return $releases->toArray();
+            
         } catch (\Exception $e) {
-            Log::error('Erreur lors de la récupération des releases:', $e->getMessage());
+            Log::error('Erreur lors de la récupération des releases', [
+                'error' => $e->getMessage()
+            ]);
+            
             return [];
         }
     }
