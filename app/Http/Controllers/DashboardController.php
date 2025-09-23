@@ -37,10 +37,10 @@ class DashboardController extends Controller
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             if (!$dbId) {
-                Log::warning('Dashboard - Aucune base de données sélectionnée');
+                Log::warning('Dashboard - No database selected');
                 
                 if ($request->wantsJson()) {
-                    return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+                    return response()->json(['error' => 'No database selected'], 400);
                 }
                 
                 return redirect()->route('projects.index')
