@@ -192,6 +192,7 @@ class FunctionController extends Controller
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
                 ],
+                'availableReleases' => $this->getAvailableReleases(),
                 'permissions' => [
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
@@ -218,12 +219,45 @@ class FunctionController extends Controller
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
                 ],
+                'availableReleases' => $this->getAvailableReleases(),
                 'permissions' => [
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
                 ],
                 'error' => 'Erreur lors de la récupération des détails de la fonction: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    private function getAvailableReleases()
+    {
+        try {
+            $currentProject = session('current_project');
+            if (!$currentProject || !isset($currentProject['id'])) {
+                return [];
+            }
+            
+            // Récupérer les releases du projet actuel
+            $releases = \App\Models\Release::where('project_id', $currentProject['id'])
+                ->orderBy('version_number', 'desc')
+                ->get()
+                ->map(function ($release) {
+                    return [
+                        'id' => $release->id,
+                        'version_number' => $release->version_number,
+                        'display_name' => $release->version_number . ' - ' . ($release->description ?? 'No description'),
+                        'description' => $release->description
+                    ];
+                });
+            
+            return $releases->toArray();
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération des releases', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [];
         }
     }
 

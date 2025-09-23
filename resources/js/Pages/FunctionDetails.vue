@@ -768,7 +768,7 @@ const saveRangeValues = async (parameterName) => {
 
 const updateColumnRelease = async (parameter, releaseId) => {
   if (!canEdit.value) {
-    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('You are not allowed to modified this function')
     return
   }
   

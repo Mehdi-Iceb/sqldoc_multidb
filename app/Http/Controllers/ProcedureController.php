@@ -197,6 +197,7 @@ class ProcedureController extends Controller
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
                 ],
+                'availableReleases' => $this->getAvailableReleases(),
                 'permissions' => [
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
@@ -227,6 +228,7 @@ class ProcedureController extends Controller
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
                 ],
+                'availableReleases' => $this->getAvailableReleases(),
                 'permissions' => [
                     'can_edit' => $canEdit,
                     'is_owner' => $isOwner,
