@@ -223,17 +223,20 @@
             <h4 class="text-md font-medium text-gray-900 mb-3">Grant new project access</h4>
             <form @submit.prevent="grantProjectAccess" class="space-y-3">
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- Sélection du projet -->
+                <!-- Sélection de plusieurs projets -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Project</label>
+                  <label class="block text-sm font-medium text-gray-700">projects</label>
                   <select 
                     v-model="newProjectAccess.project_ids"
                     multiple
                     required
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   >
-                    <option value="">Select a project</option>
-                    <option v-for="project in availableProjects" :key="project.id" :value="project.id">
+                    <option 
+                      v-for="project in availableProjects" 
+                      :key="project.id" 
+                      :value="project.id"
+                    >
                       {{ project.display_name || project.name }}
                     </option>
                   </select>
@@ -512,13 +515,13 @@ const grantProjectAccess = async () => {
   try {
     console.log('Granting access:', {
       user_id: selectedUser.value.id,
-      project_id: newProjectAccess.value.project_ids,
+      project_ids: newProjectAccess.value.project_ids,
       access_level: newProjectAccess.value.access_level
     })
     
     const response = await axios.post('/admin/project-access/grant', {
       user_id: selectedUser.value.id,
-      project_id: newProjectAccess.value.project_id,
+      project_ids: newProjectAccess.value.project_ids,
       access_level: newProjectAccess.value.access_level
     })
     
@@ -526,7 +529,7 @@ const grantProjectAccess = async () => {
       info('Project access granted successfully!')
       await loadUserProjectAccesses(selectedUser.value.id)
       newProjectAccess.value = {
-        project_id: '',
+        project_ids: [],
         access_level: 'read'
       }
       window.location.reload()
@@ -541,20 +544,21 @@ const revokeProjectAccess = async (userId, projectId) => {
   if (!confirm('Are you sure you want to revoke this project access?')) {
     return
   }
-  
+
   try {
     const response = await axios.post('/admin/project-access/revoke', {
       user_id: userId,
-      project_id: projectId
+      project_ids: [projectId]
     })
-    
+
     if (response.data.success) {
       info('Project access revoked successfully!')
-      
+
+      // Recharger les accès si le modal est ouvert sur l'utilisateur actuel
       if (showProjectAccessModal.value && selectedUser.value?.id === userId) {
         await loadUserProjectAccesses(userId)
       }
-      
+
       window.location.reload()
     }
   } catch (error) {

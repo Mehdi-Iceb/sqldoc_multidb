@@ -169,34 +169,35 @@ class AdminController extends Controller
             if (!$this->isUserAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Accès non autorisé.'
+                    'error' => 'Access restricted.'
                 ], 403);
             }
 
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'project_id' => 'required|exists:projects,id'
+                'project_ids' => 'required|array',
+                'project_ids.*' => 'exists:projects,id',
             ]);
 
             $deleted = UserProjectAccess::where('user_id', $validated['user_id'])
-                ->where('project_id', $validated['project_id'])
+                ->whereIn('project_id', $validated['project_ids']) 
                 ->delete();
 
             if ($deleted) {
                 Log::info('Admin - Accès projet révoqué', [
                     'user_id' => $validated['user_id'],
-                    'project_id' => $validated['project_id'],
+                    'project_ids' => $validated['project_ids'], 
                     'admin_id' => auth()->id()
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Accès révoqué avec succès'
+                    'message' => 'Access successfully revoked'
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Aucun accès trouvé à révoquer'
+                    'error' => 'No access found to revoke'
                 ], 404);
             }
 
@@ -208,7 +209,7 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de la révocation de l\'accès: ' . $e->getMessage()
+                'error' => 'Error while revoking access: ' . $e->getMessage()
             ], 500);
         }
     }
