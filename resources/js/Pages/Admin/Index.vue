@@ -178,12 +178,12 @@
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                    <button
+                    <!-- <button
                       @click="updateUserRole(user)"
                       class="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs text-white bg-green-600 hover:bg-green-700"
                     >
                       Save Role
-                    </button>
+                    </button> -->
                     <button
                       @click="openProjectAccessModal(user)"
                       class="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs text-white bg-blue-600 hover:bg-blue-700"
