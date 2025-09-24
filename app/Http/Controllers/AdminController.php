@@ -28,6 +28,7 @@ class AdminController extends Controller
     public function createUser(Request $request)
     {
         $messages = [
+            'email.unique' => 'E-mail already used.',
             'password.min' => 'Password must contain at least 8 characters.'
         ];
 
@@ -47,7 +48,7 @@ class AdminController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Utilisateur créé avec succès',
+            'message' => 'User successfully created',
             'user' => $user
         ]);
     }

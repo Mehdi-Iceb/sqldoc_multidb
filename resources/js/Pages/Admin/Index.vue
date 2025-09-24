@@ -375,7 +375,20 @@ const createUser = async () => {
     }
   } catch (error) {
     console.error('Error while creating user:', error)
-    showError('Error while creating user: ' + (error.response?.data?.error || error.message))
+
+    const validationErrors = error.response?.data?.errors
+
+    if (validationErrors) {
+      //  messages d'erreur en une seule string
+      const messages = Object.values(validationErrors)
+        .flat()
+        .join('\n')
+
+      showError(messages)
+    } else {
+      // Si ce n'est pas une erreur de validation Laravel
+      showError('Error while creating user: ' + (error.response?.data?.error || error.message))
+    }
   }
 }
 
