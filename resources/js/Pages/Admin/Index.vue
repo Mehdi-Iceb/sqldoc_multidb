@@ -313,7 +313,7 @@ import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useToast } from '@/Composables/useToast'
 
-const { success, error: showError, warning, info } = useToast()
+const { success, error: showError, warning, info, confirmToast } = useToast()
 
 // Props existants
 const props = defineProps({
@@ -526,7 +526,7 @@ const grantProjectAccess = async () => {
     })
     
     if (response.data.success) {
-      info('Project access granted successfully!')
+      success('Project access granted successfully!')
       await loadUserProjectAccesses(selectedUser.value.id)
       newProjectAccess.value = {
         project_ids: [],
@@ -541,29 +541,32 @@ const grantProjectAccess = async () => {
 }
 
 const revokeProjectAccess = async (userId, projectId) => {
-  if (!confirm('Are you sure you want to revoke this project access?')) {
-    return
-  }
+  confirmToast({
+    message: 'Are you sure you want to revoke this project access?',
+    onConfirm: async () => {
+      try {
+        const response = await axios.post('/admin/project-access/revoke', {
+          user_id: userId,
+          project_ids: [projectId]
+        })
 
-  try {
-    const response = await axios.post('/admin/project-access/revoke', {
-      user_id: userId,
-      project_ids: [projectId]
-    })
+        if (response.data.success) {
+          success('Project access revoked successfully!')
 
-    if (response.data.success) {
-      info('Project access revoked successfully!')
+          if (showProjectAccessModal.value && selectedUser.value?.id === userId) {
+            await loadUserProjectAccesses(userId)
+          }
 
-      // Recharger les accès si le modal est ouvert sur l'utilisateur actuel
-      if (showProjectAccessModal.value && selectedUser.value?.id === userId) {
-        await loadUserProjectAccesses(userId)
+          window.location.reload()
+        }
+      } catch (error) {
+        console.error('Error revoking project access:', error)
+        showError('Error revoking project access: ' + (error.response?.data?.error || error.message))
       }
-
-      window.location.reload()
+    },
+    onCancel: () => {
+      console.log('User cancelled the revoke action.')
     }
-  } catch (error) {
-    console.error('Error revoking project access:', error)
-    showError('Error revoking project access: ' + (error.response?.data?.error || error.message))
-  }
+  })
 }
 </script>

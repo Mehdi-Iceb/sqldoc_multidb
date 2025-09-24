@@ -5,29 +5,30 @@ const toasts = ref([])
 let toastId = 0
 
 // Fonctions globales
-const addToast = (message, type = 'info', duration = 5000) => {
+const addToast = (toastOptions) => {
   const id = ++toastId
-  const toast = {
+
+  const defaultToast = {
     id,
-    message,
-    type,
-    duration,
+    type: 'info',
+    message: '',
+    duration: 5000,
     visible: false
   }
-  
+
+  const toast = { ...defaultToast, ...toastOptions, id }
+
   toasts.value.push(toast)
-  
-  // Animation d'entrée
+
   nextTick(() => {
     const toastEl = toasts.value.find(t => t.id === id)
     if (toastEl) toastEl.visible = true
   })
-  
-  // Auto-suppression
-  if (duration > 0) {
-    setTimeout(() => removeToast(id), duration)
+
+  if (toast.duration > 0 && toast.type !== 'confirm') {
+    setTimeout(() => removeToast(id), toast.duration)
   }
-  
+
   return id
 }
 
@@ -42,10 +43,20 @@ const removeToast = (id) => {
 }
 
 // Fonctions de convenance globales
-const success = (message, duration = 5000) => addToast(message, 'success', duration)
-const error = (message, duration = 7000) => addToast(message, 'error', duration)
-const info = (message, duration = 5000) => addToast(message, 'info', duration)
-const warning = (message, duration = 6000) => addToast(message, 'warning', duration)
+const success = (message, duration = 5000) =>
+  addToast({ type: 'success', message, duration })
+
+const error = (message, duration = 7000) =>
+  addToast({ type: 'error', message, duration })
+
+const info = (message, duration = 5000) =>
+  addToast({ type: 'info', message, duration })
+
+const warning = (message, duration = 6000) =>
+  addToast({ type: 'warning', message, duration })
+
+const confirmToast = ({ message, onConfirm, onCancel }) =>
+  addToast({ type: 'confirm', message, duration: 0, onConfirm, onCancel })
 
 export const useToast = () => {
   return {
@@ -55,6 +66,7 @@ export const useToast = () => {
     success,
     error,
     info,
-    warning
+    warning,
+    confirmToast
   }
 }
