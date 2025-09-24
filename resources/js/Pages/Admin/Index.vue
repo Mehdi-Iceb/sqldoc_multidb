@@ -512,7 +512,7 @@ const grantProjectAccess = async () => {
   try {
     console.log('Granting access:', {
       user_id: selectedUser.value.id,
-      project_id: newProjectAccess.value.project_id,
+      project_id: newProjectAccess.value.project_ids,
       access_level: newProjectAccess.value.access_level
     })
     

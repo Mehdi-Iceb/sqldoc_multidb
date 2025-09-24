@@ -100,7 +100,7 @@ class AdminController extends Controller
             if (!$this->isUserAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Unauthorized access. Administrator privileges required..'
+                    'error' => 'Unauthorized access. Administrator privileges required.'
                 ], 403);
             }
 
@@ -115,28 +115,32 @@ class AdminController extends Controller
             $accessLevel = $validated['access_level'];
             $projectIds = $validated['project_ids'];
 
-            foreach ($projectIds as $projectId) {
-                $existingAccess = UserProjectAccess::where('user_id', $userId)
-                    ->where('project_id', $projectId)
-                    ->first();
+            DB::transaction(function () use ($userId, $accessLevel, $projectIds) {
+                foreach ($projectIds as $projectId) {
+                    $existingAccess = UserProjectAccess::where('user_id', $userId)
+                        ->where('project_id', $projectId)
+                        ->first();
 
-                if ($existingAccess) {
-                    $existingAccess->update(['access_level' => $accessLevel]);
-                } else {
-                    UserProjectAccess::create([
+                    if ($existingAccess) {
+                        if ($existingAccess->access_level !== $accessLevel) {
+                            $existingAccess->update(['access_level' => $accessLevel]);
+                        }
+                    } else {
+                        UserProjectAccess::create([
+                            'user_id' => $userId,
+                            'project_id' => $projectId,
+                            'access_level' => $accessLevel,
+                        ]);
+                    }
+
+                    Log::info('Admin - Accès projet accordé/modifié', [
                         'user_id' => $userId,
                         'project_id' => $projectId,
                         'access_level' => $accessLevel,
+                        'admin_id' => auth()->id()
                     ]);
                 }
-
-                Log::info('Admin - Accès projet accordé/modifié', [
-                    'user_id' => $userId,
-                    'project_id' => $projectId,
-                    'access_level' => $accessLevel,
-                    'admin_id' => auth()->id()
-                ]);
-            }
+            });
 
             return response()->json([
                 'success' => true,
