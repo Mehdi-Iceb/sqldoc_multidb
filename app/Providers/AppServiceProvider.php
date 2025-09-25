@@ -9,6 +9,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Services\DatabaseNavigationService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -90,7 +92,7 @@ class AppServiceProvider extends ServiceProvider
                     $cacheKey = "simple_navigation_" . Auth::id() . "_{$dbId}";
                     
                     return Cache::remember($cacheKey, 1800, function () use ($dbId) {
-                        \Log::info('AppServiceProvider - Génération navigation depuis cache', [
+                        Log::info('AppServiceProvider - Génération navigation depuis cache', [
                             'user_id' => Auth::id(),
                             'db_id' => $dbId
                         ]);
@@ -100,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
                     
                 } catch (\Exception $e) {
                     // En cas d'erreur, logger et retourner une structure vide
-                    \Log::warning('AppServiceProvider - Erreur lors du chargement de la navigation', [
+                    Log::warning('AppServiceProvider - Erreur lors du chargement de la navigation', [
                         'user_id' => Auth::id(),
                         'db_id' => $dbId,
                         'error' => $e->getMessage(),
@@ -147,31 +149,31 @@ class AppServiceProvider extends ServiceProvider
         $startTime = microtime(true);
         
         // Version simple qui récupère juste les noms
-        $tables = \DB::table('table_description')
+        $tables = DB::table('table_description')
             ->where('dbid', $dbId)
             ->select('id', 'tablename as name', 'description')
             ->orderBy('tablename')
             ->get();
             
-        $views = \DB::table('view_description')
+        $views = DB::table('view_description')
             ->where('dbid', $dbId)
             ->select('id', 'viewname as name', 'description')
             ->orderBy('viewname')
             ->get();
             
-        $functions = \DB::table('function_description')
+        $functions = DB::table('function_description')
             ->where('dbid', $dbId)
             ->select('id', 'functionname as name', 'description')
             ->orderBy('functionname')
             ->get();
             
-        $procedures = \DB::table('ps_description')
+        $procedures = DB::table('ps_description')
             ->where('dbid', $dbId)
             ->select('id', 'psname as name', 'description')
             ->orderBy('psname')
             ->get();
             
-        $triggers = \DB::table('trigger_description')
+        $triggers = DB::table('trigger_description')
             ->where('dbid', $dbId)
             ->select('id', 'triggername as name', 'description')
             ->orderBy('triggername')

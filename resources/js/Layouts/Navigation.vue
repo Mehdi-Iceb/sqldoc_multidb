@@ -1,5 +1,5 @@
 <template>
-  <aside class="z-20 hidden w-80 overflow-y-auto bg-blue-500 md:block flex-shrink-0">
+  <aside class="z-20 hidden w-80 md:w-96 overflow-y-auto bg-blue-500 md:block flex-shrink-0">
     <div class="py-4 text-white">
       <Link class="ml-6 text-lg font-bold text-gray-200" :href="route('projects.index')">
         {{ appName }}
@@ -93,7 +93,7 @@
 
       <!-- Interface de navigation normale -->
       <div v-else>
-        <!-- Informations de debug (seulement en dev) -->
+        <!-- Informations de debug (seulement en dev) ligne de separation--> 
         <div v-if="showDebugInfo" class="px-6 py-2 text-xs text-gray-300 border-b border-blue-600">
           <!-- <div>Objets: {{ navigationData.metadata?.total_objects || 0 }}</div>
           <div>Temps: {{ navigationData.metadata?.execution_time_ms || 0 }}ms</div>
@@ -128,6 +128,13 @@
           >
             {{ filter.label }} ({{ getFilterCount(filter.type) }})
           </button>
+        </div>
+
+        <div class="px-6 mt-3 flex items-center space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+          </svg>
+          <span>specific search</span>
         </div>
 
         <!-- Section Tables -->
@@ -492,6 +499,7 @@ const refreshNavigation = async () => {
 // Log des informations de debug au montage
 onMounted(() => {
   if (showDebugInfo.value) {
+    console.log(Object.keys(navigationData.value.tables[0]))
     console.log('Navigation - Données chargées depuis props partagées:', {
       hasData: !!navigationData.value,
       metadata: navigationData.value?.metadata,
