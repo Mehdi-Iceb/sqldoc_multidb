@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Models\TableStructure;
 use Inertia\Inertia;
 
 
 class SpecificSearchController extends Controller
 {
-    
+
     public function index(Request $request)
     {
         // Récupérer le projet actuellement connecté
@@ -17,7 +18,7 @@ class SpecificSearchController extends Controller
         $project = Project::with('dbDescriptions.tableDescriptions.tableStructures')->findOrFail($currentProjectId);
 
         // On récupère toutes les structures via les db_descriptions
-        $tableStructuresQuery = \App\Models\TableStructure::query()
+        $tableStructuresQuery = TableStructure::query()
             ->whereHas('tableDescription.dbDescription', function ($q) use ($currentProjectId) {
                 $q->where('project_id', $currentProjectId);
             });

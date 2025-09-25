@@ -229,7 +229,7 @@ class TableController extends Controller
                 'change_type' => $changeType
             ]);
         } catch (\Exception $e) {
-            Log::error('Erreur lors de la création du log d\'audit', [
+            Log::error('Error while creating log Audit', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -245,7 +245,7 @@ class TableController extends Controller
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             if (!$dbId) {
-                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+                return response()->json(['error' => 'No database selected'], 400);
             }
 
             // Récupérer la description de la table
@@ -254,7 +254,7 @@ class TableController extends Controller
                 ->first();
 
             if (!$tableDesc) {
-                return response()->json(['error' => 'Table non trouvée'], 404);
+                return response()->json(['error' => 'Table not found'], 404);
             }
 
             // Récupérer les logs d'audit liés à cette colonne

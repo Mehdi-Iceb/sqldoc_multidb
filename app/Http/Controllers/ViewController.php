@@ -441,7 +441,7 @@ class ViewController extends Controller
             // Obtenir l'ID de la base de données actuelle depuis la session
             $dbId = session('current_db_id');
             if (!$dbId) {
-                return response()->json(['error' => 'Aucune base de données sélectionnée'], 400);
+                return response()->json(['error' => 'No database selected'], 400);
             }
 
             // Récupérer la description de la vue
