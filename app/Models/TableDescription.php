@@ -30,7 +30,7 @@ class TableDescription  extends Model
 
     public function dbdescription()
     {
-        return $this->belongsTo(DbDescription::class);
+        return $this->belongsTo(DbDescription::class, 'dbid', 'id');
     }
 
     public function structures()
