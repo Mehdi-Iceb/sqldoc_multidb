@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReleaseApiController;
 use App\Http\Controllers\ReleaseController;
+use App\Http\Controllers\SpecificSearchController;
 use App\Http\Controllers\TableController;
 use App\Http\Controllers\TriggerController;
 use App\Http\Controllers\ViewController;
@@ -113,6 +114,8 @@ Route::middleware(['auth', 'project.permissions:read'])->group(function () {
         Route::get('/', [ReleaseController::class, 'index'])->name('index');
         Route::get('/{id}', [ReleaseController::class, 'show'])->name('show');
     });
+
+    Route::get('/specific-search', [SpecificSearchController::class, 'specificSearch'])->name('specific.search')->name('specific.search');
 });
 
 
