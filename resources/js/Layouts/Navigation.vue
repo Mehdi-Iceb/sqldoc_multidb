@@ -130,6 +130,9 @@
           </button>
         </div>
 
+        <li
+          v-if="$page.props.currentProject"
+        >
         <Link
           href="/specific-search"
           class="px-6 mt-3 flex items-center space-x-3"
@@ -139,6 +142,7 @@
           </svg>
           <span>specific search</span>
         </Link>
+        </li>
 
         <!-- Section Tables -->
         <div v-if="shouldShowSection('tables')" class="px-6 py-3">
