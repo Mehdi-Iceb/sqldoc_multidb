@@ -58,7 +58,6 @@
               <th class="px-6 py-3">Description</th>
               <th class="px-6 py-3">Range Value</th>
               <th class="px-6 py-3">Release</th>
-              <th class="px-6 py-3">Historic</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -70,7 +69,6 @@
               <td class="px-6 py-2">{{ item.description }}</td>
               <td class="px-6 py-2">{{ item.rangevalues }}</td>
               <td class="px-6 py-2">{{ item.release_id }}</td>
-              <td class="px-6 py-2">{{ item.historic ?? 'N/A' }}</td>
             </tr>
           </tbody>
         </table>
@@ -78,7 +76,7 @@
 
       <!-- Résultats des vues -->
       <div v-if="searchInViews && viewResults.length">
-        <h3 class="text-lg font-semibold mb-2">Result - Vues</h3>
+        <h3 class="text-lg font-semibold mb-2">Result - View</h3>
         <table class="min-w-full divide-y divide-gray-200 border">
           <thead class="bg-gray-50">
             <tr>
@@ -91,7 +89,6 @@
               <th class="px-6 py-3">Description</th>
               <th class="px-6 py-3">Range Value</th>
               <th class="px-6 py-3">Release</th>
-              <th class="px-6 py-3">Historic</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -105,7 +102,6 @@
               <td class="px-6 py-2">{{ item.description }}</td>
               <td class="px-6 py-2">{{ item.rangevalues }}</td>
               <td class="px-6 py-2">{{ item.release_id }}</td>
-              <td class="px-6 py-2">{{ item.historic ?? 'N/A' }}</td>
             </tr>
           </tbody>
         </table>
