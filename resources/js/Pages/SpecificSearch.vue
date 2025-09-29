@@ -96,7 +96,7 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in viewResults" :key="item.id">
-              <td class="px-6 py-2">{{ item.column }}</td>
+              <td class="px-6 py-2">{{ item.name }}</td>
               <td class="px-6 py-2">{{ item.type }}</td>
               <td class="px-6 py-2">{{ item.nullable }}</td>
               <td class="px-6 py-2">{{ item.max_length }}</td>

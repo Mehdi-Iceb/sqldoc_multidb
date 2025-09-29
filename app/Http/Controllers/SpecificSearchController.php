@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DbDescription;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use App\Models\TableStructure;
 use App\Models\ViewColumn;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -16,46 +18,73 @@ class SpecificSearchController extends Controller
     
     public function specificSearch(Request $request)
     {
-        $currentProjectId = session('current_db_id');
+        // CORRECTION : récupérer le db_id, pas le project_id
+        $currentDbId = session('current_db_id');
+        
+        Log::info('Session current_db_id: ' . $currentDbId);
+        
+        // Vérifier que la DB existe
+        $dbDescription = DbDescription::find($currentDbId);
+        if (!$dbDescription) {
+            Log::error('DB Description non trouvé pour db_id: ' . $currentDbId);
+            return Inertia::render('SpecificSearch', [
+                'tableResults' => collect(),
+                'viewResults' => collect(),
+                'filters' => [],
+            ]);
+        }
+        
+        Log::info('DB Description trouvé', [
+            'db_id' => $dbDescription->id,
+            'project_id' => $dbDescription->project_id ?? 'N/A'
+        ]);
+        
+        // Initialiser avec des collections vides
+        $tableResults = collect();
+        $viewResults = collect();
 
-        $tableResults = collect(); // Vide par défaut
-        $viewResults = collect();  // Vide par défaut
-
-        if ($request->boolean('in_tables')) {
-            $tableQuery = TableStructure::query()
-                ->whereHas('TableDescription.dbDescription', function ($q) use ($currentProjectId) {
-                    Log::info('Filtrage project_id: ' . $currentProjectId);
-                    $q->where('project_id', $currentProjectId);
-                });
-
-            if ($request->filled('column')) {
-                $tableQuery->where('column', 'like', '%' . $request->column . '%');
-            }
-
-            $tableResults = $tableQuery->get();
+        // Recherche dans les tables - FILTRER PAR DB_ID directement
+        if ($request->boolean('in_tables') && $request->filled('column')) {
+            DB::enableQueryLog();
+            
+            $tableResults = TableStructure::query()
+                ->whereHas('TableDescription', function ($q) use ($currentDbId) {
+                    // CORRECTION : filtrer par dbid au lieu de project_id
+                    $q->where('dbid', $currentDbId);
+                })
+                ->where('column', 'like', '%' . $request->column . '%')
+                ->get();
+            
+            $queries = DB::getQueryLog();
+            Log::info('Requête SQL Tables: ' . json_encode($queries));
+            Log::info('Résultats tables: ' . $tableResults->count());
         }
 
-        if ($request->boolean('in_views')) {
-            $viewQuery = ViewColumn::query()
-                ->whereHas('ViewDescription.dbDescription', function ($q) use ($currentProjectId) {
-                    $q->where('project_id', $currentProjectId);
-                });
-
-            if ($request->filled('name')) {
-                $viewQuery->where('name', 'like', '%' . $request->column . '%');
-            }
-
-            $viewResults = $viewQuery->get();
+        // Recherche dans les vues - FILTRER PAR DB_ID directement
+        if ($request->boolean('in_views') && $request->filled('column')) {
+            DB::enableQueryLog();
+            
+            $viewResults = ViewColumn::query()
+                ->whereHas('ViewDescription', function ($q) use ($currentDbId) {
+                    // CORRECTION : filtrer par dbid au lieu de project_id
+                    $q->where('dbid', $currentDbId);
+                })
+                ->where('name', 'like', '%' . $request->column . '%')
+                ->get();
+            
+            $queries = DB::getQueryLog();
+            Log::info('Requête SQL Vues: ' . json_encode($queries));
+            Log::info('Résultats vues: ' . $viewResults->count());
         }
-
-        Log::info('Recherche colonne : ' . $request->column);
-        Log::info('Résultats table : ' . $tableResults->count());
-        Log::info('Résultats vue : ' . $viewResults->count());
 
         return Inertia::render('SpecificSearch', [
             'tableResults' => $tableResults,
             'viewResults' => $viewResults,
-            'filters' => $request->only(['column_name', 'in_tables', 'in_views']),
+            'filters' => [
+                'column' => $request->column,
+                'in_tables' => $request->boolean('in_tables'),
+                'in_views' => $request->boolean('in_views'),
+            ],
         ]);
     }
 
