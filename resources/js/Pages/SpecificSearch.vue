@@ -119,6 +119,75 @@
         </table>
       </div>
 
+      <!-- Résultats des index -->
+      <div v-if="searchInIndex && IndexResults.length">
+        <h3 class="text-lg font-semibold mb-2">Result - Index</h3>
+        <table class="min-w-full divide-y divide-gray-200 border mb-6">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3">name</th>
+              <th class="px-6 py-3">type</th>
+              <th class="px-6 py-3">column</th>
+              <th class="px-6 py-3">properties</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="item in IndexResults" :key="item.id">
+              <td class="px-6 py-2">{{ item.name }}</td>
+              <td class="px-6 py-2">{{ item.type }}</td>
+              <td class="px-6 py-2">{{ item.column }}</td>
+              <td class="px-6 py-2">{{ item.properties }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Résultats des Pk -->
+      <div v-if="searchInPk && PkResults.length">
+        <h3 class="text-lg font-semibold mb-2">Result - Primary keys</h3>
+        <table class="min-w-full divide-y divide-gray-200 border mb-6">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3">name</th>
+              <th class="px-6 py-3">type</th>
+              <th class="px-6 py-3">column</th>
+              <th class="px-6 py-3">properties</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="item in PkResults" :key="item.id">
+              <td class="px-6 py-2">{{ item.name }}</td>
+              <td class="px-6 py-2">{{ item.type }}</td>
+              <td class="px-6 py-2">{{ item.column }}</td>
+              <td class="px-6 py-2">{{ item.properties }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Résultats des Fk -->
+      <div v-if="searchInFk && FkResults.length">
+        <h3 class="text-lg font-semibold mb-2">Result - Foreign keys</h3>
+        <table class="min-w-full divide-y divide-gray-200 border mb-6">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3">constraints</th>
+              <th class="px-6 py-3">column</th>
+              <th class="px-6 py-3">referenced_table</th>
+              <th class="px-6 py-3">referenced_column</th>
+              <th class="px-6 py-3">action</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="item in FkResults" :key="item.id">
+              <td class="px-6 py-2">{{ item.constraints }}</td>
+              <td class="px-6 py-2">{{ item.column }}</td>
+              <td class="px-6 py-2">{{ item.referenced_table }}</td>
+              <td class="px-6 py-2">{{ item.referenced_column }}</td>
+              <td class="px-6 py-2">{{ item.action }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Aucun résultat -->
       <div
         v-if="hasSearched && (tableResults.length === 0 && viewResults.length === 0)"
@@ -144,6 +213,9 @@ const searchInFk = ref(false);
 
 const tableResults = ref([]);
 const viewResults = ref([]);
+const IndexResults = ref([]);
+const PkResults = ref([]);
+const FkResults = ref([]);
 const hasSearched = ref(false);
 
 const performSearch = () => {
@@ -155,6 +227,9 @@ const performSearch = () => {
       column: searchQuery.value,
       in_tables: searchInTables.value,
       in_views: searchInViews.value,
+      in_index: searchInIndex.value,
+      in_pk: searchInPk.value,
+      in_fk: searchInFk.value,
     },
     {
       preserveState: true,
@@ -162,6 +237,9 @@ const performSearch = () => {
       onSuccess: (page) => {
         tableResults.value = page.props.tableResults || [];
         viewResults.value = page.props.viewResults || [];
+        IndexResults.value = page.props.IndexResults || [];
+        PkResults.value = page.props.PkResults || [];
+        FkResults.value = page.props.FkResults || [];
       },
     }
   );

@@ -44,6 +44,9 @@ class SpecificSearchController extends Controller
         // Initialiser avec des collections vides
         $tableResults = collect();
         $viewResults = collect();
+        $IndexResults = collect();
+        $PkResults = collect();
+        $FkResults = collect();
 
         // Recherche dans les tables - FILTRER PAR DB_ID directement
         if ($request->boolean('in_tables') && $request->filled('column')) {
@@ -86,8 +89,8 @@ class SpecificSearchController extends Controller
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
                     $q->where('dbid', $currentDbId);
                 })
+                ->whereRaw('properties NOT LIKE ?', ['%PRIMARY KEY%'])
                 ->where('name', 'like', '%' . $request->column . '%')
-                ->where('property', '<>', 'Primary Key')
                 ->get();
             
             $queries = DB::getQueryLog();
@@ -102,8 +105,8 @@ class SpecificSearchController extends Controller
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
                     $q->where('dbid', $currentDbId);
                 })
+                ->whereRaw('properties LIKE ?', ['%PRIMARY KEY%'])
                 ->where('name', 'like', '%' . $request->column . '%')
-                ->where('property', '=', 'Primary Key')
                 ->get();
             
             $queries = DB::getQueryLog();
