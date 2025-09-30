@@ -20,14 +20,26 @@
             <input type="checkbox" v-model="searchInViews" />
             <span class="ml-1">Search for column in View</span>
           </label>
+          <label>
+            <input type="checkbox" v-model="searchInIndex" />
+            <span class="ml-1">Search for index</span>
+          </label>
+          <label>
+            <input type="checkbox" v-model="searchInPk" />
+            <span class="ml-1">Search for primary key</span>
+          </label>
+          <label>
+            <input type="checkbox" v-model="searchInFk" />
+            <span class="ml-1">Search for foreign key</span>
+          </label>
         </div>
 
         <div class="relative w-full">
-		<span class="absolute inset-y-0 left-0 flex items-center pl-3">
-			<svg class="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-			<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
-			</svg>
-		</span>
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+          <svg class="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+          </svg>
+        </span>
 
 		<input
 			v-model="searchQuery"
@@ -124,8 +136,11 @@ import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 const searchQuery = ref('');
-const searchInTables = ref(true);
+const searchInTables = ref(false);
 const searchInViews = ref(false);
+const searchInIndex = ref(false);
+const searchInPk = ref(false);
+const searchInFk = ref(false);
 
 const tableResults = ref([]);
 const viewResults = ref([]);
