@@ -150,18 +150,19 @@
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path :d="isOpen.tables ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
             </svg>
-            <svg class="w-4 h-4 mr-2 flex-shrink-0" flex-shrink-0 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
-                  <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
-                  <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
-                  <line x1="2" y1="13" x2="22" y2="13" stroke-width="2"/>
-                  <line x1="2" y1="17" x2="22" y2="17" stroke-width="2"/>
-                  <line x1="8" y1="3" x2="8" y2="21" stroke-width="2"/>
-                  <line x1="14" y1="3" x2="14" y2="21" stroke-width="2"/>
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
+              <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
+              <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
+              <line x1="2" y1="13" x2="22" y2="13" stroke-width="2"/>
+              <line x1="2" y1="17" x2="22" y2="17" stroke-width="2"/>
+              <line x1="8" y1="3" x2="8" y2="21" stroke-width="2"/>
+              <line x1="14" y1="3" x2="14" y2="21" stroke-width="2"/>
             </svg>
             Tables ({{ filteredTables.length }})
           </button>
-          <ul v-if="isOpen.tables" class="pl-10 mt-2 max-h-64 overflow-y-auto">
+          
+          <ul v-if="isOpen.tables" class="pl-10 mt-2 max-h-64 overflow-y-auto scroll-smooth modern-scroll">
             <li v-for="table in filteredTables" :key="table.id" class="py-1 hover:text-white cursor-pointer text-sm">
               <Link 
                 :href="route('table.details', { tableName: table.name })" 
@@ -169,7 +170,7 @@
                 preserve-state
                 preserve-scroll
               >
-                <svg class="w-4 h-4 mr-2 flex-shrink-0" flex-shrink-0 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke-width="2"/>
                   <rect x="2" y="3" width="20" height="4" fill="currentColor" opacity="0.1"/>
                   <line x1="2" y1="9" x2="22" y2="9" stroke-width="2"/>
@@ -199,13 +200,13 @@
               <path :d="isOpen.views ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
             </svg>
             <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-                  <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
-                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
             </svg>
             Views ({{ filteredViews.length }})
           </button>
-          <ul v-if="isOpen.views" class="pl-10 mt-2 max-h-64 overflow-y-auto">
+          <ul v-if="isOpen.views" class="pl-10 mt-2 max-h-64 overflow-y-auto scroll-smooth modern-scroll">
             <li v-for="view in filteredViews" :key="view.id" class="py-1 hover:text-white cursor-pointer text-sm">
               <Link 
                 :href="route('view.details', { viewName: view.name })" 
@@ -238,7 +239,7 @@
             </svg>
             Functions ({{ filteredFunctions.length }})
           </button>
-          <ul v-if="isOpen.functions" class="pl-10 mt-2 max-h-64 overflow-y-auto">
+          <ul v-if="isOpen.functions" class="pl-10 mt-2 max-h-64 overflow-y-auto scroll-smooth modern-scroll">
             <li v-for="func in filteredFunctions" :key="func.id" class="py-1 hover:text-white cursor-pointer text-sm">
               <Link 
                 :href="route('function.details', { functionName: func.name })" 
@@ -270,7 +271,7 @@
             </svg>
             Procedures ({{ filteredProcedures.length }})
           </button>
-          <ul v-if="isOpen.procedures" class="pl-10 mt-2 max-h-64 overflow-y-auto">
+          <ul v-if="isOpen.procedures" class="pl-10 mt-2 max-h-64 overflow-y-auto scroll-smooth modern-scroll">
             <li v-for="proc in filteredProcedures" :key="proc.id" class="py-1 hover:text-white cursor-pointer text-sm">
               <Link 
                 :href="route('procedure.details', { procedureName: proc.name })" 
@@ -302,7 +303,7 @@
             </svg>
             Triggers ({{ filteredTriggers.length }})
           </button>
-          <ul v-if="isOpen.triggers" class="pl-10 mt-2 max-h-64 overflow-y-auto">
+          <ul v-if="isOpen.triggers" class="pl-10 mt-2 max-h-64 overflow-y-auto scroll-smooth modern-scroll">
             <li v-for="trigger in filteredTriggers" :key="trigger.id" class="py-1 hover:text-white cursor-pointer text-sm">
               <Link 
                 :href="route('trigger.details', { triggerName: trigger.name })" 
@@ -519,3 +520,27 @@ onMounted(() => {
   }
 })
 </script>
+<style scoped>
+.modern-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modern-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.modern-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+</style>

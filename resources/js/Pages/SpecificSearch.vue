@@ -116,7 +116,7 @@
             <tr v-for="item in viewResults" :key="item.id">
               <td class="px-6 py-2">
                 <Link 
-                  :href="route('view.details', { viewName: item.view_description?.viewame || 'unknown' })"
+                  :href="route('view.details', { viewName: item.view_description?.viewname || 'unknown' })"
                   class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
                 >
                   {{ item.view_description?.viewname || 'N/A' }}
@@ -235,7 +235,7 @@
                 </Link>
               </td>
               <td class="px-6 py-2">{{ item.referenced_column }}</td>
-              <td class="px-6 py-2">{{ item.action }}</td>
+              <td class="px-6 py-2">{{ item.action }}</td>  
             </tr>
           </tbody>
         </table>
