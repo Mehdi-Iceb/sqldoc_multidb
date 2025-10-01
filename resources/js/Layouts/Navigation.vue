@@ -380,7 +380,10 @@ const toggleFilter = (filterType) => {
 }
 
 const shouldShowSection = (section) => {
-  return activeFilters.value.includes(section)
+   if (!navigationData.value || !page.props.currentProject) {
+    return false
+  }
+  return activeFilters.value.includes(section) 
 }
 
 const getFilterCount = (type) => {
