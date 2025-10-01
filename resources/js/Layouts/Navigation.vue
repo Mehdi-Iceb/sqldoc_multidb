@@ -187,7 +187,7 @@
                 </span>
               </Link>
             </li>
-            <li v-if="filteredTables.length === 0" class="py-1 text-gray-400 italic text-sm">
+            <li v-if="filteredTables.length === 0" class="py-1 text-red-600 italic text-sm">
               No Tables found
             </li>
           </ul>
@@ -222,7 +222,7 @@
                 {{ view.name }}
               </Link>
             </li>
-            <li v-if="filteredViews.length === 0" class="py-1 text-gray-400 italic text-sm">
+            <li v-if="filteredViews.length === 0" class="py-1 text-red-600 italic text-sm">
               No Views found
             </li>
           </ul>
@@ -253,7 +253,7 @@
                 {{ func.name }}
               </Link>
             </li>
-            <li v-if="filteredFunctions.length === 0" class="py-1 text-gray-400 italic text-sm">
+            <li v-if="filteredFunctions.length === 0" class="py-1 text-red-600 italic text-sm">
               No functions found
             </li>
           </ul>
@@ -286,7 +286,7 @@
                 {{ proc.name }}
               </Link>
             </li>
-            <li v-if="filteredProcedures.length === 0" class="py-1 text-gray-400 italic text-sm">
+            <li v-if="filteredProcedures.length === 0" class="py-1 text-red-600 italic text-sm">
               No procedures found
             </li>
           </ul>
@@ -317,7 +317,7 @@
                 {{ trigger.name }}
               </Link>
             </li>
-            <li v-if="filteredTriggers.length === 0" class="py-1 text-gray-400 italic text-sm">
+            <li v-if="filteredTriggers.length === 0" class="py-1 text-red-600 italic text-sm">
               No triggers found
             </li>
           </ul>
@@ -380,7 +380,7 @@ const toggleFilter = (filterType) => {
 }
 
 const shouldShowSection = (section) => {
-  return activeFilters.value.includes(section) && getFilterCount(section) > 0
+  return activeFilters.value.includes(section)
 }
 
 const getFilterCount = (type) => {
