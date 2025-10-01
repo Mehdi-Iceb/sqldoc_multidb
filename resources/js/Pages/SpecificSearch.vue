@@ -35,19 +35,18 @@
         </div>
 
         <div class="relative w-full">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-          <svg class="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
-          </svg>
-        </span>
-
-		<input
-			v-model="searchQuery"
-			type="text"
-			placeholder="Searching for..."
-			class="w-full pl-10 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-		/>
-		</div>
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg class="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+            </svg>
+          </span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Searching for..."
+            class="w-full pl-10 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
         <button
           type="submit"
@@ -63,6 +62,7 @@
         <table class="min-w-full divide-y divide-gray-200 border mb-6">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column</th>
               <th class="px-6 py-3">Type</th>
               <th class="px-6 py-3">Nullable</th>
@@ -74,6 +74,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in tableResults" :key="item.id">
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('table.details', { tableName: item.table_description?.tablename || 'unknown' })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.table_description?.tablename || 'N/A' }}
+                </Link>
+              </td>
               <td class="px-6 py-2">{{ item.column }}</td>
               <td class="px-6 py-2">{{ item.type }}</td>
               <td class="px-6 py-2">{{ item.nullable }}</td>
@@ -92,6 +100,7 @@
         <table class="min-w-full divide-y divide-gray-200 border">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-6 py-3">View</th>
               <th class="px-6 py-3">Column</th>
               <th class="px-6 py-3">Type</th>
               <th class="px-6 py-3">Nullable</th>
@@ -105,6 +114,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in viewResults" :key="item.id">
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('view.details', { viewName: item.view_description?.viewame || 'unknown' })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.view_description?.viewname || 'N/A' }}
+                </Link>
+              </td>
               <td class="px-6 py-2">{{ item.name }}</td>
               <td class="px-6 py-2">{{ item.type }}</td>
               <td class="px-6 py-2">{{ item.nullable }}</td>
@@ -125,6 +142,7 @@
         <table class="min-w-full divide-y divide-gray-200 border mb-6">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-6 py-3">Table</th>
               <th class="px-6 py-3">name</th>
               <th class="px-6 py-3">type</th>
               <th class="px-6 py-3">column</th>
@@ -133,6 +151,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in IndexResults" :key="item.id">
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('table.details', { tableName: item.table_description?.name || 'unknown' })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.table_description?.name || 'N/A' }}
+                </Link>
+              </td>
               <td class="px-6 py-2">{{ item.name }}</td>
               <td class="px-6 py-2">{{ item.type }}</td>
               <td class="px-6 py-2">{{ item.column }}</td>
@@ -141,12 +167,14 @@
           </tbody>
         </table>
       </div>
+
       <!-- Résultats des Pk -->
       <div v-if="searchInPk && PkResults.length">
         <h3 class="text-lg font-semibold mb-2">Result - Primary keys</h3>
         <table class="min-w-full divide-y divide-gray-200 border mb-6">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-6 py-3">Table</th>
               <th class="px-6 py-3">name</th>
               <th class="px-6 py-3">type</th>
               <th class="px-6 py-3">column</th>
@@ -155,7 +183,15 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in PkResults" :key="item.id">
-              <td class="px-6 py-2">{{ item.name }}</td>
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('table.details', { tableName: item.table_description?.tablename || 'unknown' })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.table_description?.tablename || 'N/A' }}
+                </Link>
+              </td>
+              <td class="px-6 py-2">{{ item.tablename }}</td>
               <td class="px-6 py-2">{{ item.type }}</td>
               <td class="px-6 py-2">{{ item.column }}</td>
               <td class="px-6 py-2">{{ item.properties }}</td>
@@ -163,12 +199,14 @@
           </tbody>
         </table>
       </div>
+
       <!-- Résultats des Fk -->
       <div v-if="searchInFk && FkResults.length">
         <h3 class="text-lg font-semibold mb-2">Result - Foreign keys</h3>
         <table class="min-w-full divide-y divide-gray-200 border mb-6">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-6 py-3">Table</th>
               <th class="px-6 py-3">constraints</th>
               <th class="px-6 py-3">column</th>
               <th class="px-6 py-3">referenced_table</th>
@@ -178,9 +216,24 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="item in FkResults" :key="item.id">
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('table.details', { tableName: item.table_description?.name || 'unknown' })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.table_description?.name || 'N/A' }}
+                </Link>
+              </td>
               <td class="px-6 py-2">{{ item.constraints }}</td>
               <td class="px-6 py-2">{{ item.column }}</td>
-              <td class="px-6 py-2">{{ item.referenced_table }}</td>
+              <td class="px-6 py-2">
+                <Link 
+                  :href="route('table.details', { tableName: item.referenced_table })"
+                  class="text-blue-600 hover:text-blue-900 font-medium hover:underline"
+                >
+                  {{ item.referenced_table }}
+                </Link>
+              </td>
               <td class="px-6 py-2">{{ item.referenced_column }}</td>
               <td class="px-6 py-2">{{ item.action }}</td>
             </tr>
@@ -201,8 +254,8 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 
 const searchQuery = ref('');
 const searchInTables = ref(false);

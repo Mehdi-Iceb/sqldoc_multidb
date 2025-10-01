@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\DbDescription;
 use Illuminate\Http\Request;
-use App\Models\Project;
 use App\Models\TableIndex;
 use App\Models\TableRelation;
 use App\Models\TableStructure;
@@ -20,12 +19,10 @@ class SpecificSearchController extends Controller
     
     public function specificSearch(Request $request)
     {
-        // CORRECTION : récupérer le db_id, pas le project_id
         $currentDbId = session('current_db_id');
         
         Log::info('Session current_db_id: ' . $currentDbId);
         
-        // Vérifier que la DB existe
         $dbDescription = DbDescription::find($currentDbId);
         if (!$dbDescription) {
             Log::error('DB Description non trouvé pour db_id: ' . $currentDbId);
@@ -41,20 +38,19 @@ class SpecificSearchController extends Controller
             'project_id' => $dbDescription->project_id ?? 'N/A'
         ]);
         
-        // Initialiser avec des collections vides
         $tableResults = collect();
         $viewResults = collect();
         $IndexResults = collect();
         $PkResults = collect();
         $FkResults = collect();
 
-        // Recherche dans les tables - FILTRER PAR DB_ID directement
+        // Recherche dans les tables
         if ($request->boolean('in_tables') && $request->filled('column')) {
             DB::enableQueryLog();
             
             $tableResults = TableStructure::query()
+                ->with('TableDescription:id,tablename')
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
-                    // CORRECTION : filtrer par dbid au lieu de project_id
                     $q->where('dbid', $currentDbId);
                 })
                 ->where('column', 'like', '%' . $request->column . '%')
@@ -65,13 +61,13 @@ class SpecificSearchController extends Controller
             Log::info('Résultats tables: ' . $tableResults->count());
         }
 
-        // Recherche dans les vues - FILTRER PAR DB_ID directement
+        // Recherche dans les vues
         if ($request->boolean('in_views') && $request->filled('column')) {
             DB::enableQueryLog();
             
             $viewResults = ViewColumn::query()
+                ->with('ViewDescription:id,viewname') 
                 ->whereHas('ViewDescription', function ($q) use ($currentDbId) {
-                    // CORRECTION : filtrer par dbid au lieu de project_id
                     $q->where('dbid', $currentDbId);
                 })
                 ->where('name', 'like', '%' . $request->column . '%')
@@ -82,10 +78,12 @@ class SpecificSearchController extends Controller
             Log::info('Résultats vues: ' . $viewResults->count());
         }
 
+        // Recherche dans les index
         if ($request->boolean('in_index') && $request->filled('column')) {
             DB::enableQueryLog();
             
             $IndexResults = TableIndex::query()
+                ->with('TableDescription:id,tablename') 
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
                     $q->where('dbid', $currentDbId);
                 })
@@ -98,10 +96,12 @@ class SpecificSearchController extends Controller
             Log::info('Résultats index: ' . $IndexResults->count());
         }
 
+        // Recherche dans les clés primaires
         if ($request->boolean('in_pk') && $request->filled('column')) {
             DB::enableQueryLog();
             
             $PkResults = TableIndex::query()
+                ->with('TableDescription:id,tablename') 
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
                     $q->where('dbid', $currentDbId);
                 })
@@ -114,10 +114,12 @@ class SpecificSearchController extends Controller
             Log::info('Résultats pk: ' . $PkResults->count());
         }
 
+        // Recherche dans les clés étrangères
         if ($request->boolean('in_fk') && $request->filled('column')) {
             DB::enableQueryLog();
             
             $FkResults = TableRelation::query()
+                ->with('TableDescription:id,tablename') 
                 ->whereHas('TableDescription', function ($q) use ($currentDbId) {
                     $q->where('dbid', $currentDbId);
                 })
@@ -145,6 +147,5 @@ class SpecificSearchController extends Controller
             ],
         ]);
     }
-
 
 }
