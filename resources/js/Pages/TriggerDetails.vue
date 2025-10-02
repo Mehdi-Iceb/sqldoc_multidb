@@ -36,7 +36,7 @@
                     class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="saving"
                   >
-                    {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+                    {{ saving ? 'Saving...' : 'Save' }}
                   </button>
                 </div>
               </div>
@@ -93,7 +93,7 @@
                         ? 'bg-red-100 text-red-800' 
                         : 'bg-green-100 text-green-800'
                     ]">
-                      {{ triggerDetails.is_disabled ? 'Désactivé' : 'Activé' }}
+                      {{ triggerDetails.is_disabled ? 'Desactivated' : 'Activated' }}
                     </span>
                   </p>
                 </div>
@@ -123,7 +123,7 @@
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="saving"
                 >
-                {{ saving ? 'Enregistrement...' : 'Enregistrer la description' }}
+                {{ saving ? 'Saving...' : 'Saving description' }}
                 </button>
             </div>
           </div>
@@ -199,7 +199,7 @@ onMounted(() => {
 // ✅ Fonction de sauvegarde de la description
 const saveDescription = async () => {
   if (!props.triggerName) {
-    warning('Erreur: nom du trigger manquant');
+    warning('Error: Trigger name missing');
     return;
   }
 
@@ -215,11 +215,11 @@ const saveDescription = async () => {
       // Optionnel : mettre à jour les props localement
       // props.triggerDetails.description = form.value.description
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+      throw new Error(response.data.error || 'Error while saving')
     }
   } catch (error) {
-    console.error('❌ [TRIGGER] Erreur lors de la sauvegarde de la description:', error)
-    showError('Erreur lors de la sauvegarde de la description: ' + (error.response?.data?.error || error.message))
+    console.error('❌ [TRIGGER] Error while saving description:', error)
+    showError('Error while saving description: ' + (error.response?.data?.error || error.message))
   } finally {
     saving.value = false
   }
@@ -228,7 +228,7 @@ const saveDescription = async () => {
 // ✅ Fonction de sauvegarde complète
 const saveAll = async () => {
   if (!props.triggerName) {
-    warning('Erreur: nom du trigger manquant');
+    warning('Error: Trigger name missing');
     return;
   }
 
@@ -243,13 +243,13 @@ const saveAll = async () => {
     const response = await axios.post(`/api/trigger/${encodeURIComponent(props.triggerName)}/save-all`, triggerData) 
     
     if (response.data.success) {
-      success('Description du trigger enregistrée avec succès')
+      success('Trigger description saved with success')
     } else {
-      throw new Error(response.data.error || 'Erreur lors de la sauvegarde')
+      throw new Error(response.data.error || 'Error while saving')
     }
   } catch (error) {
     console.error('❌ [TRIGGER] Erreur lors de la sauvegarde globale:', error)
-    showError('Erreur lors de la sauvegarde des informations du trigger: ' + (error.response?.data?.error || error.message))
+    showError('Error while saving trigger informations: ' + (error.response?.data?.error || error.message))
   } finally {
     saving.value = false
   }
