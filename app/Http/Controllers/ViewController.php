@@ -11,6 +11,7 @@ use App\Models\ViewColumn;
 use Inertia\Inertia;
 use App\Http\Controllers\Traits\HasProjectPermissions;
 use App\Models\AuditLog;
+use App\Models\Release;
 use Illuminate\Support\Facades\Auth;
 
 class ViewController extends Controller
@@ -202,7 +203,7 @@ class ViewController extends Controller
             }
             
             // Récupérer les releases du projet actuel
-            $releases = \App\Models\Release::where('project_id', $currentProject['id'])
+            $releases = Release::where('project_id', $currentProject['id'])
                 ->orderBy('version_number', 'desc')
                 ->get()
                 ->map(function ($release) {

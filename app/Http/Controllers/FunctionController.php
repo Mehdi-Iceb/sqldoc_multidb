@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\FunctionDescription;
 use App\Models\FuncInformation;
 use App\Models\FuncParameter;
+use App\Models\Release;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -238,7 +239,7 @@ class FunctionController extends Controller
             }
             
             // Récupérer les releases du projet actuel
-            $releases = \App\Models\Release::where('project_id', $currentProject['id'])
+            $releases = Release::where('project_id', $currentProject['id'])
                 ->orderBy('version_number', 'desc')
                 ->get()
                 ->map(function ($release) {
