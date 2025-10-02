@@ -354,115 +354,117 @@
                       </div>
                     </td>
                     <!-- Description -->
-                  <td class="px-6 py-4 text-sm text-gray-500">
-                    <div class="flex items-center space-x-2">
-                      
-                      <!-- Mode lecture -->
-                      <template v-if="!editingDescription[column.column_name]">
-                        <div class="relative w-[100px]">
-                          <span
-                            v-if="column.description"
-                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
-                          >
-                            {{ column.description }}
-                          </span>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                      <div class="flex items-center space-x-2">
+                        
+                        <!-- Mode lecture -->
+                        <template v-if="!editingDescription[column.column_name]">
+                          <!-- Container relatif uniquement si description existe -->
+                          <div v-if="column.description" class="relative w-[300px]">
+                            <span
+                              class="block w-full h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words pr-8"
+                            >
+                              {{ column.description }}
+                            </span>
+
+                            <!-- Bouton loupe en haut à droite du textarea -->
+                            <button
+                              v-if="column.description.length > 100"
+                              @click="openDescriptionModal(column.column_name, column.description)"
+                              class="absolute top-2 right-2 p-1 text-blue-500 hover:text-blue-700 bg-white rounded hover:bg-blue-50 transition-colors"
+                              title="View full description"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                            </button>
+                          </div>
+                          
+                          <!-- Tiret si pas de description -->
                           <span v-else class="text-gray-400">-</span>
 
-                          <!-- Bouton loupe en haut à droite du textarea -->
                           <button
-                            v-if="column.description && column.description.length > 100"
-                            @click="openDescriptionModal(column.column_name, column.description)"
-                            class="absolute top-2 right-2 p-1 text-blue-500 hover:text-blue-700 bg-white rounded hover:bg-blue-50 transition-colors"
-                            title="View full description"
+                            v-if="tableDetails.can_edit"
+                            @click="startEdit('description', column.column_name, column.description)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Edit description"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                           </button>
-                        </div>
+                        </template>
 
-                        <button
-                          v-if="tableDetails.can_edit"
-                          @click="startEdit('description', column.column_name, column.description)"
-                          class="p-1 text-gray-400 hover:text-gray-600"
-                          title="Edit description"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
-                        </button>
-                      </template>
+                        <!-- Mode édition -->
+                        <template v-else>
+                          <textarea
+                            v-model="editingDescriptionValue"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            :disabled="!tableDetails.can_edit"
+                            @keydown.ctrl.enter="saveDescription(column.column_name)"
+                            @keydown.esc="cancelEdit('description', column.column_name)"
+                          ></textarea>
 
-                      <!-- Mode édition -->
-                      <template v-else>
-                        <textarea
-                          v-model="editingDescriptionValue"
-                          class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
-                          :disabled="!tableDetails.can_edit"
-                          @keydown.ctrl.enter="saveDescription(column.column_name)"
-                          @keydown.esc="cancelEdit('description', column.column_name)"
-                        ></textarea>
+                          <!-- Actions -->
+                          <div class="flex space-x-1">
+                            <button
+                              @click="saveDescription(column.column_name)"
+                              class="p-1 text-green-600 hover:text-green-700"
+                              :disabled="savingDescription[column.column_name]"
+                              title="Save"
+                            >
+                              <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0..." />
+                              </svg>
+                            </button>
+                            <button
+                              @click="cancelEdit('description', column.column_name)"
+                              class="p-1 text-red-600 hover:text-red-700"
+                              :disabled="savingDescription[column.column_name]"
+                              title="Cancel"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </div>
+                    </td>
 
-                        <!-- Actions -->
-                        <div class="flex space-x-1">
-                          <button
-                            @click="saveDescription(column.column_name)"
-                            class="p-1 text-green-600 hover:text-green-700"
-                            :disabled="savingDescription[column.column_name]"
-                            title="Save"
-                          >
-                            <svg v-if="!savingDescription[column.column_name]" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0..." />
-                            </svg>
-                          </button>
-                          <button
-                            @click="cancelEdit('description', column.column_name)"
-                            class="p-1 text-red-600 hover:text-red-700"
-                            :disabled="savingDescription[column.column_name]"
-                            title="Cancel"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <!-- Modal pour afficher la description complète -->
+                    <div v-if="showDescriptionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeDescriptionModal">
+                      <div class="relative top-20 mx-auto p-6 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                        <div class="flex items-center justify-between mb-4">
+                          <h3 class="text-lg font-medium text-gray-900">
+                            Description - {{ currentDescriptionColumn }}
+                          </h3>
+                          <button @click="closeDescriptionModal" class="text-gray-400 hover:text-gray-500">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
                         </div>
-                      </template>
-                    </div>
-                  </td>
+                        
+                        <div class="mt-4 max-h-96 overflow-y-auto p-4 bg-gray-50 rounded border">
+                          <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ currentDescriptionText }}</p>
+                        </div>
 
-                  <!-- Modal pour afficher la description complète -->
-                  <div v-if="showDescriptionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeDescriptionModal">
-                    <div class="relative top-20 mx-auto p-6 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-                      <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">
-                          Description - {{ currentDescriptionColumn }}
-                        </h3>
-                        <button @click="closeDescriptionModal" class="text-gray-400 hover:text-gray-500">
-                          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      
-                      <div class="mt-4 max-h-96 overflow-y-auto p-4 bg-gray-50 rounded border">
-                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ currentDescriptionText }}</p>
-                      </div>
-
-                      <div class="mt-6 flex justify-end">
-                        <button 
-                          @click="closeDescriptionModal"
-                          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                        >
-                          Close
-                        </button>
+                        <div class="mt-6 flex justify-end">
+                          <button 
+                            @click="closeDescriptionModal"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                          >
+                            Close
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
                     
                     <!-- Possible Values -->
                     <td class="px-6 py-4 text-sm text-gray-500">
