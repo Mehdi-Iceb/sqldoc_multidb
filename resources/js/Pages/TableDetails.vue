@@ -359,10 +359,10 @@
                       
                       <!-- Mode lecture -->
                       <template v-if="!editingDescription[column.column_name]">
-                        <div class="relative w-[300px]">
+                        <div class="relative w-[100px]">
                           <span
                             v-if="column.description"
-                            class="block w-full h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words pr-8"
+                            class="block w-[300px] h-[80px] text-sm border rounded px-2 py-1 overflow-y-auto whitespace-pre-wrap break-words"
                           >
                             {{ column.description }}
                           </span>

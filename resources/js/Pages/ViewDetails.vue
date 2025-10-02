@@ -247,7 +247,7 @@
                         <template v-else>
                           <textarea
                             v-model="editingDescriptionValue"
-                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[300px] h-[80px] resize-none overflow-y-auto"
+                            class="px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 w-[200px] h-[80px] resize-none overflow-y-auto"
                             :disabled="!viewDetails.can_edit"
                             @keydown.ctrl.enter="saveDescription(column.column_name)"
                             @keydown.esc="cancelEdit('description', column.column_name)"
