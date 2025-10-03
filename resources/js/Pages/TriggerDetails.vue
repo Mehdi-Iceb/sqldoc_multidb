@@ -111,20 +111,20 @@
               </div>
               <div class="p-6">
                 <pre v-if="triggerDetails.definition" 
-                     class="whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded-lg text-gray-600">{{ triggerDetails.definition }}</pre>
+                     class="whitespace-pre-wrap text-sm font-mono bg-gray-800 p-4 rounded-lg text-gray-50">{{ triggerDetails.definition }}</pre>
                 <p v-else class="text-gray-400 italic">No definition available</p>
               </div>
             </div>
   
             <!-- Bouton pour sauvegarder toutes les informations -->
             <div class="flex justify-end mt-6">
-                <button 
+                <!-- <button 
                     @click="saveAll"
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="saving"
                 >
                 {{ saving ? 'Saving...' : 'Saving description' }}
-                </button>
+                </button> -->
             </div>
           </div>
         </div>

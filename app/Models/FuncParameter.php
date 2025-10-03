@@ -16,7 +16,7 @@ class FuncParameter extends Model
         'name',
         'type',
         'output',
-        'definition',
+        'description',
         
     ];
 

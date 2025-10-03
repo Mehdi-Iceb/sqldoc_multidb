@@ -1172,7 +1172,7 @@ class DatabaseStructureService
                                 'name' => $param->parameter_name,
                                 'type' => $param->data_type,
                                 'output' => $param->output_type,
-                                'definition' => $param->description ?? null,
+                                'description' => $param->description ?? null,
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
