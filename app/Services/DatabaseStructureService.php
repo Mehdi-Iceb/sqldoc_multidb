@@ -847,7 +847,7 @@ class DatabaseStructureService
                         n.nspname, c.relname
                 ");
             }
-
+            Log::info('views trouvées: ' . count($views));
             foreach ($views as $view) {
                 
                 DB::transaction(function () use ($view, $dbId, $connectionName, $databaseType) {
@@ -1075,7 +1075,7 @@ class DatabaseStructureService
                         n.nspname, p.proname
                 ");
             }
-
+            Log::info('functions trouvées: ' . count($functions));
             foreach ($functions as $function) {
                 DB::transaction(function () use ($function, $dbId, $connectionName, $databaseType) {
                     try {
@@ -1271,7 +1271,7 @@ class DatabaseStructureService
                         n.nspname, p.proname
                 ");
             }
-
+            Log::info('proicedure trouvées: ' . count($procedures));
             foreach ($procedures as $procedure) {
                 DB::transaction(function () use ($procedure, $dbId, $connectionName, $databaseType) {
                     try {
@@ -1524,6 +1524,8 @@ class DatabaseStructureService
 
         $successCount = 0;
         $errorCount = 0;
+
+        Log::info('triggers trouvées: ' . count($triggers));
 
         foreach ($triggers as $trigger) {
             try {

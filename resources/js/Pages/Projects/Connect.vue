@@ -30,8 +30,8 @@
                         <div v-if="form.processing" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                             <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
                                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-                                <p class="text-gray-700 font-medium">Testing connection...</p>
-                                <p class="text-gray-500 text-sm mt-1">Please wait while we connect to your database</p>
+                                <p class="text-gray-700 font-medium">data transfer in progress...</p>
+                                <p class="text-gray-500 text-sm mt-1">Please wait while we saving the data</p>
                             </div>
                         </div>
                         
@@ -287,11 +287,11 @@ const submit = () => {
             console.log('onSuccess appelé:', page);
             console.log('Flash props:', page.props.flash);
             
-            // IMPORTANT: Vérifier s'il y a des erreurs dans flash
+            
             if (page.props.flash?.error) {
                 console.log('Error detected in onSuccess:', page.props.flash.error);
                 showErrorToast(page.props.flash.error);
-                return; // NE PAS afficher le succès
+                return; 
             }
             
             if (page.props.flash?.success) {
