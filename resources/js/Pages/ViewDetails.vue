@@ -421,7 +421,7 @@
               </h3>
             </div>
             <div class="p-6">
-              <pre class="whitespace-pre-wrap text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded-lg">{{ viewDetails.definition }}</pre>
+              <pre class="whitespace-pre-wrap text-sm font-mono bg-gray-800 p-4 rounded-lg text-gray-50">{{ viewDetails.definition }}</pre>
             </div>
           </div>
         </div>

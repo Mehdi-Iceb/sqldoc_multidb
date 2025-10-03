@@ -487,8 +487,10 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
+import { useToast } from '@/Composables/useToast'
 import axios from 'axios';
 
+const { success, error: showError, warning, info, confirmToast } = useToast()
 
 const props = defineProps({
     projects: Array
@@ -624,7 +626,7 @@ const openProject = (project) => {
 
 const openProjectWithPreload = async (project) => {
   if (!project) {
-    console.warn('No projects provided to openProjectWithPreload');
+    warning('No projects provided to openProjectWithPreload');
     return;
   }
 
@@ -670,7 +672,7 @@ const loadDeletedProjects = async () => {
             throw new Error(response.data.error || 'Error loading');
         }
     } catch (error) {
-        console.error('Error loading deleted projects:', error);
+        showError('Error loading deleted projects:', error);
         
         if (error.response?.status === 403) {
             flashMessage.value = { 
@@ -715,44 +717,44 @@ const showProjectDependencies = async (project) => {
         
         if (response.data.success) {
             projectDependencies.value = response.data.dependencies || {};
-            console.log('📊 Dépendances chargées:', projectDependencies.value);
+            success('📊 Dependencies charged:', projectDependencies.value);
         } else {
-            throw new Error(response.data.error || 'Erreur lors du chargement des dépendances');
+            showError(response.data.error || 'Error while charging dependencies');
         }
     } catch (error) {
-        console.error('❌ Erreur lors du chargement des dépendances:', error);
+        console.error('❌ Error while charging dependencies:', error);
         flashMessage.value = { 
             type: 'error', 
-            message: 'Erreur lors du chargement des dépendances: ' + (error.response?.data?.error || error.message)
+            message: 'Error while charging dependencies: ' + (error.response?.data?.error || error.message)
         };
     } finally {
         loadingDependencies.value = false;
     }
 };
 
-// ✅ FONCTION CORRIGÉE: Confirmer la suppression définitive
+// Confirmer la suppression définitive
 const confirmForceDelete = (project) => {
     // D'abord afficher les dépendances
     showProjectDependencies(project);
 };
 
-// ✅ FONCTION CORRIGÉE: Suppression forcée avec router Inertia
+// Suppression forcée avec router Inertia
 const forceDeleteProject = async () => {
     if (!selectedProject.value) {
-        flashMessage.value = { type: 'error', message: 'Aucun projet sélectionné' };
+        flashMessage.value = { type: 'error', message: 'Np project selected' };
         return;
     }
 
     // Triple confirmation
-    if (!confirm('⚠️ ATTENTION: Cette action supprimera DÉFINITIVEMENT le projet et TOUTES les données associées!\n\nCette action est IRRÉVERSIBLE!\n\nÊtes-vous absolument sûr?')) {
+    if (!confirm('⚠️ Warning: This action will PERMANENTLY delete the project and ALL associated data! This action is IRREVERSIBLE! Are you absolutely sure?')) {
         return;
     }
     
-    if (!confirm('Confirmation finale: Cela supprimera TOUT (tables, colonnes, triggers, relations, etc.).\n\nContinuer?')) {
+    if (!confirm('Final confirmation: This will drop EVERYTHING (tables, columns, triggers, relationships, etc.).Continue?')) {
         return;
     }
     
-    const confirmText = prompt('Tapez "DELETE" pour confirmer cette suppression permanente:');
+    const confirmText = prompt('Type "DELETE" to confirm this permanent deletion:');
     if (!confirmText || confirmText.toUpperCase() !== 'DELETE') {
         flashMessage.value = { type: 'info', message: 'Suppression annulée - texte de confirmation incorrect.' };
         return;
@@ -762,7 +764,7 @@ const forceDeleteProject = async () => {
         forceDeleting.value = true;
         console.log('🗑️ Début de la suppression forcée du projet:', selectedProject.value.id);
         
-        // ✅ UTILISER LE ROUTER INERTIA au lieu d'axios
+        // ROUTER INERTIA 
         router.delete(`/projects/${selectedProject.value.id}/force`, {
             preserveState: false,
             onSuccess: (page) => {

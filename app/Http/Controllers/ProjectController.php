@@ -1274,18 +1274,14 @@ class ProjectController extends Controller
     public function forceDeleteProject($id)
     {
         try {
-            // Log pour débugger
             Log::info('🚨 ProjectController::forceDeleteProject appelée', [
                 'project_id' => $id,
                 'user_id' => auth()->id()
             ]);
 
-            // Vérifier les permissions (ajustez selon votre logique)
+            // Vérifier les permissions 
             if (!auth()->user()->isAdmin()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Accès non autorisé. Seuls les administrateurs peuvent restaurer des projets.'
-                ], 403);
+                return back()->with('error', 'Accès restreint. Seul un administrateur peut supprimer définitivement ce projet.');
             }
 
             $project = Project::withTrashed()->findOrFail($id);
@@ -1309,8 +1305,6 @@ class ProjectController extends Controller
             // Supprimer toutes les dépendances dans une transaction
             DB::transaction(function () use ($project, $dependencies) {
                 $this->deleteProjectDependencies($project->id, $dependencies);
-                
-                // ✅ IMPORTANT: Utiliser forceDelete() sur l'instance Eloquent
                 $project->forceDelete();
             });
 
@@ -1322,14 +1316,8 @@ class ProjectController extends Controller
                 'admin_id' => auth()->id()
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Projet et toutes ses dépendances supprimés définitivement',
-                'details' => [
-                    'project_name' => $projectName,
-                    'dependencies_removed' => $dependencies
-                ]
-            ]);
+            return redirect()->route('admin')
+                ->with('success', "Le projet \"{$projectName}\" et toutes ses dépendances ont été supprimés définitivement.");
             
         } catch (\Exception $e) {
             Log::error('❌ Erreur dans ProjectController::forceDeleteProject', [
@@ -1339,10 +1327,7 @@ class ProjectController extends Controller
                 'admin_id' => auth()->id()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Erreur lors de la suppression définitive: ' . $e->getMessage()
-            ], 500);
+            return back()->with('error', 'Erreur lors de la suppression définitive: ' . $e->getMessage());
         }
     }
 
@@ -1353,7 +1338,6 @@ class ProjectController extends Controller
         try {
             Log::info('📊 Analyse des dépendances pour le projet', ['project_id' => $projectId]);
 
-            // 1. Bases de données
             $dbDescriptions = DbDescription::where('project_id', $projectId)->get();
             $dependencies['databases'] = $dbDescriptions->count();
 
@@ -1361,12 +1345,11 @@ class ProjectController extends Controller
                 $dbIds = $dbDescriptions->pluck('id');
                 Log::info('📁 Bases de données trouvées', ['count' => $dependencies['databases'], 'db_ids' => $dbIds->toArray()]);
                 
-                // 2. Tables
+                // Tables
                 $dependencies['tables'] = DB::table('table_description')
                     ->whereIn('dbid', $dbIds)
                     ->count();
                     
-                // 3. Colonnes
                 $tableIds = DB::table('table_description')
                     ->whereIn('dbid', $dbIds)
                     ->pluck('id');
@@ -1385,19 +1368,47 @@ class ProjectController extends Controller
                         ->count();
                 }
                 
-                // 4. Triggers
+                // Vues et leurs colonnes
+                $dependencies['views'] = DB::table('view_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->count();
+                    
+                $viewIds = DB::table('view_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($viewIds->isNotEmpty()) {
+                    $dependencies['view_columns'] = DB::table('view_column')
+                        ->whereIn('id_view', $viewIds)
+                        ->count();
+                    
+                    $dependencies['view_information'] = DB::table('view_information')
+                        ->whereIn('id_view', $viewIds)
+                        ->count();
+                }
+                
+                // Triggers
                 $dependencies['triggers'] = DB::table('trigger_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->count();
+                    
+                // Fonctions et procédures si vous en avez
+                $dependencies['functions'] = DB::table('function_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->count();
+                    
+                $dependencies['procedures'] = DB::table('ps_description')
                     ->whereIn('dbid', $dbIds)
                     ->count();
             }
 
-            // 5. Releases
+            // Releases
             $dependencies['releases'] = DB::table('release')
                 ->where('project_id', $projectId)
                 ->count();
                 
-            // 6. Permissions utilisateur
-            $dependencies['user_permissions'] = DB::table('user_project_permission')
+            // Permissions utilisateur
+            $dependencies['user_permissions'] = DB::table('user_project_accesses')
                 ->where('project_id', $projectId)
                 ->count();
 
@@ -1406,8 +1417,7 @@ class ProjectController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Erreur lors de l\'analyse des dépendances', [
                 'project_id' => $projectId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
         }
 
@@ -1429,14 +1439,33 @@ class ProjectController extends Controller
             if ($dbIds->isNotEmpty()) {
                 Log::info('🔍 IDs des bases de données à traiter', ['db_ids' => $dbIds->toArray()]);
                 
-                $tableIds = DB::table('table_description')
-                    ->whereIn('dbid', $dbIds)
-                    ->pluck('id');
+                $viewIds = DB::table('view_description')->whereIn('dbid', $dbIds)->pluck('id');
+                
+                // ⚠️ ORDRE CRITIQUE : Supprimer view_information AVANT view_description
+                
+                // 1. view_information (référence view_description)
+                if ($viewIds->isNotEmpty() && isset($dependencies['view_information'])) {
+                    $deleted = DB::table('view_information')->whereIn('id_view', $viewIds)->delete();
+                    Log::info("✅ Informations de vues supprimées: {$deleted}");
+                }
+                
+                // 2. view_column (référence view_description)
+                if ($viewIds->isNotEmpty() && isset($dependencies['view_columns'])) {
+                    $deleted = DB::table('view_column')->whereIn('id_view', $viewIds)->delete();
+                    Log::info("✅ Colonnes de vues supprimées: {$deleted}");
+                }
+                
+                // 3. view_description (maintenant peut être supprimée)
+                if (isset($dependencies['views'])) {
+                    $deleted = DB::table('view_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Vues supprimées: {$deleted}");
+                }
+                
+                // 4. Tables et leurs dépendances
+                $tableIds = DB::table('table_description')->whereIn('dbid', $dbIds)->pluck('id');
                     
                 if ($tableIds->isNotEmpty()) {
                     Log::info('🔍 IDs des tables à traiter', ['table_ids' => $tableIds->toArray()]);
-                    
-                    // Supprimer dans l'ordre: enfants d'abord
                     
                     if (isset($dependencies['columns'])) {
                         $deleted = DB::table('table_structure')->whereIn('id_table', $tableIds)->delete();
@@ -1454,6 +1483,7 @@ class ProjectController extends Controller
                     }
                 }
                 
+                // 5. Triggers
                 if (isset($dependencies['triggers'])) {
                     $triggerIds = DB::table('trigger_description')->whereIn('dbid', $dbIds)->pluck('id');
                     if ($triggerIds->isNotEmpty()) {
@@ -1464,11 +1494,25 @@ class ProjectController extends Controller
                     Log::info("✅ Triggers supprimés: {$deleted}");
                 }
                 
+                // 6. Fonctions
+                if (isset($dependencies['functions'])) {
+                    $deleted = DB::table('function_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Fonctions supprimées: {$deleted}");
+                }
+                
+                // 7. Procédures
+                if (isset($dependencies['procedures'])) {
+                    $deleted = DB::table('ps_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Procédures supprimées: {$deleted}");
+                }
+                
+                // 8. Tables
                 if (isset($dependencies['tables'])) {
                     $deleted = DB::table('table_description')->whereIn('dbid', $dbIds)->delete();
                     Log::info("✅ Tables supprimées: {$deleted}");
                 }
                 
+                // 9. Bases de données
                 if (isset($dependencies['databases'])) {
                     $deleted = DbDescription::where('project_id', $projectId)->delete();
                     Log::info("✅ Bases de données supprimées: {$deleted}");
@@ -1481,7 +1525,7 @@ class ProjectController extends Controller
             }
             
             if (isset($dependencies['user_permissions'])) {
-                $deleted = DB::table('user_project_permission')->where('project_id', $projectId)->delete();
+                $deleted = DB::table('user_project_accesses')->where('project_id', $projectId)->delete();
                 Log::info("✅ Permissions supprimées: {$deleted}");
             }
 
