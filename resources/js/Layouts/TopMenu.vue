@@ -1,7 +1,10 @@
 <template>
     <header class="z-10 py-4 bg-white shadow-md">
       <div class="container flex justify-between items-center px-6 mx-auto h-full text-blue-600">
-        <div class="flex items-center ml-auto">
+        <div v-if="$page.props.currentProject" class="text-lg font-semibold text-gray-700">
+        Project: - {{ $page.props.currentProject.name }}
+        </div>
+        <div class="flex flex-1 justify-end items-center">
           <!-- Mobile hamburger -->
           <button @click="$page.props.showingMobileMenu = !$page.props.showingMobileMenu" class="p-1 mr-5 -ml-1 rounded-md md:hidden focus:outline-none focus:shadow-outline-purple" aria-label="Menu">
             <svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">

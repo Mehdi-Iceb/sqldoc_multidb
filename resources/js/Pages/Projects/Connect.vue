@@ -1,3 +1,219 @@
+<template>
+    <Head title="Connexion au projet" />
+    
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Connection to the project: {{ project.name }}
+            </h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                    <div class="mb-6">
+                        <div class="flex items-center mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-900">Login information</h3>
+                                <p class="text-sm text-gray-600">Database type: {{ getDbTypeName(project.db_type) }}</p>
+                            </div>
+                            <Link
+                                :href="route('projects.index')"
+                                class="inline-flex items-center px-3 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                                :class="{ 'pointer-events-none opacity-50': form.processing }"
+                            >
+                                Back to project
+                            </Link>
+                        </div>
+                        
+                        <!-- Overlay de chargement -->
+                        <div v-if="form.processing" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+                                <p class="text-gray-700 font-medium">Testing connection...</p>
+                                <p class="text-gray-500 text-sm mt-1">Please wait while we connect to your database</p>
+                            </div>
+                        </div>
+                        
+                        <form @submit.prevent="submit" class="max-w-lg" :class="{ 'opacity-50 pointer-events-none': form.processing }">
+                            <div class="mb-4">
+                                <InputLabel for="server" value="Serveur" />
+                                <TextInput
+                                    id="server"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    v-model="form.server"
+                                    required
+                                    placeholder="localhost ou adresse IP"
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.server" />
+                            </div>
+
+                            <div class="mb-4">
+                                <InputLabel for="database" value="Base de données" />
+                                <TextInput
+                                    id="database"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    v-model="form.database"
+                                    required
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.database" />
+                            </div>
+
+                            <div v-if="project.db_type !== 'sqlserver'" class="mb-4">
+                                <InputLabel for="port" value="Port" />
+                                <TextInput
+                                    id="port"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    v-model="form.port"
+                                    required
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.port" />
+                            </div>
+
+                            <div v-if="project.db_type === 'sqlserver'" class="mb-4">
+                                <InputLabel value="Mode d'authentification" />
+                                <div class="mt-2 space-y-2">
+                                    <div class="flex items-center">
+                                        <input
+                                            id="windows-auth"
+                                            type="radio"
+                                            value="windows"
+                                            name="authMode"
+                                            :checked="authMode === 'windows'"
+                                            @change="updateAuthMode('windows')"
+                                            :disabled="form.processing"
+                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                        />
+                                        <label for="windows-auth" class="ml-2 block text-sm text-gray-900">
+                                            Authentification Windows
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input
+                                            id="sql-auth"
+                                            type="radio"
+                                            value="sql"
+                                            name="authMode"
+                                            :checked="authMode === 'sql'"
+                                            @change="updateAuthMode('sql')"
+                                            :disabled="form.processing"
+                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                        />
+                                        <label for="sql-auth" class="ml-2 block text-sm text-gray-900">
+                                            Authentification SQL Server
+                                        </label>
+                                    </div>
+                                </div>
+                                <InputError class="mt-2" :message="form.errors.authMode" />
+                            </div>
+
+                            <div v-if="showAuthFields" class="mb-4">
+                                <InputLabel for="username" value="Nom d'utilisateur" />
+                                <TextInput
+                                    id="username"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    v-model="form.username"
+                                    required
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.username" />
+                            </div>
+
+                            <div v-if="showAuthFields" class="mb-4">
+                                <InputLabel for="password" value="Mot de passe" />
+                                <TextInput
+                                    id="password"
+                                    type="password"
+                                    class="mt-1 block w-full"
+                                    v-model="form.password"
+                                    required
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.password" />
+                            </div>
+
+                            <div class="mb-4">
+                                <InputLabel for="description" value="Description (optionnelle)" />
+                                <TextareaInput
+                                    id="description"
+                                    class="mt-1 block w-full"
+                                    v-model="form.description"
+                                    rows="4"
+                                    :disabled="form.processing"
+                                />
+                                <InputError class="mt-2" :message="form.errors.description" />
+                            </div>
+
+                            <div class="flex items-center justify-between mt-6">
+                                <button
+                                    type="button"
+                                    @click="testConnection"
+                                    :disabled="form.processing"
+                                    class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150"
+                                >
+                                    Test Connection
+                                </button>
+                                
+                                <PrimaryButton 
+                                    :class="{ 'opacity-25': form.processing }" 
+                                    :disabled="form.processing"
+                                    class="relative"
+                                >
+                                    <span v-if="!form.processing">Se connecter</span>
+                                    <span v-else class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Connexion...
+                                    </span>
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div :class="getToastClasses">
+            <div class="p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div :class="['rounded-full p-2', getToastIconAndColor.bgColor]">
+                            <svg class="h-5 w-5" :class="getToastIconAndColor.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getToastIconAndColor.icon"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-3 w-0 flex-1 pt-0.5">
+                        <p :class="['text-sm font-medium', getToastIconAndColor.titleColor]">
+                            {{ toastType === 'error' ? 'Connection Error' : toastType === 'success' ? 'Success' : 'Information' }}
+                        </p>
+                        <p :class="['mt-1 text-sm', getToastIconAndColor.messageColor]">
+                            {{ toastMessage }}
+                        </p>
+                    </div>
+                    <div class="ml-4 flex-shrink-0 flex">
+                        <button @click="hideToast" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="sr-only">Close</span>
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
@@ -280,220 +496,3 @@ const getToastIconAndColor = computed(() => {
     }
 });
 </script>
-
-<template>
-    <Head title="Connexion au projet" />
-    
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Connection to the project: {{ project.name }}
-            </h2>
-        </template>
-
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="mb-6">
-                        <div class="flex items-center mb-4">
-                            <div class="flex-1">
-                                <h3 class="text-lg font-medium text-gray-900">Login information</h3>
-                                <p class="text-sm text-gray-600">Database type: {{ getDbTypeName(project.db_type) }}</p>
-                            </div>
-                            <Link
-                                :href="route('projects.index')"
-                                class="inline-flex items-center px-3 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                :class="{ 'pointer-events-none opacity-50': form.processing }"
-                            >
-                                Back to project
-                            </Link>
-                        </div>
-                        
-                        <!-- Overlay de chargement -->
-                        <div v-if="form.processing" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
-                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-                                <p class="text-gray-700 font-medium">Testing connection...</p>
-                                <p class="text-gray-500 text-sm mt-1">Please wait while we connect to your database</p>
-                            </div>
-                        </div>
-                        
-                        <form @submit.prevent="submit" class="max-w-lg" :class="{ 'opacity-50 pointer-events-none': form.processing }">
-                            <div class="mb-4">
-                                <InputLabel for="server" value="Serveur" />
-                                <TextInput
-                                    id="server"
-                                    type="text"
-                                    class="mt-1 block w-full"
-                                    v-model="form.server"
-                                    required
-                                    placeholder="localhost ou adresse IP"
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.server" />
-                            </div>
-
-                            <div class="mb-4">
-                                <InputLabel for="database" value="Base de données" />
-                                <TextInput
-                                    id="database"
-                                    type="text"
-                                    class="mt-1 block w-full"
-                                    v-model="form.database"
-                                    required
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.database" />
-                            </div>
-
-                            <div v-if="project.db_type !== 'sqlserver'" class="mb-4">
-                                <InputLabel for="port" value="Port" />
-                                <TextInput
-                                    id="port"
-                                    type="text"
-                                    class="mt-1 block w-full"
-                                    v-model="form.port"
-                                    required
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.port" />
-                            </div>
-
-                            <div v-if="project.db_type === 'sqlserver'" class="mb-4">
-                                <InputLabel value="Mode d'authentification" />
-                                <div class="mt-2 space-y-2">
-                                    <div class="flex items-center">
-                                        <input
-                                            id="windows-auth"
-                                            type="radio"
-                                            value="windows"
-                                            name="authMode"
-                                            :checked="authMode === 'windows'"
-                                            @change="updateAuthMode('windows')"
-                                            :disabled="form.processing"
-                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                                        />
-                                        <label for="windows-auth" class="ml-2 block text-sm text-gray-900">
-                                            Authentification Windows
-                                        </label>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <input
-                                            id="sql-auth"
-                                            type="radio"
-                                            value="sql"
-                                            name="authMode"
-                                            :checked="authMode === 'sql'"
-                                            @change="updateAuthMode('sql')"
-                                            :disabled="form.processing"
-                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                                        />
-                                        <label for="sql-auth" class="ml-2 block text-sm text-gray-900">
-                                            Authentification SQL Server
-                                        </label>
-                                    </div>
-                                </div>
-                                <InputError class="mt-2" :message="form.errors.authMode" />
-                            </div>
-
-                            <div v-if="showAuthFields" class="mb-4">
-                                <InputLabel for="username" value="Nom d'utilisateur" />
-                                <TextInput
-                                    id="username"
-                                    type="text"
-                                    class="mt-1 block w-full"
-                                    v-model="form.username"
-                                    required
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.username" />
-                            </div>
-
-                            <div v-if="showAuthFields" class="mb-4">
-                                <InputLabel for="password" value="Mot de passe" />
-                                <TextInput
-                                    id="password"
-                                    type="password"
-                                    class="mt-1 block w-full"
-                                    v-model="form.password"
-                                    required
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.password" />
-                            </div>
-
-                            <div class="mb-4">
-                                <InputLabel for="description" value="Description (optionnelle)" />
-                                <TextareaInput
-                                    id="description"
-                                    class="mt-1 block w-full"
-                                    v-model="form.description"
-                                    rows="4"
-                                    :disabled="form.processing"
-                                />
-                                <InputError class="mt-2" :message="form.errors.description" />
-                            </div>
-
-                            <div class="flex items-center justify-between mt-6">
-                                <button
-                                    type="button"
-                                    @click="testConnection"
-                                    :disabled="form.processing"
-                                    class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150"
-                                >
-                                    Test Connection
-                                </button>
-                                
-                                <PrimaryButton 
-                                    :class="{ 'opacity-25': form.processing }" 
-                                    :disabled="form.processing"
-                                    class="relative"
-                                >
-                                    <span v-if="!form.processing">Se connecter</span>
-                                    <span v-else class="flex items-center">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Connexion...
-                                    </span>
-                                </PrimaryButton>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div :class="getToastClasses">
-            <div class="p-4">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0">
-                        <div :class="['rounded-full p-2', getToastIconAndColor.bgColor]">
-                            <svg class="h-5 w-5" :class="getToastIconAndColor.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getToastIconAndColor.icon"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="ml-3 w-0 flex-1 pt-0.5">
-                        <p :class="['text-sm font-medium', getToastIconAndColor.titleColor]">
-                            {{ toastType === 'error' ? 'Connection Error' : toastType === 'success' ? 'Success' : 'Information' }}
-                        </p>
-                        <p :class="['mt-1 text-sm', getToastIconAndColor.messageColor]">
-                            {{ toastMessage }}
-                        </p>
-                    </div>
-                    <div class="ml-4 flex-shrink-0 flex">
-                        <button @click="hideToast" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <span class="sr-only">Close</span>
-                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </AuthenticatedLayout>
-</template>

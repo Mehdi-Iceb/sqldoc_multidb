@@ -626,7 +626,7 @@ const openProject = (project) => {
 
 const openProjectWithPreload = async (project) => {
   if (!project) {
-    warning('No projects provided to openProjectWithPreload');
+    Error('No projects provided to openProjectWithPreload');
     return;
   }
 
@@ -706,7 +706,7 @@ const showProjectDependencies = async (project) => {
         loadingDependencies.value = true;
         showDependenciesModal.value = true;
         
-        console.log('🔍 Chargement des dépendances pour le projet:', project.id);
+        console.log('🔍 Loading dependencies for the project:', project.id);
         
         const response = await axios.get(`/admin/projects/${project.id}/deletion-preview`, {
             headers: {
@@ -741,7 +741,7 @@ const confirmForceDelete = (project) => {
 // Suppression forcée avec router Inertia
 const forceDeleteProject = async () => {
     if (!selectedProject.value) {
-        flashMessage.value = { type: 'error', message: 'Np project selected' };
+        flashMessage.value = { type: 'error', message: 'No project selected' };
         return;
     }
 
@@ -756,13 +756,13 @@ const forceDeleteProject = async () => {
     
     const confirmText = prompt('Type "DELETE" to confirm this permanent deletion:');
     if (!confirmText || confirmText.toUpperCase() !== 'DELETE') {
-        flashMessage.value = { type: 'info', message: 'Suppression annulée - texte de confirmation incorrect.' };
+        flashMessage.value = { type: 'info', message: 'Deletion canceled - incorrect confirmation text.' };
         return;
     }
 
     try {
         forceDeleting.value = true;
-        console.log('🗑️ Début de la suppression forcée du projet:', selectedProject.value.id);
+        console.log('🗑️ Forced project deletion begins:', selectedProject.value.id);
         
         // ROUTER INERTIA 
         router.delete(`/projects/${selectedProject.value.id}/force`, {
@@ -776,7 +776,7 @@ const forceDeleteProject = async () => {
                 
                 flashMessage.value = { 
                     type: 'success', 
-                    message: 'Projet et toutes ses dépendances supprimés définitivement!' 
+                    message: 'Project and all its dependencies permanently deleted!' 
                 };
                 
                 // Recharger les projets supprimés si on est dans cette vue
@@ -790,7 +790,7 @@ const forceDeleteProject = async () => {
             onError: (errors) => {
                 console.error('❌ Erreur lors de la suppression forcée:', errors);
                 
-                let errorMessage = 'Erreur lors de la suppression forcée';
+                let errorMessage = 'Error during force deletion';
                 if (typeof errors === 'object' && errors !== null) {
                     // Extraire le premier message d'erreur
                     const firstError = Object.values(errors)[0];
@@ -818,7 +818,7 @@ const forceDeleteProject = async () => {
         console.error('❌ Erreur lors de la suppression forcée:', error);
         flashMessage.value = { 
             type: 'error', 
-            message: 'Erreur: ' + (error.response?.data?.error || error.message) 
+            message: 'Error: ' + (error.response?.data?.error || error.message) 
         };
         forceDeleting.value = false;
     }
