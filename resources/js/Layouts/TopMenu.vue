@@ -2,7 +2,7 @@
     <header class="z-10 py-4 bg-white shadow-md">
       <div class="container flex justify-between items-center px-6 mx-auto h-full text-blue-600">
         <div v-if="$page.props.currentProject" class="text-lg font-semibold text-gray-700">
-        Project: - {{ $page.props.currentProject.name }}
+        Project: {{ $page.props.currentProject.name }}
         </div>
         <div class="flex flex-1 justify-end items-center">
           <!-- Mobile hamburger -->
