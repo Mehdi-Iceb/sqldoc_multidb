@@ -6,13 +6,25 @@
           <span class="text-gray-500 font-normal">View :</span> 
           {{ viewName }}
         </h2>
-        
+        <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              help ?
+            </span>
+          </button>
       </div>
     </template>
 
     <div class="py-12">
       <div class="max-w-10xl mx-auto sm:px-6 lg:px-8 space-y-8">
-        <!-- 🎯 SPINNER DE CHARGEMENT PRINCIPAL -->
+        <!--  SPINNER DE CHARGEMENT PRINCIPAL -->
         <div v-if="loading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center max-w-sm w-full mx-4">
             <!-- Spinner principal -->
@@ -78,7 +90,7 @@
         <!-- Success state -->
         <div v-else>
           <!-- Description de la vue -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <div id="view-description" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
               <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -88,6 +100,7 @@
                 Description
               </h3>
               <button 
+                id="save-view-button"
                 v-if="viewDetails.can_edit"
                   @click="saveViewStructure" 
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -121,7 +134,7 @@
           </div>
 
           <!-- Informations de la vue -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <div id="view-info" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex items-center">
                 <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +166,7 @@
           </div>
 
           <!-- Structure de la vue -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <div id="view-structure" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h3 class="text-lg font-medium text-gray-900">
                 <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,7 +212,7 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="column in viewDetails.columns" 
+                  <tr v-for="(column, index) in viewDetails.columns" 
                       :key="column.column_name"
                       class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -227,7 +240,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {{ column.scale || '-' }}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-description' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
 
                         <!-- Mode lecture -->
@@ -245,6 +258,7 @@
                             v-if="viewDetails.can_edit"
                             @click="startEdit('description', column.column_name, column.description)"
                             class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Edit description"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -291,7 +305,7 @@
                         </template>
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-range' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
 
                         <!-- Mode lecture -->
@@ -357,7 +371,7 @@
                       </div>
                     </td>
                     
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-release' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2 relative">
                         <select 
                           :value="column.release_id || ''"
@@ -383,7 +397,7 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-sm">
+                    <td :id="index === 0 ? 'column-history' : undefined" class="px-4 py-3 text-sm">
                       <SecondaryButton @click="showAuditLogs(column.column_name)" :disabled="loadingAuditLogs && currentColumn === column.column_name">
                         <span v-if="!(loadingAuditLogs && currentColumn === column.column_name)">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -411,7 +425,7 @@
           </div>
 
           <!-- Définition SQL -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <div id="view-sql" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
@@ -504,10 +518,18 @@ import { router } from '@inertiajs/vue3'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js'
 import axios from 'axios'
 
-// ✅ Utilisation du toast - renommage pour éviter les conflits
+// Utilisation du toast - renommage pour éviter les conflits
 const { success, error: showError, warning, info } = useToast()
+const { showViewDetailsGuide } = useDriver()
+
+// Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('view_details_tutorial_shown')
+  showViewDetailsGuide()
+}
 
 const props = defineProps({
   viewName: {
@@ -566,7 +588,7 @@ let progressInterval = null
 // Computed pour l'erreur
 const error = computed(() => props.error)
 
-// ✅ DÉCLARATION DES FONCTIONS AVANT LES WATCHERS
+// DÉCLARATION DES FONCTIONS AVANT LES WATCHERS
 const simulateLoadingProgress = () => {
   loadingProgress.value = 0
   
@@ -611,7 +633,7 @@ const currentColumn = ref('')
 const showAuditModal = ref(false)
 const auditLogs = ref([])
 
-// ✅ FONCTION pour fermer la modal
+// FONCTION pour fermer la modal
 const closeAuditModal = () => {
   showAuditModal.value = false
   auditLogs.value = []
@@ -619,7 +641,7 @@ const closeAuditModal = () => {
   loadingAuditLogs.value = false
 }
 
-// ✅ WATCHERS APRÈS LA DÉCLARATION DES FONCTIONS
+// WATCHERS APRÈS LA DÉCLARATION DES FONCTIONS
 watch(
   () => props.viewDetails,
   (newViewDetails) => {
@@ -659,7 +681,7 @@ watch(
   }
 )
 
-// ✅ Fonctions d'édition avec Toast
+// Fonctions d'édition avec Toast
 const startEdit = (type, columnName, currentValue) => {
   if (!canEdit.value) {
     // ✅ Toast de warning au lieu d'alert
@@ -689,7 +711,7 @@ const cancelEdit = (type, columnName) => {
   // info('↩️ Édition annulée')
 }
 
-// ✅ Fonction pour sauvegarder avec Toast
+// Fonction pour sauvegarder avec Toast
 const saveViewStructure = async () => {
   try {
     saving.value = true
@@ -706,13 +728,13 @@ const saveViewStructure = async () => {
     })
     
     if (response.data.success) {
-      // ✅ Recharger les données avec Inertia
+      // Recharger les données avec Inertia
       router.reload({
         only: ['viewDetails'],
         preserveScroll: true,
         onSuccess: () => {
           console.log('✅ Données rechargées avec succès')
-          // ✅ Toast de succès avec emoji
+          // Toast de succès avec emoji
           success(`👁️ Description de la vue ${props.viewName} enregistrée avec succès!`)
         },
         onError: (errors) => {
@@ -725,7 +747,7 @@ const saveViewStructure = async () => {
     }
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde:', error)
-    // ✅ Toast d'erreur au lieu d'alert
+    // Toast d'erreur au lieu d'alert
     showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     saving.value = false
@@ -746,15 +768,15 @@ const saveDescription = async (columnName) => {
         column.description = editingDescriptionValue.value
       }
       cancelEdit('description', columnName)
-      // ✅ Toast de succès
-      success(`✅ Description de la colonne ${columnName} mise à jour!`)
+      // Toast de succès
+      success(` Description de la colonne ${columnName} mise à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
-    console.error('❌ Error:', error)
-    // ✅ Toast d'erreur
-    showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
+    console.error(' Error:', error)
+    // Toast d'erreur
+    showError(` Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingDescription.value[columnName] = false
   }
@@ -774,14 +796,14 @@ const saveRangeValues = async (columnName) => {
         column.rangevalues = editingRangeValuesValue.value
       }
       cancelEdit('rangeValues', columnName)
-      // ✅ Toast de succès
+      // Toast de succès
       success(`📋 Valeurs de plage de la colonne ${columnName} mises à jour!`)
     } else {
       throw new Error(response.data.error)
     }
   } catch (error) {
-    console.error('❌ Error:', error)
-    // ✅ Toast d'erreur
+    console.error(' Error:', error)
+    // Toast d'erreur
     showError(`❌ Erreur lors de la sauvegarde: ${error.response?.data?.error || error.message}`)
   } finally {
     savingRangeValues.value[columnName] = false
@@ -790,7 +812,7 @@ const saveRangeValues = async (columnName) => {
 
 const updateColumnRelease = async (column, releaseId) => {
   if (!canEdit.value) {
-    // ✅ Toast de warning
+    // Toast de warning
     warning('🚫 Vous n\'avez pas les permissions pour modifier cette vue')
     return
   }
@@ -809,7 +831,7 @@ const updateColumnRelease = async (column, releaseId) => {
       const selectedRelease = props.availableReleases.find(r => r.id === finalReleaseId)
       column.release_version = selectedRelease ? selectedRelease.version_number : ''
       
-      // ✅ Toast de succès avec info de la release
+      // Toast de succès avec info de la release
       const releaseInfo = selectedRelease ? selectedRelease.version_number : 'aucune'
       success(`🚀 Release de ${column.column_name} mise à jour: ${releaseInfo}`)
     } else {
@@ -817,7 +839,7 @@ const updateColumnRelease = async (column, releaseId) => {
     }
   } catch (error) {
     console.error('❌ Error:', error)
-    // ✅ Toast d'erreur
+    // Toast d'erreur
     showError(`❌ Erreur lors de la mise à jour: ${error.response?.data?.error || error.message}`)
   } finally {
     updatingRelease.value[column.column_name] = false
@@ -826,7 +848,7 @@ const updateColumnRelease = async (column, releaseId) => {
 
 const showAuditLogs = async (columnName) => {
   try {
-    console.log('🔍 Ouverture audit logs pour:', columnName)
+    console.log(' Ouverture audit logs pour:', columnName)
     
     // Ouvrir la modal immédiatement
     showAuditModal.value = true
@@ -834,7 +856,7 @@ const showAuditLogs = async (columnName) => {
     currentColumn.value = columnName
     auditLogs.value = [] // Réinitialiser les logs
     
-    // ✅ Toast d'info pour le chargement
+    // Toast d'info pour le chargement
     info(`📋 Chargement de l'historique de ${columnName}...`)
     
     // Faire la requête
@@ -845,7 +867,7 @@ const showAuditLogs = async (columnName) => {
     if (response.data && Array.isArray(response.data)) {
       auditLogs.value = response.data
       
-      // ✅ Toast de succès avec compteur
+      // Toast de succès avec compteur
       if (response.data.length > 0) {
         success(`📊 ${response.data.length} modification(s) trouvée(s) pour ${columnName}`)
       } else {
@@ -860,7 +882,7 @@ const showAuditLogs = async (columnName) => {
   } catch (error) {
     console.error('❌ Erreur lors du chargement des audit logs:', error)
     
-    // ✅ Toast d'erreur personnalisé selon le type d'erreur
+    // Toast d'erreur personnalisé selon le type d'erreur
     let errorMessage = 'Erreur lors du chargement de l\'historique'
     
     if (error.response) {
@@ -931,11 +953,20 @@ onUnmounted(() => {
 
 // Debug au montage
 onMounted(() => {
-  console.log('🔍 Props reçues:', props)
-  console.log('🔍 ViewDetails:', props.viewDetails)
-  console.log('🔍 Permissions:', props.permissions)
-  console.log('🔍 Can Edit:', canEdit.value)
-  console.log('🔍 Is Owner:', isOwner.value)
-  console.log('🔍 Access Level:', accessLevel.value)
+  console.log(' Props reçues:', props)
+  console.log(' ViewDetails:', props.viewDetails)
+  console.log(' Permissions:', props.permissions)
+  console.log(' Can Edit:', canEdit.value)
+  console.log(' Is Owner:', isOwner.value)
+  console.log(' Access Level:', accessLevel.value)
+
+  // Lancer le tutoriel au premier chargement
+  const tutorialShown = localStorage.getItem('view_details_tutorial_shown')
+  if (!tutorialShown && props.viewDetails && !props.error && props.viewDetails.columns?.length > 0) {
+    setTimeout(() => {
+      showViewDetailsGuide()
+      localStorage.setItem('view_details_tutorial_shown', 'true')
+    }, 1000)
+  }
 })
 </script>

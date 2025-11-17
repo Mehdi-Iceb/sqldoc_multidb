@@ -16,7 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->enum('access_level', ['read', 'write', 'admin'])->default('read');
-            $table->timestamps();
+            $table->dateTime2('created_at')->nullable();
+            $table->dateTime2('updated_at')->nullable();
 
             // Index pour optimiser les requêtes
             $table->index(['user_id', 'project_id']);

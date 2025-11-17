@@ -7,6 +7,19 @@
           <span class="text-gray-500 font-normal">Table :</span> 
           {{ tableName }}
         </h2>
+        <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              help ?
+            </span>
+          </button>
       </div>
     </template>
 
@@ -28,7 +41,7 @@
         <div class="space-y-8">
 
           <!-- Description de la table -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6" :key="`description-${tableName}`">
+          <div id="table-description" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6" :key="`description-${tableName}`">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -38,6 +51,7 @@
                   Table description
                 </h3>
                 <button 
+                  id="save-table-button"
                   v-if="tableDetails.can_edit"
                   @click="saveTableStructure" 
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -72,7 +86,7 @@
           </div>
           
           <!-- Structure de la table -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div id="table-structure" class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">
@@ -84,7 +98,7 @@
                     ({{ filteredColumns.length }}/{{ tableDetails.columns.length }})
                   </span>
                 </h3>
-                <PrimaryButton v-if="tableDetails.can_add_columns" @click="showAddColumnModal = true">
+                <PrimaryButton id="add-column-button" v-if="tableDetails.can_add_columns" @click="showAddColumnModal = true">
                   Add a column
                 </PrimaryButton>
               </div>
@@ -268,7 +282,7 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="column in tableDetails.columns" 
+                  <tr v-for="(column, index) in tableDetails.columns" 
                       :key="column.column_name"
                       class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -360,7 +374,7 @@
                     </td>
 
                     <!-- Description -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-description' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
                         
                         <!-- Mode lecture -->
@@ -473,7 +487,7 @@
                     </div>
                     
                     <!-- Possible Values -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-range' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
 
                         <!-- Mode lecture -->
@@ -537,7 +551,7 @@
 
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td :id="index === 0 ? 'column-release' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2 relative">
                         <select 
                           :value="column.release_id || ''"
@@ -563,7 +577,7 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-sm">
+                    <td :id="index === 0 ? 'column-history' : undefined" class="px-4 py-3 text-sm">
                       <SecondaryButton @click="showAuditLogs(column.column_name)" :disabled="loadingAuditLogs && currentColumn === column.column_name">
                         <span v-if="!(loadingAuditLogs && currentColumn === column.column_name)">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -586,7 +600,7 @@
           </div>
 
           <!-- Index -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div id="table-indexes" class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h3 class="text-lg font-medium text-gray-900">
                 <svg class="h-5 w-5 text-gray-500 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -615,8 +629,10 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {{ index.index_type }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <span class="font-mono">{{ index.columns }}</span>
+                    <td class="px-6 py-4 text-sm text-gray-600 align-top">
+                      <div class="font-mono max-w-xs max-h-24 overflow-y-auto whitespace-pre-wrap break-words"> 
+                        {{ index.columns }}
+                      </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       <div class="flex gap-2">
@@ -642,7 +658,7 @@
           </div>
 
           <!-- Relations -->
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div id="table-relations" class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">
@@ -768,7 +784,7 @@
                       :disabled="addingRelation"
                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                     >
-                      Annuler
+                      Cancel
                     </button>
                     <button 
                       type="submit"
@@ -921,10 +937,18 @@ import { Link, router } from '@inertiajs/vue3'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js'
 import axios from 'axios'
 
 //  Utilisation du toast - renommage pour éviter les conflits
 const { success, error: showError, warning, info } = useToast()
+const { showTableDetailsGuide } = useDriver()
+
+// Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('table_details_tutorial_shown')
+  showTableDetailsGuide()
+}
 
 //  Props optimisés avec valeurs par défaut
 const props = defineProps({
@@ -1085,8 +1109,17 @@ const resetComponent = () => {
 //  Initialisation avec Inertia
 onMounted(() => {
   form.value.description = props.tableDetails.description || ''
-  console.log('🔍 [TABLE] Composant monté avec les données:', props.tableDetails)
-  console.log('🔍 [TABLE] Table name:', props.tableName)
+  console.log(' [TABLE] Composant monté avec les données:', props.tableDetails)
+  console.log(' [TABLE] Table name:', props.tableName)
+  
+  // Lancer le tutoriel au premier chargement
+  const tutorialShown = localStorage.getItem('table_details_tutorial_shown')
+  if (!tutorialShown && props.tableDetails && !props.error && props.tableDetails.columns?.length > 0) {
+    setTimeout(() => {
+      showTableDetailsGuide()
+      localStorage.setItem('table_details_tutorial_shown', 'true')
+    }, 1000)
+  }
 })
 
 //  IMPORTANT: Surveiller les changements de table pour Inertia

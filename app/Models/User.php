@@ -46,6 +46,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role_id' => 'integer',
         ];
     }
 
@@ -71,11 +72,11 @@ class User extends Authenticatable
 
     public function isAdmin()
     {
-        if ($this->role && $this->role->name === 'admin') {
+        if ($this->role && $this->role->name === 'Admin') {
             return true;
         }
 
-        if (isset($this->role_name) && $this->role_name === 'admin') {
+        if (isset($this->role_name) && $this->role_name === 'Admin') {
             return true;
         }
 
@@ -141,12 +142,12 @@ class User extends Authenticatable
     {
         // Le propriétaire du projet a les droits admin
         if ($this->projects()->where('id', $projectId)->exists()) {
-            return 'admin';
+            return 'Admin';
         }
 
         // Les admins ont accès admin à tous les projets
         if ($this->isAdmin()) {
-            return 'admin';
+            return 'Admin';
         }
 
         // Vérifier les accès accordés

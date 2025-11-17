@@ -9,6 +9,9 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Services\DatabaseNavigationService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Grammars\SqlServerGrammar;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -139,6 +142,26 @@ class AppServiceProvider extends ServiceProvider
         Carbon::serializeUsing(function ($carbon) {
             return $carbon->format('Y-m-d H:i:s');
         });
+
+        Blueprint::macro('dateTime2', function ($column, $precision = 7) {
+        /** @var \Illuminate\Database\Schema\Blueprint $this */
+        return $this->addColumn('datetime2', $column, compact('precision'));
+        });
+        Schema::getConnection()->setSchemaGrammar(
+        tap(DB::connection()->getSchemaGrammar(), function ($grammar) {
+            if ($grammar instanceof SqlServerGrammar) {
+                $grammar->macro('typeDatetime2', function ($column) {
+                    $precision = $column->precision ?? 0;
+                    return "datetime2($precision)";
+                });
+            }
+        })
+
+    );
+    if (app()->environment('local')) {
+        config(['session.domain' => '.'.config('app.domain', 'localhost')]);
+    }
+
     }
 
     /**

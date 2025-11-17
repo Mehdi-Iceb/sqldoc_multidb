@@ -178,7 +178,7 @@ trait HasProjectPermissions
         $permissions = $this->getUserPermissions($request);
         $currentLevel = $permissions['level'] ?? 'none';
         
-        $levels = ['none', 'read', 'write', 'admin', 'owner'];
+        $levels = ['none', 'read', 'write', 'Admin', 'owner'];
         $currentIndex = array_search($currentLevel, $levels);
         $requiredIndex = array_search($minimumLevel, $levels);
         

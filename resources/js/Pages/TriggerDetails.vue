@@ -2,10 +2,23 @@
     <AuthenticatedLayout>
       <template #header>
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-semibold text-gray-800">
+          <h2 id="trigger-header" class="text-xl font-semibold text-gray-800">
             <span class="text-gray-500 font-normal">Trigger :</span> 
             {{ triggerName }}
           </h2>
+          <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              help ?
+            </span>
+          </button>
         </div>
       </template>
   
@@ -26,8 +39,8 @@
           <!-- Contenu principal -->
           <div class="space-y-8">
   
-            <!-- Description du trigger -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <!-- ID ajouté - Description du trigger -->
+            <div id="trigger-description" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <div class="flex justify-between items-center">
                   <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -36,12 +49,21 @@
                     </svg>
                     Description
                   </h3>
+                  <!-- ID ajouté -->
                   <button 
+                    id="save-description-button"
                     @click="saveDescription" 
                     class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="saving"
                   >
-                    {{ saving ? 'Saving...' : 'Save' }}
+                    <span v-if="!saving">Save</span>
+                    <span v-else class="flex items-center">
+                      <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </span>
                   </button>
                 </div>
               </div>
@@ -50,13 +72,14 @@
                   v-model="form.description"
                   rows="3"
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Description du trigger (usage, comportement, impact...)"
+                  placeholder="Trigger description (usage, behavior, impact...)"
+                  :disabled="saving"
                 ></textarea>
               </div>
             </div>
   
-            <!-- Informations générales -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <!-- ID ajouté - Informations générales -->
+            <div id="trigger-info" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <h3 class="text-lg font-medium text-gray-900 flex items-center gap-1">
                   <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,8 +137,8 @@
               </div>
             </div>
   
-            <!-- Définition SQL -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <!-- ID ajouté - Définition SQL -->
+            <div id="trigger-sql" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <h3 class="text-lg font-medium text-gray-900 flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
@@ -126,36 +149,27 @@
               </div>
               <div class="p-6">
                 <pre v-if="triggerDetails.definition" 
-                     class="whitespace-pre-wrap text-sm font-mono bg-gray-800 p-4 rounded-lg text-gray-50">{{ triggerDetails.definition }}</pre>
+                     class="whitespace-pre-wrap text-sm font-mono bg-gray-800 p-4 rounded-lg text-gray-50 overflow-auto max-h-96">{{ triggerDetails.definition }}</pre>
                 <p v-else class="text-gray-400 italic">No definition available</p>
               </div>
-            </div>
-  
-            <!-- Bouton pour sauvegarder toutes les informations -->
-            <div class="flex justify-end mt-6">
-                <!-- <button 
-                    @click="saveAll"
-                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    :disabled="saving"
-                >
-                {{ saving ? 'Saving...' : 'Saving description' }}
-                </button> -->
             </div>
           </div>
         </div>
       </div>
     </AuthenticatedLayout>
-  </template>
+</template>
   
-  <script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js' 
 import axios from 'axios'
 
 const { success, error: showError, warning, info } = useToast()
+const { showTriggerDetailsGuide } = useDriver() 
 
-// ✅ Props définies avec des valeurs par défaut
+// Props définies avec des valeurs par défaut
 const props = defineProps({
   triggerName: {
     type: String,
@@ -181,19 +195,25 @@ const props = defineProps({
   }
 })
 
-// ✅ Réactifs locaux simplifiés
+// ✅ Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('trigger_details_tutorial_shown')
+  showTriggerDetailsGuide()
+}
+
+// Réactifs locaux simplifiés
 const saving = ref(false)
 const form = ref({
   description: props.triggerDetails.description || ''
 })
 
-// ✅ Fonction de formatage de date
+// Fonction de formatage de date
 const formatDate = (date) => {
   if (!date) return '-';
   const d = new Date(date)
   if (isNaN(d.getTime())) {
     console.warn("Date invalide fournie pour formatDate:", date);
-    return 'Date invalide';
+    return 'Invalid date';
   }
   return d.toLocaleString('fr-FR', {
     year: 'numeric',
@@ -204,14 +224,22 @@ const formatDate = (date) => {
   })
 }
 
-// ✅ Initialisation au montage
+// Initialisation au montage
 onMounted(() => {
-  // Synchroniser la description du formulaire avec les props
   form.value.description = props.triggerDetails.description || ''
   console.log('🔍 [TRIGGER] Composant monté avec les données:', props.triggerDetails)
+  
+  // ✅ Lancer le tutoriel au premier chargement
+  const tutorialShown = localStorage.getItem('trigger_details_tutorial_shown')
+  if (!tutorialShown && props.triggerDetails && !props.error) {
+    setTimeout(() => {
+      showTriggerDetailsGuide()
+      localStorage.setItem('trigger_details_tutorial_shown', 'true')
+    }, 1000)
+  }
 })
 
-// ✅ Fonction de sauvegarde de la description
+// Fonction de sauvegarde de la description
 const saveDescription = async () => {
   if (!props.triggerName) {
     warning('Error: Trigger name missing');
@@ -226,9 +254,7 @@ const saveDescription = async () => {
     })
     
     if (response.data.success) {
-      alert('Description du trigger enregistrée avec succès')
-      // Optionnel : mettre à jour les props localement
-      // props.triggerDetails.description = form.value.description
+      success('Trigger description save successfully')
     } else {
       throw new Error(response.data.error || 'Error while saving')
     }
@@ -240,7 +266,7 @@ const saveDescription = async () => {
   }
 }
 
-// ✅ Fonction de sauvegarde complète
+// Fonction de sauvegarde complète
 const saveAll = async () => {
   if (!props.triggerName) {
     warning('Error: Trigger name missing');

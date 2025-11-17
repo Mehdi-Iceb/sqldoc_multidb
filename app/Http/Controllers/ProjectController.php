@@ -1392,14 +1392,57 @@ class ProjectController extends Controller
                     ->whereIn('dbid', $dbIds)
                     ->count();
                     
-                // Fonctions et procédures si vous en avez
+                $triggerIds = DB::table('trigger_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($triggerIds->isNotEmpty()) {
+                    $dependencies['trigger_information'] = DB::table('trigger_information')
+                        ->whereIn('id_trigger', $triggerIds)
+                        ->count();
+                }
+                    
+                // ✅ Fonctions et func_information
                 $dependencies['functions'] = DB::table('function_description')
                     ->whereIn('dbid', $dbIds)
                     ->count();
                     
+                $functionIds = DB::table('function_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($functionIds->isNotEmpty()) {
+                    $dependencies['func_information'] = DB::table('func_information')
+                        ->whereIn('id_func', $functionIds)
+                        ->count();
+                }
+
+                if ($functionIds->isNotEmpty()) {
+                    $dependencies['func_parameter'] = DB::table('func_parameter')
+                        ->whereIn('id_func', $functionIds)
+                        ->count();
+                }
+                    
+                // ✅ Procédures et ps_information
                 $dependencies['procedures'] = DB::table('ps_description')
                     ->whereIn('dbid', $dbIds)
                     ->count();
+                    
+                $procedureIds = DB::table('ps_description')
+                    ->whereIn('dbid', $dbIds)
+                    ->pluck('id');
+                    
+                if ($procedureIds->isNotEmpty()) {
+                    $dependencies['ps_information'] = DB::table('ps_information')
+                        ->whereIn('id_ps', $procedureIds)
+                        ->count();
+                }
+
+                if ($procedureIds->isNotEmpty()) {
+                    $dependencies['ps_parameter'] = DB::table('ps_information')
+                        ->whereIn('id_ps', $procedureIds)
+                        ->count();
+                }
             }
 
             // Releases
@@ -1441,7 +1484,7 @@ class ProjectController extends Controller
                 
                 $viewIds = DB::table('view_description')->whereIn('dbid', $dbIds)->pluck('id');
                 
-                // ⚠️ ORDRE CRITIQUE : Supprimer view_information AVANT view_description
+                // ORDRE CRITIQUE : Supprimer les enfants AVANT les parents
                 
                 // 1. view_information (référence view_description)
                 if ($viewIds->isNotEmpty() && isset($dependencies['view_information'])) {
@@ -1483,7 +1526,7 @@ class ProjectController extends Controller
                     }
                 }
                 
-                // 5. Triggers
+                // 5. Triggers et leurs dépendances
                 if (isset($dependencies['triggers'])) {
                     $triggerIds = DB::table('trigger_description')->whereIn('dbid', $dbIds)->pluck('id');
                     if ($triggerIds->isNotEmpty()) {
@@ -1494,16 +1537,52 @@ class ProjectController extends Controller
                     Log::info("✅ Triggers supprimés: {$deleted}");
                 }
                 
-                // 6. Fonctions
+                //  6. Fonctions - CORRECTION ICI
                 if (isset($dependencies['functions'])) {
-                    $deleted = DB::table('function_description')->whereIn('dbid', $dbIds)->delete();
-                    Log::info("✅ Fonctions supprimées: {$deleted}");
+                    $functionIds = DB::table('function_description')->whereIn('dbid', $dbIds)->pluck('id');
+
+                    if ($functionIds->isNotEmpty()) {
+                        Log::info('🔍 IDs des fonctions à traiter', ['count' => $functionIds->count()]);
+
+                        // Suppression par lots pour éviter la limite SQL Server (2100 paramètres max)
+                        collect($functionIds)->chunk(1000)->each(function ($chunk) {
+                            DB::table('func_information')->whereIn('id_func', $chunk)->delete();
+                        });
+                        Log::info("✅ Informations de fonctions supprimées (func_information)");
+
+                        collect($functionIds)->chunk(1000)->each(function ($chunk) {
+                            DB::table('func_parameter')->whereIn('id_func', $chunk)->delete();
+                        });
+                        Log::info("✅ Paramètres de fonctions supprimés (func_parameter)");
+                    }
+
+                    // Enfin, suppression des fonctions elles-mêmes
+                    DB::table('function_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Fonctions supprimées: {$functionIds->count()}");
                 }
                 
-                // 7. Procédures
+                // 7. Procédures et leurs dépendances
                 if (isset($dependencies['procedures'])) {
-                    $deleted = DB::table('ps_description')->whereIn('dbid', $dbIds)->delete();
-                    Log::info("✅ Procédures supprimées: {$deleted}");
+                    $procedureIds = DB::table('ps_description')->whereIn('dbid', $dbIds)->pluck('id');
+
+                    if ($procedureIds->isNotEmpty()) {
+                        Log::info('🔍 IDs des procédures à traiter', ['count' => $procedureIds->count()]);
+
+                        // Suppression par lots pour éviter la limite SQL Server (2100)
+                        collect($procedureIds)->chunk(1000)->each(function ($chunk) {
+                            DB::table('ps_information')->whereIn('id_ps', $chunk)->delete();
+                        });
+                        Log::info("✅ Informations de procédures supprimées (ps_information)");
+
+                        collect($procedureIds)->chunk(1000)->each(function ($chunk) {
+                            DB::table('ps_parameter')->whereIn('id_ps', $chunk)->delete();
+                        });
+                        Log::info("✅ Paramètres de procédures supprimés (ps_parameter)");
+                    }
+
+                    // Puis suppression des procédures elles-mêmes
+                    DB::table('ps_description')->whereIn('dbid', $dbIds)->delete();
+                    Log::info("✅ Procédures supprimées: {$procedureIds->count()}");
                 }
                 
                 // 8. Tables

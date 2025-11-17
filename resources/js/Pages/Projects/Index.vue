@@ -1,11 +1,24 @@
 <template>
+    <div>
     <Head title="Projects" />
-    
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 Projects
             </h2>
+            <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              Need help ?
+            </span>
+          </button>
         </template>
 
         <div class="py-12">
@@ -125,6 +138,7 @@
                     </div>
 
                     <Link
+                        id="create-project-button"
                         :href="route('projects.create')"
                         class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
                     >
@@ -132,7 +146,7 @@
                     </Link>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                <div id="projects-list" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                     <!-- Projets actifs -->
                     <div v-if="!showDeleted">
                     <div v-if="activeProjects.length === 0" class="text-center py-8">
@@ -143,18 +157,19 @@
                         <div v-else class="space-y-8">
                             <!-- Projets dont vous êtes propriétaire -->
                             <div v-if="ownedProjects.length > 0">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                    <svg class="h-5 w-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Your Projects ({{ ownedProjects.length }})
-                                </h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <div 
-                                        v-for="project in ownedProjects" 
-                                        :key="'owned-' + project.id"
-                                        class="border-2 border-blue-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-blue-50"
-                                    >
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg class="h-5 w-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Your Projects ({{ ownedProjects.length }})
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div 
+                                v-for="(project, index) in ownedProjects" 
+                                :key="'owned-' + project.id"
+                                :id="index === 0 ? 'project-card-1' : undefined"
+                                class="border-2 border-blue-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-blue-50"
+                                >
                                         <div class="p-4 border-b bg-blue-100">
                                             <div class="flex justify-between items-start">
                                                 <div class="flex-1">
@@ -480,6 +495,7 @@
             </div>
         </div>
     </AuthenticatedLayout>
+    </div>
 </template>
 
 <script setup>
@@ -489,8 +505,10 @@ import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useToast } from '@/Composables/useToast'
 import axios from 'axios';
+import { useDriver } from '@/Composables/useDriver.js';
 
 const { success, error: showError, warning, info, confirmToast } = useToast()
+const { showProjectsGuide } = useDriver();
 
 const props = defineProps({
     projects: Array
@@ -914,7 +932,22 @@ onMounted(() => {
   console.log('Active projects:', activeProjects.value.length);
 
   preloadDashboard(); 
-
   openProjectWithPreload();
+
+  // Vérifier si le tutoriel a déjà été montré
+    const tutorialShown  = localStorage.getItem('projects_tutorial_shown');
+    if (!tutorialShown) {
+    // Attendre que le DOM soit complètement chargé
+    setTimeout(() => {
+      showProjectsGuide();
+      localStorage.setItem('projects_tutorial_shown', 'true');
+    }, 1000); 
+  }
 });
+
+const restartTutorial = () => {
+  localStorage.removeItem('projects_tutorial_shown');
+  showProjectsGuide();
+};
+
 </script>

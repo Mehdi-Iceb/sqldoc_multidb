@@ -1,4 +1,5 @@
 <template>
+  <div>
   <transition
       enter-active-class="transition ease-in-out duration-150"
       enter-from-class="opacity-0"
@@ -8,6 +9,7 @@
       leave-to-class="opacity-0">
     <div v-show="$page.props.showingMobileMenu" class="fixed inset-0 z-10 flex items-end bg-black bg-opacity-50 sm:items-center sm:justify-center"></div>
   </transition>
+
   <transition
       enter-active-class="transition ease-in-out duration-150"
       enter-from-class="opacity-0 transform -translate-x-20"
@@ -278,6 +280,7 @@
       </div>
     </aside>
   </transition>
+  </div>
 </template>
 
 <script setup>

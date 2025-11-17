@@ -39,6 +39,7 @@ class SpecificSearchController extends Controller
         ]);
         
         $tableResults = collect();
+        $descriptionResults = collect();
         $viewResults = collect();
         $IndexResults = collect();
         $PkResults = collect();
@@ -59,6 +60,23 @@ class SpecificSearchController extends Controller
             $queries = DB::getQueryLog();
             Log::info('Requête SQL Tables: ' . json_encode($queries));
             Log::info('Résultats tables: ' . $tableResults->count());
+        }
+
+        // Recherche dans les tables
+        if ($request->boolean('in_descriptions') && $request->filled('column')) {
+            DB::enableQueryLog();
+            
+            $descriptionResults = TableStructure::query()
+                ->with('TableDescription:id,tablename')
+                ->whereHas('TableDescription', function ($q) use ($currentDbId) {
+                    $q->where('dbid', $currentDbId);
+                })
+                ->where('description', 'like', '%' . $request->column . '%')
+                ->get();
+            
+            $queries = DB::getQueryLog();
+            Log::info('Requête SQL Tables: ' . json_encode($queries));
+            Log::info('Résultats tables: ' . $descriptionResults->count());
         }
 
         // Recherche dans les vues
@@ -133,6 +151,7 @@ class SpecificSearchController extends Controller
 
         return Inertia::render('SpecificSearch', [
             'tableResults' => $tableResults,
+            'descriptionResults' => $descriptionResults,
             'viewResults' => $viewResults,
             'IndexResults' => $IndexResults,
             'PkResults' => $PkResults,
@@ -140,6 +159,7 @@ class SpecificSearchController extends Controller
             'filters' => [
                 'column' => $request->column,
                 'in_tables' => $request->boolean('in_tables'),
+                'in_descriptions' => $request->boolean('in_descriptions'),
                 'in_views' => $request->boolean('in_views'),
                 'in_index' => $request->boolean('in_index'),
                 'in_pk' => $request->boolean('in_pk'),

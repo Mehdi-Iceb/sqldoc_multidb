@@ -1,7 +1,6 @@
 <template>
   <div>
     <div class="flex h-screen bg-gray-100">
-      <!-- SUPPRESSION de la prop databaseStructure -->
       <Navigation />
       <NavigationMobile />
 
@@ -19,8 +18,8 @@
         </main>
       </div>
     </div>
+    <ToastContainer />
   </div>
-  <ToastContainer />
 </template>
 
 <script setup>

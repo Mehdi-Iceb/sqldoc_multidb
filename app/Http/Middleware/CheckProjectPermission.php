@@ -171,13 +171,13 @@ class CheckProjectPermission
         $hasPermission = false;
         switch ($requiredPermission) {
             case 'read':
-                $hasPermission = in_array($projectAccess->access_level, ['read', 'write', 'admin']);
+                $hasPermission = in_array($projectAccess->access_level, ['read', 'write', 'Admin']);
                 break;
             case 'write':
-                $hasPermission = in_array($projectAccess->access_level, ['write', 'admin']);
+                $hasPermission = in_array($projectAccess->access_level, ['write', 'Admin']);
                 break;
-            case 'admin':
-                $hasPermission = $projectAccess->access_level === 'admin';
+            case 'Admin':
+                $hasPermission = $projectAccess->access_level === 'Admin';
                 break;
             default:
                 $hasPermission = false;
@@ -272,9 +272,9 @@ class CheckProjectPermission
                     'can_delete' => false
                 ];
             
-            case 'admin':
+            case 'Admin':
                 return [
-                    'level' => 'admin',
+                    'level' => 'Admin',
                     'can_read' => true,
                     'can_write' => true,
                     'can_admin' => true,

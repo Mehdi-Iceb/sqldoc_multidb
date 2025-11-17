@@ -2,10 +2,23 @@
   <AuthenticatedLayout>
     <template #header>
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-800">
+        <h2 id="function-header" class="text-xl font-semibold text-gray-800">
           <span class="text-gray-500 font-normal">Function :</span>
           {{ functionName }}
         </h2>
+        <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              help ?
+            </span>
+          </button>
       </div>
     </template>
 
@@ -33,7 +46,8 @@
         </div>
 
         <div v-else>
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          <!-- ✅ ID ajouté - Description -->
+          <div id="function-description" class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -42,7 +56,9 @@
                   </svg>
                   Description
                 </h3>
+                <!-- ✅ ID ajouté -->
                 <button 
+                  id="save-description-button"
                   v-if="canEdit"
                   @click="saveDescription" 
                   class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -75,7 +91,8 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <!-- ✅ ID ajouté - Informations -->
+          <div id="function-info" class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div class="flex items-center">
                 <svg class="h-5 w-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +139,8 @@
             </div>
           </div>
 
-          <div class="border-b border-gray-200">
+          <!-- ✅ ID ajouté - Tabs -->
+          <div id="function-tabs" class="border-b border-gray-200">
             <nav class="-mb-px flex space-x-8">
               <a
                 v-for="tab in tabs"
@@ -150,7 +168,8 @@
                   <h3 class="text-lg font-medium text-gray-900">Parameters</h3>
                 </div>
               </div>
-              <div class="overflow-x-auto">
+              <!--  ID ajouté -->
+              <div id="parameters-table" class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr class="bg-gray-50">
@@ -178,7 +197,7 @@
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="param in functionData.parameters"
+                    <tr v-for="(param, index) in functionData.parameters"
                         :key="param.parameter_id"
                         class="hover:bg-gray-50 transition-colors">
                       <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -197,11 +216,10 @@
                           {{ param.is_output ? 'Yes' : 'No' }}
                         </span>
                       </td>
-                      <!-- Description -->
-                      <td class="px-6 py-4 text-sm text-gray-500">
+                      <!-- ID ajouté à la première ligne de description -->
+                      <td :id="index === 0 ? 'parameter-description' : undefined" class="px-6 py-4 text-sm text-gray-500">
                         <div class="flex items-center space-x-2">
                           
-                          <!-- Mode lecture -->
                           <template v-if="!editingParamId || editingParamId !== param.parameter_id">
                             <span
                               v-if="param.description"
@@ -211,7 +229,6 @@
                             </span>
                             <span v-else class="text-gray-400">-</span>
 
-                            <!-- Bouton édition -->
                             <button
                               v-if="canEdit"
                               @click="startEdit(param)"
@@ -225,7 +242,6 @@
                             </button>
                           </template>
 
-                          <!-- Mode édition -->
                           <template v-else>
                             <textarea
                               v-model="editingValue"
@@ -235,7 +251,6 @@
                               @keydown.esc="cancelEdit"
                             ></textarea>
 
-                            <!-- Boutons sauvegarde/annulation -->
                             <div class="flex space-x-1">
                               <button
                                 @click="saveParameterDescription(param)"
@@ -248,7 +263,7 @@
                                 <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                   <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                        d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                                 </svg>
                               </button>
                               <button
@@ -266,11 +281,10 @@
                         </div>
                       </td>
 
-                      <!-- Range Values -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                      <!--  ID ajouté à la première ligne de range -->
+                    <td :id="index === 0 ? 'parameter-range' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2">
 
-                        <!-- Mode lecture -->
                         <template v-if="!editingRangeValues[param.parameter_id]">
                           <span
                             v-if="param.rangevalues"
@@ -280,7 +294,6 @@
                           </span>
                           <span v-else class="text-gray-400">-</span>
 
-                          <!-- Bouton édition -->
                           <button
                             v-if="canEdit"
                             @click="startEditAdvanced('rangeValue', param.parameter_id, param.rangevalues)"
@@ -294,7 +307,6 @@
                           </button>
                         </template>
 
-                        <!-- Mode édition -->
                         <template v-else>
                           <textarea
                             v-model="editingRangeValuesValue"
@@ -304,7 +316,6 @@
                             @keydown.esc="cancelEditAdvanced('rangeValue', param.parameter_name)"
                           ></textarea>
 
-                          <!-- Boutons sauvegarde/annulation -->
                           <div v-if="canEdit" class="flex space-x-1">
                             <button
                               @click="saveRangeValues(param.parameter_name)"
@@ -317,7 +328,7 @@
                               <svg v-else class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor"
-                                      d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                      d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                               </svg>
                             </button>
                             <button
@@ -335,8 +346,8 @@
                       </div>
                     </td>
                     
-                    <!-- Release -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <!--  ID ajouté à la première ligne de release -->
+                    <td :id="index === 0 ? 'parameter-release' : undefined" class="px-6 py-4 text-sm text-gray-500">
                       <div class="flex items-center space-x-2 relative">
                         <select 
                           :value="param.release_id || ''"
@@ -363,8 +374,8 @@
                       </div>
                     </td>
 
-                    <!-- History -->
-                    <td class="px-4 py-3 text-sm">
+                    <!--  ID ajouté à la première ligne d'historique -->
+                    <td :id="index === 0 ? 'parameter-history' : undefined" class="px-4 py-3 text-sm">
                       <SecondaryButton @click="showAuditLogs(param.parameter_name)" :disabled="loadingAuditLogs && currentColumn === param.parameter_name">
                         <span v-if="!(loadingAuditLogs && currentColumn === param.parameter_name)">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -492,11 +503,13 @@ import { router } from '@inertiajs/vue3'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js' 
 import axios from 'axios'
 
 const { success, error: showError, warning, info } = useToast()
+const { showFunctionDetailsGuide } = useDriver() 
 
-// ✅ PROPS pour FunctionDetails (basé sur ProcedureDetails)
+// Props
 const props = defineProps({
   functionName: {
     type: String,
@@ -520,7 +533,13 @@ const props = defineProps({
   }
 })
 
-// ✅ COMPUTED pour les permissions
+// Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('function_details_tutorial_shown')
+  showFunctionDetailsGuide()
+}
+
+// Computed pour les permissions
 const canEdit = computed(() => {
   return props.functionDetails?.can_edit || props.permissions.can_edit || false
 })
@@ -529,7 +548,7 @@ const isOwner = computed(() => {
   return props.functionDetails?.is_owner || props.permissions.is_owner || false
 })
 
-// ✅ ÉTATS LOCAUX (adaptés pour les fonctions)
+// États locaux
 const procedureForm = ref({
   description: props.functionDetails.description || ''
 })
@@ -540,7 +559,6 @@ const saving = ref(false)
 const editingParamId = ref(null)
 const editingValue = ref('')
 
-// ✅ NOUVEAUX ÉTATS pour les fonctionnalités avancées
 const editingDescription = ref({})
 const editingDescriptionValue = ref('')
 const editingRangeValues = ref({})
@@ -549,33 +567,28 @@ const savingDescription = ref({})
 const savingRangeValues = ref({})
 const updatingRelease = ref({})
 
-// ✅ ÉTATS pour la modal d'audit
 const showAuditModal = ref(false)
 const loadingAuditLogs = ref(false)
 const auditLogs = ref([])
 const currentColumn = ref('')
 
-// ✅ ÉTATS pour les onglets
 const activeTab = ref('parameters')
 const tabs = [
   { id: 'parameters', name: 'Parameters' },
   { id: 'definition', name: 'Definition' }
 ]
 
-// Computed pour l'erreur
 const currentError = computed(() => props.error)
 
-// ✅ WATCHERS (adaptés pour les fonctions)
+// Watchers
 watch(
   () => props.functionDetails,
   (newFunctionDetails) => {
     console.log('🔍 [FUNCTION] Props functionDetails ont changé:', newFunctionDetails)
     
-    // Mettre à jour les données locales avec les nouvelles props
     functionData.value = { ...newFunctionDetails }
     procedureForm.value.description = newFunctionDetails.description || ''
     
-    // Réinitialiser les états d'édition
     editingParamId.value = null
     editingValue.value = ''
     editingDescription.value = {}
@@ -592,10 +605,8 @@ watch(
     if (newFunctionName !== oldFunctionName) {
       console.log(`🔍 [FUNCTION] Nom de fonction changé: ${oldFunctionName} → ${newFunctionName}`)
       
-      // Recharger la page pour récupérer les nouvelles données
       router.reload({ preserveScroll: true, preserveState: true })
       
-      // Réinitialiser les états d'édition quand on change de fonction
       editingParamId.value = null
       editingValue.value = ''
       editingDescription.value = {}
@@ -606,20 +617,19 @@ watch(
   }
 )
 
-// ✅ FONCTIONS D'ÉDITION (adaptées pour les fonctions)
+// Fonctions d'édition
 const startEdit = (param) => {
   if (!canEdit.value) {
-    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('You do not have permission to modify this function')
     return
   }
   editingParamId.value = param.parameter_id
   editingValue.value = param.description || ''
 }
 
-// ✅ NOUVELLES FONCTIONS pour l'édition avancée
 const startEditAdvanced = (type, parameterName, currentValue) => {
   if (!canEdit.value) {
-    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('You do not have permission to modify this function')
     return
   }
   
@@ -647,10 +657,9 @@ const cancelEditAdvanced = (type, parameterName) => {
   }
 }
 
-// ✅ FONCTION DE SAUVEGARDE DESCRIPTION (adaptée pour les fonctions)
 const saveDescription = async () => {
   if (!canEdit.value) {
-    warning('Vous n\'avez pas les permissions pour modifier cette fonction')
+    warning('You do not have permission to modify this function')
     return
   }
   
@@ -661,12 +670,12 @@ const saveDescription = async () => {
       description: procedureForm.value.description
     }, {
       onSuccess: () => {
-        success('Description de la fonction enregistrée avec succès!')
+        success('Description of the function successfully registered!')
         functionData.value.description = procedureForm.value.description
       },
       onError: (errors) => {
         console.error('Erreur lors de la sauvegarde:', errors)
-        showError('Erreur lors de la sauvegarde de la description')
+        showError('Error saving description')
       },
       onFinish: () => {
         saving.value = false
@@ -678,12 +687,11 @@ const saveDescription = async () => {
   }
 }
 
-// ✅ FONCTION DE SAUVEGARDE PARAMÈTRE (adaptée pour les fonctions)
 const saveParameterDescription = async (param) => {
   try {
     const parameterIdentifier = param.parameter_id
     if (!parameterIdentifier) {
-      warning("Impossible de sauvegarder : identifiant du paramètre manquant.")
+      warning("Unable to save: missing parameter ID.")
       return
     }
 
@@ -693,24 +701,21 @@ const saveParameterDescription = async (param) => {
       description: editingValue.value
     }, {
       onSuccess: () => {
-
         router.reload({ 
           only: ['functionDetails'],
           preserveScroll: true,
-          onSuccess: () => {
-            
-          }
+          onSuccess: () => {}
         })
         const index = functionData.value.parameters.findIndex(p => p.parameter_id === parameterIdentifier)
         if (index !== -1) {
           functionData.value.parameters[index].description = editingValue.value
         }
-        success('Description du paramètre enregistrée avec succès!')
+        success('Parameter description successfully saved!')
         cancelEdit()
       },
       onError: (errors) => {
         console.error('Erreur lors de la sauvegarde:', errors)
-        showError('Erreur lors de la sauvegarde de la description du paramètre')
+        showError('Error saving parameter description')
       },
       onFinish: () => {
         saving.value = false
@@ -722,7 +727,6 @@ const saveParameterDescription = async (param) => {
   }
 }
 
-// ✅ NOUVELLES FONCTIONS pour l'édition avancée avec axios
 const saveDescriptionAdvanced = async (parameterName) => {
   try {
     savingDescription.value[parameterName] = true
@@ -803,7 +807,6 @@ const updateColumnRelease = async (parameter, releaseId) => {
   }
 }
 
-// ✅ FONCTIONS pour la modal d'audit
 const showAuditLogs = async (parameterName) => {
   try {
     console.log('🔍 Ouverture audit logs pour paramètre:', parameterName)
@@ -827,18 +830,18 @@ const showAuditLogs = async (parameterName) => {
   } catch (error) {
     console.error('❌ Erreur lors du chargement des audit logs:', error)
     
-    let errorMessage = 'Erreur lors du chargement de l\'historique'
+    let errorMessage = 'Error loading history'
     
     if (error.response) {
       if (error.response.status === 404) {
-        errorMessage = 'Fonction ou paramètre non trouvé'
+        errorMessage = 'Function or parameter not found'
       } else if (error.response.status === 400) {
         errorMessage = error.response.data.error || 'Requête invalide'
       } else if (error.response.data && error.response.data.error) {
         errorMessage = error.response.data.error
       }
     } else if (error.request) {
-      errorMessage = 'Erreur de réseau - impossible de contacter le serveur'
+      errorMessage = 'Network error - unable to contact the server'
     }
     
     showError(errorMessage)
@@ -856,7 +859,6 @@ const closeAuditModal = () => {
   loadingAuditLogs.value = false
 }
 
-// ✅ FONCTION utilitaire
 const formatDate = (dateString) => {
   if (!dateString) return 'Not specified'
   const date = new Date(dateString)
@@ -873,7 +875,7 @@ const formatDate = (dateString) => {
   })
 }
 
-// ✅ Debug au montage
+// Lancer le tutoriel au montage
 onMounted(() => {
   console.log('🔍 [FUNCTION] Composant monté avec les props:', props)
   console.log('🔍 [FUNCTION] FunctionDetails:', props.functionDetails)
@@ -881,5 +883,14 @@ onMounted(() => {
   console.log('🔍 [FUNCTION] Nombre de paramètres:', props.functionDetails?.parameters?.length)
   console.log('🔍 [FUNCTION] Can Edit:', canEdit.value)
   console.log('🔍 [FUNCTION] Is Owner:', isOwner.value)
+  
+  // Lancer le tutoriel au premier chargement
+  const tutorialShown = localStorage.getItem('function_details_tutorial_shown')
+  if (!tutorialShown && props.functionDetails && !props.error) {
+    setTimeout(() => {
+      showFunctionDetailsGuide()
+      localStorage.setItem('function_details_tutorial_shown', 'true')
+    }, 1000)
+  }
 })
 </script>

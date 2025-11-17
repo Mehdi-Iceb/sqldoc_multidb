@@ -3,13 +3,26 @@
     <!-- Header -->
     <template #header>
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-800">
+        <h2 id="releases-header" class="text-xl font-semibold text-gray-800">
           <span class="text-gray-500 font-normal">Releases :</span> 
           Release management
           <span v-if="currentProject" class="text-blue-600 font-medium">
             - {{ currentProject.name }}
           </span>
         </h2>
+        <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              Need help ?
+            </span>
+          </button>
       </div>
     </template>
 
@@ -62,8 +75,10 @@
                   Available releases for {{ currentProject?.name }}
                 </h3>
                 <div class="flex space-x-2">
+                  <!-- ✅ ID ajouté -->
                   <div class="relative">
                     <input 
+                      id="search-input"
                       v-model="searchQuery" 
                       type="text" 
                       placeholder="Search..." 
@@ -73,7 +88,9 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
+                  <!-- ✅ ID ajouté -->
                   <select 
+                    id="filter-version"
                     v-model="filterVersion" 
                     class="pl-2 pr-6 py-1.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -82,13 +99,15 @@
                       {{ version }}
                     </option>
                   </select>
-                  <PrimaryButton @click="showAddReleaseModal = true">
+                  <!-- ✅ ID ajouté -->
+                  <PrimaryButton id="add-release-button" @click="showAddReleaseModal = true">
                     Add a release
                   </PrimaryButton>
                 </div>
               </div>
             </div>
-            <div class="overflow-x-auto">
+            <!-- ✅ ID ajouté -->
+            <div id="releases-table" class="overflow-x-auto">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr class="bg-gray-50">
@@ -110,7 +129,7 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="release in filteredReleases" 
+                  <tr v-for="(release, index) in filteredReleases" 
                       :key="release.id"
                       class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -140,7 +159,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {{ release.created_at }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <!-- ✅ ID ajouté à la première ligne d'actions -->
+                    <td :id="index === 0 ? 'release-actions' : undefined" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div class="flex space-x-2">
                         <button @click="editRelease(release)" class="text-indigo-600 hover:text-indigo-900" title="Modifier">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,7 +213,6 @@
         
         <form @submit.prevent="saveRelease">
           <div class="space-y-4">
-            <!-- Numéro de version -->
             <div>
               <label for="version_number" class="block text-sm font-medium text-gray-700">Release number</label>
               <input 
@@ -207,7 +226,6 @@
               <p class="mt-1 text-sm text-gray-500">Enter a unique version number for this project</p>
             </div>
             
-            <!-- Projet (info seulement, pas de sélection) -->
             <div v-if="currentProject">
               <label class="block text-sm font-medium text-gray-700">Project</label>
               <div class="mt-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-700">
@@ -221,7 +239,6 @@
               <p class="mt-1 text-sm text-gray-500">This release will be created for the current project</p>
             </div>
             
-            <!-- Description -->
             <div>
               <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
               <textarea 
@@ -233,7 +250,6 @@
               ></textarea>
             </div>
             
-            <!-- Date de création (affichage en mode édition) -->
             <div v-if="editingReleaseId">
               <label class="block text-sm font-medium text-gray-700">Creation date</label>
               <div class="mt-1 text-sm text-gray-500">{{ newRelease.created_at || 'Not available' }}</div>
@@ -304,24 +320,20 @@ import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js'  
 
-// Utilisation du toast - renommage pour éviter les conflits
 const { success, error: showError, warning, info } = useToast()
+const { showReleaseGuide } = useDriver() 
 
-// Variable réactive pour les erreurs de chargement
 const error = ref(null);
-
-// États
 const loading = ref(true);
 const releases = ref([]);
 const uniqueVersions = ref([]);
-const currentProject = ref(null); // Projet actuel depuis la session
+const currentProject = ref(null);
 
-// États de filtrage (suppression du filtre par projet)
 const searchQuery = ref('');
 const filterVersion = ref('');
 
-// États pour le modal d'ajout/édition
 const showAddReleaseModal = ref(false);
 const savingRelease = ref(false);
 const editingReleaseId = ref(null);
@@ -331,15 +343,28 @@ const newRelease = ref({
   created_at: null
 });
 
-// États pour le modal de suppression
 const showDeleteConfirmModal = ref(false);
 const deletingRelease = ref(false);
 const releaseToDelete = ref(null);
 
-// Chargement des données
+// Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('release_tutorial_shown')
+  showReleaseGuide()
+}
+
 onMounted(async () => {
   try {
     await loadReleases();
+    
+    // Lancer le tutoriel au premier chargement SI un projet est sélectionné
+    const tutorialShown = localStorage.getItem('release_tutorial_shown');
+    if (!tutorialShown && currentProject.value) {
+      setTimeout(() => {
+        showReleaseGuide();
+        localStorage.setItem('release_tutorial_shown', 'true');
+      }, 1000);
+    }
   } catch (err) {
     console.error('Erreur lors du chargement des données:', err);
     error(`Erreur de chargement: ${err.response?.data?.error || err.message}`);
@@ -348,7 +373,6 @@ onMounted(async () => {
   }
 });
 
-// Fonction pour charger les versions
 const loadReleases = async () => {
   try {
     console.log('🔍 DÉBUT loadReleases');
@@ -360,7 +384,6 @@ const loadReleases = async () => {
       uniqueVersions.value = response.data.uniqueVersions || [];
       currentProject.value = response.data.currentProject || null;
 
-      // DEBUG TRÈS DÉTAILLÉ
       console.log('🔍 APRÈS ASSIGNATION:');
       console.log('  - currentProject.value:', currentProject.value);
       console.log('  - Type:', typeof currentProject.value);
@@ -378,7 +401,6 @@ const loadReleases = async () => {
   }
 };
 
-// Filtrage des versions (simplifié, plus de filtre par projet)
 const filteredReleases = computed(() => {
   return releases.value.filter(release => {
     const matchesSearch = searchQuery.value === '' || 
@@ -391,7 +413,6 @@ const filteredReleases = computed(() => {
   });
 });
 
-// Fonction pour ouvrir le modal en mode édition
 const editRelease = (release) => {
   editingReleaseId.value = release.id;
   newRelease.value = {
@@ -403,7 +424,6 @@ const editRelease = (release) => {
   info(`Édition de la release ${release.version_number}`);
 };
 
-// Fonction pour fermer le modal
 const closeReleaseModal = () => {
   showAddReleaseModal.value = false;
   editingReleaseId.value = null;
@@ -414,12 +434,10 @@ const closeReleaseModal = () => {
   };
 };
 
-// Fonction pour sauvegarder/mettre à jour une version
 const saveRelease = async () => {
   try {
     savingRelease.value = true;
     
-    // Validation simple
     if (!newRelease.value.version_number?.trim()) {
       warning('Le numéro de version est requis');
       return;
@@ -427,21 +445,15 @@ const saveRelease = async () => {
     
     let response;
     if (editingReleaseId.value) {
-      // Mise à jour d'une version existante
       response = await axios.post(`/api/releases/${editingReleaseId.value}`, newRelease.value);
     } else {
-      // Création d'une nouvelle version
       response = await axios.post('/api/releases', newRelease.value);
     }
     
     if (response.data.success) {
-      // Recharger les données
       await loadReleases();
-      
-      // Fermer le modal
       closeReleaseModal();
       
-      // Toast de succès avec emoji et message personnalisé
       success(
         editingReleaseId.value 
           ? `🎯 Release ${newRelease.value.version_number} mise à jour avec succès!`
@@ -452,8 +464,6 @@ const saveRelease = async () => {
     }
   } catch (err) {
     console.error('Erreur lors de la sauvegarde:', err);
-    
-    // Toast d'erreur avec message détaillé
     showError(
       `❌ Erreur lors de la sauvegarde: ${err.response?.data?.error || err.message}`
     );
@@ -462,14 +472,12 @@ const saveRelease = async () => {
   }
 };
 
-// Fonction pour confirmer la suppression
 const confirmDeleteRelease = (release) => {
   releaseToDelete.value = release;
   showDeleteConfirmModal.value = true;
   warning(`Vous êtes sur le point de supprimer la release ${release.version_number}`);
 };
 
-// Fonction pour supprimer une version
 const deleteRelease = async () => {
   try {
     deletingRelease.value = true;
@@ -478,23 +486,15 @@ const deleteRelease = async () => {
     
     if (response.data.success) {
       const deletedVersion = releaseToDelete.value.version_number;
-      
-      // Recharger les données
       await loadReleases();
-      
-      // Fermer le modal
       showDeleteConfirmModal.value = false;
       releaseToDelete.value = null;
-      
-      // Toast de succès pour la suppression
       success(`🗑️ Release ${deletedVersion} supprimée avec succès`);
     } else {
       throw new Error(response.data.error || 'Erreur lors de la suppression');
     }
   } catch (err) {
     console.error('Erreur lors de la suppression:', err);
-    
-    // Toast d'erreur pour la suppression
     error(
       `❌ Erreur lors de la suppression: ${err.response?.data?.error || err.message}`
     );
@@ -503,7 +503,6 @@ const deleteRelease = async () => {
   }
 };
 
-// Fonction pour annuler la suppression
 const cancelDelete = () => {
   showDeleteConfirmModal.value = false;
   releaseToDelete.value = null;

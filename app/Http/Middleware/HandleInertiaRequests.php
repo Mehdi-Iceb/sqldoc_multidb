@@ -42,6 +42,23 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role->name,
                 ] : null,
             ],
+            'tenant' => function () use ($request) {
+                // Vérifier si on est dans un contexte tenant
+                if (function_exists('tenancy') && tenancy()->initialized) {
+                    $tenant = tenancy()->tenant;
+                    
+                    return [
+                        'id' => $tenant->id,
+                        'name' => $tenant->name,
+                        'slug' => $tenant->slug,
+                        'logo' => $tenant->logo ? asset('storage/' . $tenant->logo) : null,
+                        'subdomain' => $request->getHost(),
+                    ];
+                }
+                
+                return null;
+            },
+            'csrf_token' => csrf_token(),
             'flash' => function () use ($request) {
                 return [
                     'success' => $request->session()->get('success'),

@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================
+   DRIVER.JS CUSTOM STYLES
+   ========================================== */
+
+.driver-popover {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.driver-popover-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.driver-popover-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.driver-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.driver-popover-footer button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.driver-popover-footer button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.driver-popover-prev-btn {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+}
+
+.driver-popover-prev-btn:hover {
+    background: #e5e7eb !important;
+}
+
+.driver-popover-close-btn {
+    color: #9ca3af;
+    transition: color 0.2s;
+}
+
+.driver-popover-close-btn:hover {
+    color: #ef4444;
+}
+
+.driver-popover-progress-text {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Overlay (fond sombre) */
+.driver-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Élément mis en surbrillance */
+.driver-highlighted-element {
+    border-radius: 8px;
+}
+
+/* Animation d'entrée */
+.driver-popover {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

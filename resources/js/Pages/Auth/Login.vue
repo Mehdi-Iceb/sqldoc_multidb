@@ -5,15 +5,14 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed, onMounted } from 'vue';
+import { useDriver } from '@/Composables/useDriver.js';
 
 defineProps({
-    canResetPassword: {
-        type: Boolean,
-    },
-    status: {
-        type: String,
-    },
+    canResetPassword: Boolean,
+    status: String,
 });
 
 const form = useForm({
@@ -22,79 +21,113 @@ const form = useForm({
     remember: false,
 });
 
+const page = usePage();
+const tenant = computed(() => page.props.tenant);
+
 const submit = () => {
     form.post(route('login'), {
         onFinish: () => form.reset('password'),
     });
 };
+
+const { showLoginGuide } = useDriver();
+
+onMounted(() => {
+    if (page.props?.tenant) {
+        const shown = localStorage.getItem('login_tutorial_shown');
+        if (!shown) {
+            setTimeout(() => {
+                showLoginGuide();
+                localStorage.setItem('login_tutorial_shown', 'true');
+            }, 500);
+        }
+    }
+});
 </script>
 
 <template>
     <GuestLayout>
         <Head title="Log in" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
-            {{ status }}
+        <!-- Logo à gauche -->
+        <div class="hidden h-full md:flex md:w-1/2 items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-8">
+            <ApplicationLogo />
         </div>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
+        <!-- Formulaire à droite -->
+        <div class="flex items-center justify-center p-6 sm:p-12 md:w-1/2">
+            <div class="w-full max-w-md">
+                <!-- Logo du tenant (uniquement s'il existe) -->
+                <div v-if="tenant?.logo" class="flex justify-center mb-6">
+                    <img 
+                        :src="tenant.logo" 
+                        :alt="`${tenant.name} logo`"
+                        class="h-16 w-auto object-contain"
+                    />
+                </div>
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
+                <!-- Nom du tenant (uniquement s'il existe) -->
+                <div v-if="tenant?.name" class="mb-6 text-center">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        {{ tenant.name }}
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1">Connection to your workspace</p>
+                </div>
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <h1 class="mb-6 text-2xl font-semibold text-gray-700">Login</h1>
+
+                <!-- Message de statut -->
+                <div v-if="status" class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <p class="text-sm font-medium text-blue-700">{{ status }}</p>
+                </div>
+
+                <form @submit.prevent="submit">
+                    <div>
+                        <InputLabel for="email" value="Email" />
+                        <TextInput 
+                            id="email" 
+                            type="email" 
+                            class="block w-full mt-1"
+                            v-model="form.email"
+                            required 
+                            autofocus 
+                            autocomplete="username" 
+                        />
+                        <InputError class="mt-2" :message="form.errors.email" />
+                    </div>
+
+                    <div class="mt-4" id="password-field">
+                        <InputLabel for="password" value="Password" />
+                        <TextInput 
+                            id="password" 
+                            type="password" 
+                            class="block w-full mt-1"
+                            v-model="form.password"
+                            required 
+                            autocomplete="current-password" 
+                        />
+                        <InputError class="mt-2" :message="form.errors.password" />
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6">
+                        <Link
+                            v-if="canResetPassword"
+                            :href="route('password.request')"
+                            class="text-sm text-gray-600 underline hover:text-blue-900"
+                        >
+                            Forgot your password?
+                        </Link>
+
+                        <PrimaryButton 
+                            id="login-button"
+                            :class="{ 'opacity-25': form.processing }" 
+                            :disabled="form.processing"
+                        >
+                            Log in
+                        </PrimaryButton>
+                    </div>
+                </form>
             </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600 dark:text-gray-400"
-                        >Remember me</span
-                    >
-                </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <!-- <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
-                >
-                    Forgot your password?
-                </Link> -->
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
-            </div>
-        </form>
+        </div>
     </GuestLayout>
 </template>

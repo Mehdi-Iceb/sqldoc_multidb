@@ -39,6 +39,11 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            'connection' => 'tenant', 
+        ],
+        'tenant' => [
+        'driver' => 'session',
+        'provider' => 'tenant_users',
         ],
     ],
 
@@ -62,7 +67,12 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\User::class,//env('AUTH_MODEL', App\Models\User::class),
+            'connection' => 'tenant',
+        ],
+        'tenant_users' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\User::class, // modèle du tenant
         ],
 
         // 'users' => [

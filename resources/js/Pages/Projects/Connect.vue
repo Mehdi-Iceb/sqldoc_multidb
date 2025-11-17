@@ -1,11 +1,27 @@
 <template>
+    <div>
     <Head title="Connexion au projet" />
     
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Connection to the project: {{ project.name }}
-            </h2>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    Connection to the project: {{ project.name }}
+                </h2>
+                <!-- ✅ Bouton d'aide flottant -->
+                <button
+                    @click="restartTutorial"
+                    class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+                    title="Show tutorial"
+                >
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    Need help ?
+                    </span>
+                </button>
+            </div>
         </template>
 
         <div class="py-12">
@@ -36,33 +52,37 @@
                         </div>
                         
                         <form @submit.prevent="submit" class="max-w-lg" :class="{ 'opacity-50 pointer-events-none': form.processing }">
+                            <!-- ✅ ID ajouté -->
                             <div class="mb-4">
-                                <InputLabel for="server" value="Serveur" />
+                                <InputLabel for="server" value="Server" />
                                 <TextInput
                                     id="server"
                                     type="text"
                                     class="mt-1 block w-full"
                                     v-model="form.server"
                                     required
-                                    placeholder="localhost ou adresse IP"
+                                    placeholder="localhost or IP address"
                                     :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.server" />
                             </div>
 
+                            <!-- ✅ ID ajouté -->
                             <div class="mb-4">
-                                <InputLabel for="database" value="Base de données" />
+                                <InputLabel for="database" value="Database" />
                                 <TextInput
                                     id="database"
                                     type="text"
                                     class="mt-1 block w-full"
                                     v-model="form.database"
                                     required
+                                    placeholder="Database name"
                                     :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.database" />
                             </div>
 
+                            <!-- ✅ ID ajouté -->
                             <div v-if="project.db_type !== 'sqlserver'" class="mb-4">
                                 <InputLabel for="port" value="Port" />
                                 <TextInput
@@ -76,8 +96,9 @@
                                 <InputError class="mt-2" :message="form.errors.port" />
                             </div>
 
-                            <div v-if="project.db_type === 'sqlserver'" class="mb-4">
-                                <InputLabel value="Mode d'authentification" />
+                            <!-- ✅ ID ajouté pour la section d'authentification -->
+                            <div v-if="project.db_type === 'sqlserver'" id="auth-mode-section" class="mb-4">
+                                <InputLabel value="Authentication mode" />
                                 <div class="mt-2 space-y-2">
                                     <div class="flex items-center">
                                         <input
@@ -91,7 +112,7 @@
                                             class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                         />
                                         <label for="windows-auth" class="ml-2 block text-sm text-gray-900">
-                                            Authentification Windows
+                                            Windows Authentication
                                         </label>
                                     </div>
                                     <div class="flex items-center">
@@ -106,53 +127,61 @@
                                             class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                         />
                                         <label for="sql-auth" class="ml-2 block text-sm text-gray-900">
-                                            Authentification SQL Server
+                                            SQL Server Authentication
                                         </label>
                                     </div>
                                 </div>
                                 <InputError class="mt-2" :message="form.errors.authMode" />
                             </div>
 
+                            <!-- ✅ ID ajouté -->
                             <div v-if="showAuthFields" class="mb-4">
-                                <InputLabel for="username" value="Nom d'utilisateur" />
+                                <InputLabel for="username" value="Username" />
                                 <TextInput
                                     id="username"
                                     type="text"
                                     class="mt-1 block w-full"
                                     v-model="form.username"
                                     required
+                                    placeholder="Database username"
                                     :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.username" />
                             </div>
 
+                            <!-- ✅ ID ajouté -->
                             <div v-if="showAuthFields" class="mb-4">
-                                <InputLabel for="password" value="Mot de passe" />
+                                <InputLabel for="password" value="Password" />
                                 <TextInput
                                     id="password"
                                     type="password"
                                     class="mt-1 block w-full"
                                     v-model="form.password"
                                     required
+                                    placeholder="Database password"
                                     :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.password" />
                             </div>
 
+                            <!-- ✅ ID ajouté -->
                             <div class="mb-4">
-                                <InputLabel for="description" value="Description (optionnelle)" />
+                                <InputLabel for="description" value="Description (optional)" />
                                 <TextareaInput
                                     id="description"
                                     class="mt-1 block w-full"
                                     v-model="form.description"
                                     rows="4"
+                                    placeholder="Add a description for this connection..."
                                     :disabled="form.processing"
                                 />
                                 <InputError class="mt-2" :message="form.errors.description" />
                             </div>
 
                             <div class="flex items-center justify-between mt-6">
+                                <!-- ✅ ID ajouté -->
                                 <button
+                                    id="test-connection-button"
                                     type="button"
                                     @click="testConnection"
                                     :disabled="form.processing"
@@ -161,18 +190,20 @@
                                     Test Connection
                                 </button>
                                 
+                                <!-- ✅ ID ajouté -->
                                 <PrimaryButton 
+                                    id="submit-connection-button"
                                     :class="{ 'opacity-25': form.processing }" 
                                     :disabled="form.processing"
                                     class="relative"
                                 >
-                                    <span v-if="!form.processing">Se connecter</span>
+                                    <span v-if="!form.processing">Connect</span>
                                     <span v-else class="flex items-center">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Connexion...
+                                        Connecting...
                                     </span>
                                 </PrimaryButton>
                             </div>
@@ -213,6 +244,7 @@
             </div>
         </div>
     </AuthenticatedLayout>
+</div>
 </template>
 
 <script setup>
@@ -224,6 +256,9 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextareaInput from '@/Components/TextareaInput.vue';
+import { useDriver } from '@/Composables/useDriver.js'; // Import
+
+const { showConnectProjectGuide } = useDriver(); // Récupération de la fonction
 
 const props = defineProps({
     project: Object
@@ -233,7 +268,7 @@ const page = usePage();
 const authMode = ref(props.project.db_type === 'sqlserver' ? 'windows' : 'sql');
 const showToast = ref(false);
 const toastMessage = ref('');
-const toastType = ref('error'); // 'success', 'error', 'warning'
+const toastType = ref('error');
 
 const form = useForm({
     server: '',
@@ -244,6 +279,12 @@ const form = useForm({
     password: '',
     description: ''
 });
+
+// Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+    localStorage.removeItem('connect_project_tutorial_shown');
+    showConnectProjectGuide(props.project.db_type);
+};
 
 // Surveiller les messages flash
 watch(() => page.props.flash, (flash) => {
@@ -259,10 +300,9 @@ watch(() => page.props.flash, (flash) => {
         showWarningToast(flash.warning);
     }
     if (flash?.info) {
-        showWarningToast(flash.info); // Afficher les infos comme des warnings
+        showWarningToast(flash.info);
     }
 }, { immediate: true, deep: true });
-
 
 const showAuthFields = computed(() => {
     return props.project.db_type !== 'sqlserver' || (props.project.db_type === 'sqlserver' && authMode.value === 'sql');
@@ -287,7 +327,6 @@ const submit = () => {
             console.log('onSuccess appelé:', page);
             console.log('Flash props:', page.props.flash);
             
-            
             if (page.props.flash?.error) {
                 console.log('Error detected in onSuccess:', page.props.flash.error);
                 showErrorToast(page.props.flash.error);
@@ -305,13 +344,11 @@ const submit = () => {
         onError: (errors) => {
             console.log('onError appelé:', errors);
             
-            // Gestion des erreurs de validation et autres
             if (typeof errors === 'string') {
                 showErrorToast(errors);
                 return;
             }
             
-            // Erreurs de validation spécifiques
             if (errors.server) {
                 showErrorToast(`Server error: ${errors.server}`);
             } else if (errors.database) {
@@ -325,7 +362,6 @@ const submit = () => {
             } else if (errors.authMode) {
                 showErrorToast(`Authentication mode error: ${errors.authMode}`);
             } else {
-                // Prendre la première erreur disponible
                 const firstError = Object.values(errors)[0];
                 if (Array.isArray(firstError)) {
                     showErrorToast(firstError[0]);
@@ -389,7 +425,6 @@ const updateAuthMode = (value) => {
 };
 
 const testConnection = async () => {
-    // Validation basique avant le test
     if (!form.server || !form.database) {
         showWarningToast('Please fill in server and database fields before testing.');
         return;
@@ -447,8 +482,6 @@ const testConnection = async () => {
     }
 };
 
-
-
 const getToastClasses = computed(() => {
     const baseClasses = 'fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out';
     
@@ -493,6 +526,18 @@ const getToastIconAndColor = computed(() => {
                 titleColor: 'text-blue-800',
                 messageColor: 'text-blue-700'
             };
+    }
+});
+
+// Lancer le tutoriel au montage
+onMounted(() => {
+    const tutorialShown = localStorage.getItem('connect_project_tutorial_shown');
+    
+    if (!tutorialShown) {
+        setTimeout(() => {
+            showConnectProjectGuide(props.project.db_type);
+            localStorage.setItem('connect_project_tutorial_shown', 'true');
+        }, 1000);
     }
 });
 </script>

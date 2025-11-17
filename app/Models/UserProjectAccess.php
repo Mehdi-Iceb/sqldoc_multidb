@@ -28,7 +28,7 @@ class UserProjectAccess extends Model
     const ACCESS_LEVELS = [
         'read' => 'Lecture seule',
         'write' => 'Lecture/Écriture',
-        'admin' => 'Administration complète'
+        'Admin' => 'Administration complète'
     ];
 
     /**
@@ -52,7 +52,7 @@ class UserProjectAccess extends Model
      */
     public function hasMinimumAccess($requiredLevel)
     {
-        $levels = ['read', 'write', 'admin'];
+        $levels = ['read', 'write', 'Admin'];
         $currentLevelIndex = array_search($this->access_level, $levels);
         $requiredLevelIndex = array_search($requiredLevel, $levels);
         

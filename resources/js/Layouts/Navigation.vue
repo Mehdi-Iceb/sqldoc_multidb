@@ -8,8 +8,34 @@
         {{ appVersion }}
       </span>
 
+      <!-- Logo compact -->
+      <div class="px-6 mb-6 pb-4 border-b border-blue-600">
+        <div class="flex items-center space-x-3">
+          <img 
+            v-if="tenant?.logo" 
+            :src="tenant.logo" 
+            :alt="`${tenant.name} logo`"
+            class="h-10 w-10 object-contain flex-shrink-0"
+          />
+          <div v-else class="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span class="text-white font-bold text-lg">
+              {{ tenant?.name?.charAt(0) || 'A' }}
+            </span>
+          </div>
+          
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-bold text-gray-800 truncate">
+              {{ tenant?.name || 'Your App' }}
+            </h3>
+            <p class="text-xs text-gray-500 truncate">
+              {{ tenant?.subdomain }}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <ul class="mt-6">
-        <li v-if="$page.props.auth.user.role === 'admin'" class="relative px-6 py-3">
+        <li v-if="$page.props.auth.user.role === 'Admin'" class="relative px-6 py-3">
           <NavLink :href="route('admin')" :active="route().current('admin')">
             <template #icon>
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,7 +49,7 @@
         </li>
 
         <li
-          v-if="$page.props.auth.user.role === 'admin' && $page.props.currentProject"
+          v-if="$page.props.auth.user.role === 'Admin' && $page.props.currentProject"
           class="relative px-6 py-3"
         >
           <NavLink :href="route('releases.index')" :active="route().current('releases.index')">
@@ -334,6 +360,8 @@ import { Link, router } from '@inertiajs/vue3'
 import { usePage } from '@inertiajs/vue3'
 
 const page = usePage()
+
+const tenant = computed(() => page.props.tenant);
 
 // Données partagées depuis AppServiceProvider
 const navigationData = computed(() => page.props.navigationData)

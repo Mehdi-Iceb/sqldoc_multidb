@@ -1,15 +1,30 @@
 <template>
     <AuthenticatedLayout>
       <template #header>
-        <h2 class="text-xl font-semibold text-gray-800">
-          Administration
-        </h2>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold text-gray-800">
+            Administration
+          </h2>
+          <!--  Bouton aide -->
+          <button
+            @click="restartTutorial"
+            class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all z-50 group"
+            title="Show tutorial"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              Need help ?
+            </span>
+          </button>
+        </div>
       </template>
   
       <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-          <!-- Gestion des rôles et permissions -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+          <!--  ID ajouté - Gestion des rôles et permissions -->
+          <div id="roles-permissions-section" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-6">Roles and permissions management</h3>
             <div class="space-y-6">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -55,43 +70,52 @@
             </div>
           </div>
 
-          <!-- Formulaire de création d'utilisateur -->
-          <div class="mb-8 p-6 bg-white rounded-lg shadow">
+          <!--  ID ajouté - Formulaire de création d'utilisateur -->
+          <div id="create-user-section" class="mb-8 p-6 bg-white rounded-lg shadow">
             <h4 class="text-lg font-medium text-gray-900 mb-4">Create a user</h4>
             <form @submit.prevent="createUser" class="space-y-4">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <!--  ID ajouté -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Name</label>
                     <input 
+                    id="user-name-field"
                     v-model="newUser.name"
                     type="text" 
                     required
+                    placeholder="Full name"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
+                <!--  ID ajouté -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email</label>
                     <input 
+                    id="user-email-field"
                     v-model="newUser.email"
                     type="email" 
                     required
+                    placeholder="email@example.com"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
+                <!--  ID ajouté -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Password</label>
                     <input 
+                    id="user-password-field"
                     v-model="newUser.password"
                     type="password" 
-                    placeholder="min 8 character"
+                    placeholder="min 8 characters"
                     required
-                    
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
+                <!--  ID ajouté -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Role</label>
                     <select 
+                    id="user-role-field"
                     v-model="newUser.role_id"
                     required
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -104,7 +128,9 @@
                 </div>
                 </div>
                 <div class="flex justify-end">
+                <!--  ID ajouté -->
                 <button 
+                    id="create-user-button"
                     type="submit"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition"
                 >
@@ -114,8 +140,8 @@
             </form>
           </div>
         
-          <!-- Gestion des utilisateurs et accès aux projets -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+          <!--  ID ajouté - Gestion des utilisateurs et accès aux projets -->
+          <div id="users-management-section" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-6">User management and project access</h3>
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
@@ -138,15 +164,17 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="user in users" :key="user.id">
+                <tr v-for="(user, index) in users" :key="user.id">
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {{ user.name }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {{ user.email }}
                   </td>
+                  <!--  ID ajouté au premier dropdown -->
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" style="min-width: 180px;">
                     <select 
+                      :id="index === 0 ? 'user-role-dropdown' : undefined"
                       v-model="user.role_id"
                       @change="updateUserRole(user)"
                       class="mt-1 block w-full py-2 px-3 pr-6 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -177,14 +205,10 @@
                       </div>
                     </div>
                   </td>
+                  <!--  ID ajouté au premier bouton -->
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                    <!-- <button
-                      @click="updateUserRole(user)"
-                      class="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs text-white bg-green-600 hover:bg-green-700"
-                    >
-                      Save Role
-                    </button> -->
                     <button
+                      :id="index === 0 ? 'manage-access-button' : undefined"
                       @click="openProjectAccessModal(user)"
                       class="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs text-white bg-blue-600 hover:bg-blue-700"
                     >
@@ -212,18 +236,15 @@
             </button>
           </div>
           
-          <!-- Debug: Afficher le nombre de projets disponibles -->
           <div class="mb-2 text-sm text-gray-600">
             Projects available: {{ availableProjects.length }}
             <span v-if="loadingProjects" class="text-blue-600">(Loading...)</span>
           </div>
           
-          <!-- Formulaire pour accorder un nouvel accès -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg">
             <h4 class="text-md font-medium text-gray-900 mb-3">Grant new project access</h4>
             <form @submit.prevent="grantProjectAccess" class="space-y-3">
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- Sélection de plusieurs projets -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700">projects</label>
                   <select 
@@ -240,13 +261,11 @@
                       {{ project.display_name || project.name }}
                     </option>
                   </select>
-                  <!-- Debug: Afficher les projets disponibles -->
                   <div v-if="availableProjects.length === 0" class="mt-1 text-sm text-red-600">
                     No projects available. Check console for errors.
                   </div>
                 </div>
 
-                <!-- Niveau d'accès -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700">Access level</label>
                   <select 
@@ -273,7 +292,6 @@
             </form>
           </div>
 
-          <!-- Liste des accès actuels -->
           <div>
             <h4 class="text-md font-medium text-gray-900 mb-3">Current project accesses</h4>
             <div v-if="currentUserAccesses.length === 0" class="text-gray-500 text-sm">
@@ -312,15 +330,17 @@
 import { ref, computed, onMounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useToast } from '@/Composables/useToast'
+import { useDriver } from '@/Composables/useDriver.js' 
 
 const { success, error: showError, warning, info, confirmToast } = useToast()
+const { showAdminGuide } = useDriver() 
 
 // Props existants
 const props = defineProps({
   users: Array,
   roles: Array,
   permissions: Array,
-  projects: Array // Ajouté pour recevoir les projets depuis le controller
+  projects: Array
 })
 
 // États existants
@@ -342,12 +362,26 @@ const newProjectAccess = ref({
   access_level: 'read'
 })
 
+//  Fonction pour relancer le tutoriel
+const restartTutorial = () => {
+  localStorage.removeItem('admin_tutorial_shown')
+  showAdminGuide()
+}
+
 // Charger les projets disponibles au montage
 onMounted(async () => {
   console.log('Component mounted')
   console.log('Props projects:', props.projects)
   
-  // Utiliser les projets des props d'abord si disponibles
+  //  Lancer le tutoriel au premier chargement
+  const tutorialShown = localStorage.getItem('admin_tutorial_shown')
+  if (!tutorialShown) {
+    setTimeout(() => {
+      showAdminGuide()
+      localStorage.setItem('admin_tutorial_shown', 'true')
+    }, 1000)
+  }
+  
   if (props.projects && props.projects.length > 0) {
     availableProjects.value = props.projects.map(project => ({
       id: project.id,
@@ -357,11 +391,9 @@ onMounted(async () => {
     console.log('Projects loaded from props:', availableProjects.value)
   }
   
-  // Charger également via API pour avoir la liste complète
   await loadAvailableProjects()
 })
 
-// Fonctions existantes
 const createUser = async () => {
   try {
     const response = await axios.post('/admin/users', newUser.value)
@@ -382,14 +414,12 @@ const createUser = async () => {
     const validationErrors = error.response?.data?.errors
 
     if (validationErrors) {
-      //  messages d'erreur en une seule string
       const messages = Object.values(validationErrors)
         .flat()
         .join('\n')
 
       showError(messages)
     } else {
-      // Si ce n'est pas une erreur de validation Laravel
       showError('Error while creating user: ' + (error.response?.data?.error || error.message))
     }
   }
@@ -436,7 +466,6 @@ const updateUserRole = async (user) => {
   }
 }
 
-// Nouvelles fonctions pour la gestion des accès aux projets
 const loadAvailableProjects = async () => {
   try {
     loadingProjects.value = true
@@ -460,7 +489,6 @@ const loadAvailableProjects = async () => {
       url: error.config?.url
     })
     
-    // Fallback: utiliser les projets des props
     if (props.projects && props.projects.length > 0) {
       availableProjects.value = props.projects.map(project => ({
         id: project.id,
@@ -479,7 +507,6 @@ const openProjectAccessModal = async (user) => {
   selectedUser.value = user
   showProjectAccessModal.value = true
   
-  // Recharger les projets disponibles
   if (availableProjects.value.length === 0) {
     await loadAvailableProjects()
   }

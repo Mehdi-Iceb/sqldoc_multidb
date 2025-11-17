@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -34,7 +35,7 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email:rfc|max:255|unique:users',
             'password' => 'required|string|min:8',
             'role_id' => 'required|exists:roles,id'
         ], $messages);
@@ -108,7 +109,7 @@ class AdminController extends Controller
                 'user_id' => 'required|exists:users,id',
                 'project_ids' => 'required|array',
                 'project_ids.*' => 'exists:projects,id',
-                'access_level' => 'required|in:read,write,admin'
+                'access_level' => 'required|in:read,write,Admin'
             ]);
 
             $userId = $validated['user_id'];
@@ -514,11 +515,11 @@ class AdminController extends Controller
             return false;
         }
 
-        if ($user->role && $user->role->name === 'admin') {
+        if ($user->role && $user->role->name === 'Admin') {
             return true;
         }
 
-        if (isset($user->role) && $user->role === 'admin') {
+        if (isset($user->role) && $user->role === 'Admin') {
             return true;
         }
 
