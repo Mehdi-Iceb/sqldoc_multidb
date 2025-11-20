@@ -104,7 +104,7 @@ class TenantController extends Controller
         return Inertia::render('Central/Tenants/Create', [
             'countries' => $this->getCountriesList(),
             'industries' => $this->getIndustriesList(),
-            'domain' => config('app.domain', 'domain.test'),
+            'domain' => config('app.domain'),
             'selectedPlan' => $selectedPlan,
             'selectedCycle' => $cycle,
         ]);
@@ -507,7 +507,7 @@ class TenantController extends Controller
             ]);
 
             // 2. Créer le domaine
-            $domain = $validated['slug'] . '.' . config('app.domain', 'domain.test');
+            $domain = $validated['slug'] . '.' . config('app.domain');
             $tenant->domains()->create([
                 'domain' => $domain,
             ]);

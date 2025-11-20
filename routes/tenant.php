@@ -134,7 +134,7 @@ if (!in_array($host, config('tenancy.central_domains', []))) {
             'database.default' => $tenantConnection,
 
             'session.cookie' => env('SESSION_COOKIE', 'laravel_session') . '_' . $tenant->slug,
-            'session.domain' => '.domain.test',
+            'session.domain' => '.test-sqlinfo.io',
             'session.same_site' => 'lax',
         ]);
         

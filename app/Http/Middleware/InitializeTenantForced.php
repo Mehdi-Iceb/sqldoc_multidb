@@ -44,7 +44,7 @@ class InitializeTenantForced
                 'driver' => 'sqlsrv',
                 'host' => config('database.connections.sqlsrv.host'),
                 'port' => config('database.connections.sqlsrv.port'),
-                'database' => $tenant->getDatabaseName(), // tenant_thanos
+                'database' => $tenant->getDatabaseName(), 
                 'username' => config('database.connections.sqlsrv.username'),
                 'password' => config('database.connections.sqlsrv.password'),
                 'charset' => config('database.connections.sqlsrv.charset'),
