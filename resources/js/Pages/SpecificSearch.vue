@@ -321,7 +321,7 @@
 
       <!-- Aucun résultat -->
       <div
-        v-if="hasSearched && noResults && tableResults.length === 0 && viewResults.length === 0 && IndexResults.length === 0 && PkResults.length === 0 && FkResults.length === 0 && descriptionResults.length === 0"
+        v-if="hasSearched && (tableResults.length === 0 && viewResults.length === 0 && IndexResults.length === 0 && PkResults.length === 0 && FkResults.length === 0 && descriptionResults.length === 0)"
         class="mt-6 text-gray-500"
       >
         No result matched your research.
