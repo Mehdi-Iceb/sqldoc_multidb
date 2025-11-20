@@ -315,6 +315,9 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::post('/admin/users/{user}/role', [AdminController::class, 'updateUserRole']);
     Route::put('/admin/roles/{role}/permissions', [AdminController::class, 'updateRolePermissions']);
 
+    //creation de role
+    Route::post('/admin/createrole', [AdminController::class, 'createRole']);
+
     // Nouvelles routes pour la gestion des accès aux projets
     Route::get('/admin/projects/available', [AdminController::class, 'getAvailableProjects'])->name('admin.projects.available');
     Route::get('/admin/users/{user}/project-accesses', [AdminController::class, 'getUserProjectAccesses'])->name('admin.users.project-accesses');

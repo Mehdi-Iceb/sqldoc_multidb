@@ -54,6 +54,29 @@ class AdminController extends Controller
         ]);
     }
 
+    public function createRole(Request $request)
+    {
+        $messages = [
+            'name.unique' => 'name already used.',
+        ];
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:role',
+            'description' => 'required|string|max:255',
+        ]);
+
+        $role = Role::create([
+            'name' => $validated['name'],
+            'description' => $validated['description']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Role successfully created',
+            'role' => $role
+        ]);
+    }
+
     public function updateUserRole(Request $request, User $user)
     {
         $validated = $request->validate([
