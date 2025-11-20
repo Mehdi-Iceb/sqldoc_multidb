@@ -28,7 +28,7 @@ class TenantController extends Controller
     public function landing(): InertiaResponse
     {
         return Inertia::render('Landing', [
-            'domain' => config('app.domain', 'domain.test')
+            'domain' => config('app.domain')
         ]);
     }
 
@@ -38,7 +38,7 @@ class TenantController extends Controller
     public function register(): InertiaResponse
     {
         return Inertia::render('Register', [
-            'domain' => config('app.domain', 'domain.test')
+            'domain' => config('app.domain')
         ]);
     }
 
@@ -117,7 +117,7 @@ class TenantController extends Controller
     {
         Log::info('Start method called', $request->all());
 
-        $fullDomain = $request->slug . '.' . config('app.domain', 'domain.test');
+        $fullDomain = $request->slug . '.' . config('app.domain');
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -348,7 +348,7 @@ class TenantController extends Controller
                         $subscription->load('subscriptionPlan');
                         
                         $protocol = request()->secure() ? 'https://' : 'http://';
-                        $tenantUrl = $protocol . $fullDomain . ':8000/login';
+                        $tenantUrl = $protocol . $fullDomain . '/login';
                         
                         Log::info('Attempting to send welcome email', [
                             'to' => $tenant->contact_email,
@@ -395,7 +395,7 @@ class TenantController extends Controller
 
             // Construire l'URL du tenant avec le protocole approprié
             $protocol = request()->secure() ? 'https://' : 'http://';
-            $tenantUrl = $protocol . $fullDomain . ':8000/login';
+            $tenantUrl = $protocol . $fullDomain . '/login';
 
             return Inertia::render('RegistrationSuccess', [
                 'tenant' => [
