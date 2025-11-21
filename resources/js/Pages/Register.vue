@@ -619,7 +619,7 @@ async function validateField(field) {
         form.errors.contact_email = 'Format d’email invalide.'
       } else {
         try {
-          const { data } = await axios.post('/api/check-email', {
+          const { data } = await axios.post('/check-email', {
             email: form.contact_email
           })
           if (data.exists) {
@@ -666,7 +666,7 @@ async function validateField(field) {
         form.errors.slug = 'L’identifiant est obligatoire.'
       } else {
         try {
-          const { data } = await axios.post('/api/check-slug', {
+          const { data } = await axios.post('/check-slug', {
             slug: form.slug
           })
           if (data.exists) {
