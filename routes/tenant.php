@@ -71,7 +71,7 @@ Route::post('/check-email', function (Request $request) {
         ]);
     }
 
-    // 🔍 Vérifie si l'email existe déjà dans la table tenants
+    // Vérifie si l'email existe déjà dans la table tenants
     $exists = Tenant::where('contact_email', $request->email)->exists();
 
     return response()->json([

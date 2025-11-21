@@ -11,5 +11,5 @@ if (token) {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
 
-// IMPORTANT : pour envoyer le cookie de session
+
 window.axios.defaults.withCredentials = true;
