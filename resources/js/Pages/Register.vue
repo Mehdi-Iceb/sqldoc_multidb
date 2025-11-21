@@ -162,9 +162,9 @@
               <div class="relative">
                 <input v-model="form.slug" @blur="validateField('slug')" type="text" placeholder="your-company-name"
                        class="input-modern w-full px-4 py-3 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">.{{ domain }}</span>
+                <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">.{{ props.domain }}</span>
               </div>
-              <p class="text-xs text-gray-500 mt-1">Your URL will be: {{ form.slug || 'your-id' }}.{{ domain }}</p>
+              <p class="text-xs text-gray-500 mt-1">Your URL will be: {{ form.slug || 'your-id' }}.{{ props.domain }}</p>
               <div v-if="form.errors.slug" class="text-red-500 text-sm mt-1">{{ form.errors.slug }}</div>
             </div>
 
@@ -314,7 +314,7 @@ import axios from 'axios'
 
 // === Props ===
 const props = defineProps({
-  domain: { type: String, default: 'domain.com' },
+  domain: { type: String, default: 'test-sqlinfo.io' },
   selectedPlan: { type: Object, default: null },
   selectedCycle: { type: String, default: 'monthly' }
 })
