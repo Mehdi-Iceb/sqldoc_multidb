@@ -29,37 +29,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        
         $request->authenticate();
-
-    //     dd([
-    //     'step' => 'After authenticate',
-    //     'user' => Auth::user(),
-    //     'user_id' => Auth::id(),
-    //     'session_id' => session()->getId(),
-    // ]);
 
         $request->session()->regenerate();
 
-    //      dd([
-    //     'step' => 'After regenerate',
-    //     'user' => Auth::user(),
-    //     'user_id' => Auth::id(),
-    //     'session_id' => session()->getId(),
-    //     'redirect_url' => route('projects.index', absolute: false),
-    // ]);
-
-        $response = redirect()->intended(route('projects.index', absolute: false));
-
-        dd([
-        'step' => 'Response created',
-        'response_class' => get_class($response),
-        'response_status' => $response->getStatusCode(),
-        'response_target' => $response->getTargetUrl(),
-        'is_redirect' => $response->isRedirect(),
-    ]);
-
-    return $response;
+        return redirect()->intended('/projects');
     }
 
     /**
