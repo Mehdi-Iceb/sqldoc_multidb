@@ -72,12 +72,6 @@ class ProjectController extends Controller
                 ]);
             }
         }
-
-        dd([
-        'test' => 'After sharedProjects',
-        'shared_count' => $sharedProjects->count(),
-        'shared_projects' => $sharedProjects,
-    ]);
         
         // Combiner les deux collections
         $allProjects = $ownedProjects->concat($sharedProjects)->sortBy('name');
@@ -87,6 +81,20 @@ class ProjectController extends Controller
             'owned_count' => $ownedProjects->count(),
             'shared_count' => $sharedProjects->count(),
             'total_count' => $allProjects->count()
+        ]);
+        
+        $data = [
+            'projects' => $allProjects->values(),
+            'stats' => [
+                'owned' => $ownedProjects->count(),
+                'shared' => $sharedProjects->count(),
+                'total' => $allProjects->count()
+            ]
+        ];
+        
+        dd([
+            'test' => 'Before Inertia::render',
+            'data' => $data,
         ]);
         
         return Inertia::render('Projects/Index', [
