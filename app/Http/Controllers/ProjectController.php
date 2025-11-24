@@ -12,7 +12,7 @@ use Inertia\Inertia;
 use App\Models\DbDescription;
 use App\Services\DatabaseStructureService;
 use App\Models\UserProjectAccess;
-use Illuminate\Container\Attributes\Auth;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
