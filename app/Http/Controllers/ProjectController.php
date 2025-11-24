@@ -83,19 +83,6 @@ class ProjectController extends Controller
             'total_count' => $allProjects->count()
         ]);
         
-        $data = [
-            'projects' => $allProjects->values(),
-            'stats' => [
-                'owned' => $ownedProjects->count(),
-                'shared' => $sharedProjects->count(),
-                'total' => $allProjects->count()
-            ]
-        ];
-        
-        dd([
-            'test' => 'Before Inertia::render',
-            'data' => $data,
-        ]);
         
         return Inertia::render('Projects/Index', [
             'projects' => $allProjects->values(), // Réindexer la collection
