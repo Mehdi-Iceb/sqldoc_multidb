@@ -12,7 +12,6 @@ use Inertia\Inertia;
 use App\Models\DbDescription;
 use App\Services\DatabaseStructureService;
 use App\Models\UserProjectAccess;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
@@ -22,15 +21,7 @@ class ProjectController extends Controller
 
     public function index()
     {
-
-        dd([
-        'controller' => 'ProjectController@index',
-        'user' => Auth::user(),
-        'user_id' => Auth::id(),
-        'is_inertia' => request()->header('X-Inertia'),
-        'tenant_initialized' => tenancy()->initialized ?? false,
-        'tenant' => tenant(),
-    ]);
+        
         $userId = auth()->id();
         
         // Récupérer les projets appartenant à l'utilisateur
@@ -51,6 +42,11 @@ class ProjectController extends Controller
                 ];
             });
         
+            dd([
+        'test' => 'After ownedProjects',
+        'owned_count' => $ownedProjects->count(),
+        'owned_projects' => $ownedProjects,
+    ]);
         // Récupérer les projets partagés avec l'utilisateur
         $sharedProjects = collect();
         
