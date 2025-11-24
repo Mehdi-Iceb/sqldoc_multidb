@@ -36,6 +36,11 @@ class TenancyMiddleware
         // Si le domaine est introuvable, retourner une erreur 404
         if (!$domain) {
             Log::warning('TenancyMiddleware: Domain not found for host ' . $host);
+
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors(['message' => 'Tenant introuvable']);
+            }
+
             return response()->view('errors.404', [], 404);
         }
 
@@ -59,14 +64,23 @@ class TenancyMiddleware
         ];
 
         Config::set("database.connections.{$connectionName}", $tenantConnectionConfig);
+        Config::set('database.default', $connectionName);
 
         try {
             DB::connection($connectionName)->getPdo();
             Log::info('TenancyMiddleware: Switched to tenant database successfully.', ['database' => $tenantDbName]);
-        } catch (\Exception $e) {
-            Log::error('TenancyMiddleware: Failed to switch to tenant database.', ['error' => $e->getMessage()]);
-            // Gérer l'erreur de connexion à la base de données du locataire
-            return response()->view('errors.500', ['message' => 'Cannot connect to tenant database.'], 500);
+        }catch (\Exception $e) {
+            Log::error('TenancyMiddleware: Failed to switch to tenant database.', [
+                'error' => $e->getMessage()
+            ]);
+
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors(['message' => 'Database tenant error']);
+            }
+
+            return response()->view('errors.500', [
+                'message' => 'Cannot connect to tenant database.'
+            ], 500);
         }
         
         // Stocker le locataire dans l'application pour un accès facile
