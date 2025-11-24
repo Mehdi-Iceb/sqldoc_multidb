@@ -31,31 +31,18 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
 
-         Log::info('🔐 Login attempt started', [
-        'email' => $request->email,
-        'is_inertia' => $request->header('X-Inertia'),
-    ]);
         $request->authenticate();
 
-        Log::info('✅ Authentication successful', [
+    $request->session()->regenerate();
+
+    // ✅ Utiliser session()->put() puis flash()
+    session()->flash('debug', [
+        'login_successful' => true,
         'user_id' => Auth::id(),
-        'user_email' => Auth::user()->email,
-    ]);
-
-        $request->session()->regenerate();
-
-        Log::info('🔄 Session regenerated', [
         'session_id' => session()->getId(),
     ]);
 
-    $redirectUrl = route('projects.index', absolute: false);
-
-    Log::info('↗️ Redirecting to', [
-        'url' => $redirectUrl,
-        'intended' => $request->session()->get('url.intended'),
-    ]);
-
-        return redirect()->intended('/projects');
+    return redirect()->intended(route('projects.index', absolute: false));
     }
 
     /**

@@ -22,6 +22,13 @@ const form = useForm({
 });
 
 const page = usePage();
+
+watch(() => page.props.flash?.debug, (debug) => {
+    if (debug) {
+        console.log('🔍 DEBUG INFO:', debug)
+    }
+}, { immediate: true, deep: true })
+
 const tenant = computed(() => page.props.tenant);
 
 const submit = () => {
