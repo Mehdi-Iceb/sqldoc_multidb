@@ -72,6 +72,12 @@ class ProjectController extends Controller
                 ]);
             }
         }
+
+        dd([
+        'test' => 'After sharedProjects',
+        'shared_count' => $sharedProjects->count(),
+        'shared_projects' => $sharedProjects,
+    ]);
         
         // Combiner les deux collections
         $allProjects = $ownedProjects->concat($sharedProjects)->sortBy('name');
