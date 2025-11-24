@@ -932,7 +932,7 @@ onMounted(() => {
   console.log('Active projects:', activeProjects.value.length);
 
   preloadDashboard(); 
-  openProjectWithPreload();
+  //openProjectWithPreload();
 
   // Vérifier si le tutoriel a déjà été montré
     const tutorialShown  = localStorage.getItem('projects_tutorial_shown');

@@ -394,35 +394,34 @@ onMounted(async () => {
   await loadAvailableProjects()
 })
 
-const createUser = async () => {
-  try {
-    const response = await axios.post('/admin/users', newUser.value)
-    
-    if (response.data.success) {
+const createUser = () => {
+  router.post('/admin/users', newUser.value, {
+    preserveState: false,
+    onSuccess: (page) => {
+      success('User created successfully!')
+      
+      // Réinitialiser le formulaire
       newUser.value = {
         name: '',
         email: '',
         password: '',
         role_id: ''
       }
-      window.location.reload()
-      info('User created successfully!')
+    },
+    onError: (errors) => {
+      console.error('Error while creating user:', errors)
+      
+      if (errors) {
+        const messages = Object.values(errors)
+          .flat()
+          .join('\n')
+        
+        showError(messages)
+      } else {
+        showError('Error while creating user')
+      }
     }
-  } catch (error) {
-    console.error('Error while creating user:', error)
-
-    const validationErrors = error.response?.data?.errors
-
-    if (validationErrors) {
-      const messages = Object.values(validationErrors)
-        .flat()
-        .join('\n')
-
-      showError(messages)
-    } else {
-      showError('Error while creating user: ' + (error.response?.data?.error || error.message))
-    }
-  }
+  })
 }
 
 const hasPermission = (role, permission) => {
