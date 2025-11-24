@@ -161,7 +161,7 @@ Route::get('/subscription', [SubscriptionController::class, 'index'])->name('ind
 //         'headers' => request()->headers->all(),
 //     ]);
 // });
-}
+//}
 
 // IMPORTANT: Appliquer tous les middlewares web à toutes les routes
 Route::middleware(['web'])->group(function () {
