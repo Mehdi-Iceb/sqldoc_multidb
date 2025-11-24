@@ -30,21 +30,24 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         
-        dd([
-        'step' => 'Before authenticate',
-        'email' => $request->email,
-        'is_inertia' => $request->header('X-Inertia'),
-        'session_id' => session()->getId(),
-    ]);
+        $request->authenticate();
 
-    $request->authenticate();
-
-    dd([
-        'step' => 'After authenticate',
-        'user' => Auth::user(),
-    ]);
+    //     dd([
+    //     'step' => 'After authenticate',
+    //     'user' => Auth::user(),
+    //     'user_id' => Auth::id(),
+    //     'session_id' => session()->getId(),
+    // ]);
 
         $request->session()->regenerate();
+
+         dd([
+        'step' => 'After regenerate',
+        'user' => Auth::user(),
+        'user_id' => Auth::id(),
+        'session_id' => session()->getId(),
+        'redirect_url' => route('projects.index', absolute: false),
+    ]);
 
         return redirect()->intended('/projects');
     }
