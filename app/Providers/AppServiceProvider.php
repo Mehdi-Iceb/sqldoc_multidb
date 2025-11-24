@@ -13,7 +13,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Grammars\SqlServerGrammar;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Stancl\Tenancy\Events\TenancyInitialized;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -158,48 +160,42 @@ class AppServiceProvider extends ServiceProvider
         })
     );
 
-    if (config('database.default') === 'sqlsrv' || str_starts_with(config('database.default'), 'tenant_')) {
-            try {
-                DB::statement("SET DATEFORMAT ymd");
-            } catch (\Exception $e) {
-                Log::warning('Could not set SQL Server date format on boot', [
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
+     $this->configureSqlServerConnection();
 
-        // ✅ NOUVEAU : Écouter l'initialisation du tenant pour configurer SQL Server
-        if (class_exists(\Stancl\Tenancy\Tenancy::class)) {
-            $this->configureTenantDatabaseOnInit();
-        }
+        // ✅ Écouter l'événement d'initialisation du tenant
+        Event::listen(TenancyInitialized::class, function (TenancyInitialized $event) {
+            $this->configureSqlServerConnection();
+        });
     }
 
-    protected function configureTenantDatabaseOnInit(): void
+    /**
+     * Configurer SQL Server pour gérer les dates correctement
+     */
+    protected function configureSqlServerConnection(): void
     {
-        tenancy()->hook('bootstrapped', function () {
-            try {
-                $connection = DB::connection();
+        try {
+            $connection = DB::connection();
+            
+            if ($connection->getDriverName() === 'sqlsrv') {
+                // Forcer le format de date YYYY-MM-DD
+                $connection->statement("SET DATEFORMAT ymd");
                 
-                if ($connection->getDriverName() === 'sqlsrv') {
-                    // Forcer le format de date YYYY-MM-DD
-                    $connection->statement("SET DATEFORMAT ymd");
-                    
-                    // Options supplémentaires pour SQL Server
-                    $connection->statement("SET ANSI_NULLS ON");
-                    $connection->statement("SET QUOTED_IDENTIFIER ON");
-                    
-                    Log::info('SQL Server date format configured for tenant', [
-                        'connection' => $connection->getName(),
-                        'database' => $connection->getDatabaseName(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Error configuring SQL Server for tenant', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                // Options supplémentaires pour SQL Server
+                $connection->statement("SET ANSI_NULLS ON");
+                $connection->statement("SET QUOTED_IDENTIFIER ON");
+                
+                Log::info('✅ SQL Server configured', [
+                    'connection' => $connection->getName(),
+                    'database' => $connection->getDatabaseName(),
                 ]);
             }
-        });
+        } catch (\Exception $e) {
+            Log::warning('⚠️ Could not configure SQL Server', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    
+
     
 
 
