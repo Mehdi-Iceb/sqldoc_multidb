@@ -7,7 +7,6 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,19 +29,24 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-
-        $request->authenticate();
-
-    $request->session()->regenerate();
-
-    // ✅ Utiliser session()->put() puis flash()
-    session()->flash('debug', [
-        'login_successful' => true,
-        'user_id' => Auth::id(),
+        
+        dd([
+        'step' => 'Before authenticate',
+        'email' => $request->email,
+        'is_inertia' => $request->header('X-Inertia'),
         'session_id' => session()->getId(),
     ]);
 
-    return redirect()->intended(route('projects.index', absolute: false));
+    $request->authenticate();
+
+    dd([
+        'step' => 'After authenticate',
+        'user' => Auth::user(),
+    ]);
+
+        $request->session()->regenerate();
+
+        return redirect()->intended('/projects');
     }
 
     /**

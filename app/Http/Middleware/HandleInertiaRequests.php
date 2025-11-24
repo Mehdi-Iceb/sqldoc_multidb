@@ -43,14 +43,6 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role->name,
                 ] : null,
             ],
-            'flash' => [
-            'success' => fn () => $request->session()->get('success'),
-            'error' => fn () => $request->session()->get('error'),
-            'warning' => fn () => $request->session()->get('warning'),
-            'info' => fn () => $request->session()->get('info'),
-            // ✅ Ajouter debug
-            'debug' => fn () => $request->session()->get('debug'),
-        ],
             'tenant' => function () use ($request) {
                 // Vérifier si on est dans un contexte tenant
                 if (function_exists('tenancy') && tenancy()->initialized) {
