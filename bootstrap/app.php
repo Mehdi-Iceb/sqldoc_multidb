@@ -20,14 +20,18 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenancy' => \App\Http\Middleware\InitializeTenantForced::class,
         ]);
         
-        $middleware->web(append: [
-            InitializeTenancyByDomain::class,
-            PreventAccessFromCentralDomains::class,
-        ]);
+        // $middleware->web(append: [
+        //     InitializeTenancyByDomain::class,
+        //     PreventAccessFromCentralDomains::class,
+        // ]);
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,  
+
+            InitializeTenancyByDomain::class,
+            PreventAccessFromCentralDomains::class,
+
             \App\Http\Middleware\MeasureLoadTime::class,
             
         ]);

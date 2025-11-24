@@ -32,10 +32,10 @@ return [
         Str::slug(env('APP_NAME', 'laravel'), '_').'_session'
     ),
     'path' => '/',
-    'domain' => env('SESSION_DOMAIN'), // Ne pas mettre de domaine par défaut
+    'domain' => env('SESSION_DOMAIN'), 
     'secure' => env('SESSION_SECURE_COOKIE', false),
     'http_only' => true,
-    'same_site' => 'lax',
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
     'partitioned' => false,
 
     /*
