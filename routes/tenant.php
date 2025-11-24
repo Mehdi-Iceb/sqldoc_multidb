@@ -108,46 +108,46 @@ Route::get('/subscription', [SubscriptionController::class, 'index'])->name('ind
     Route::delete('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
     Route::post('/{subscription}/resume', [SubscriptionController::class, 'resume'])->name('resume');
 
-// $host = request()->getHost();
-// if (!in_array($host, config('tenancy.central_domains', []))) {
+$host = request()->getHost();
+if (!in_array($host, config('tenancy.central_domains', []))) {
     
-//     $centralConnection = config('tenancy.database.central_connection', 'sqlsrv');
+    $centralConnection = config('tenancy.database.central_connection', 'sqlsrv');
     
-//     $domain = Domain::on($centralConnection)->where('domain', $host)->first();
+    $domain = Domain::on($centralConnection)->where('domain', $host)->first();
     
-//     if ($domain && $domain->tenant) {
-//         $tenant = $domain->tenant;
-//         $tenantConnection = 'tenant_' . strtolower(str_replace(['-', ' '], '_', $tenant->slug));
+    if ($domain && $domain->tenant) {
+        $tenant = $domain->tenant;
+        $tenantConnection = 'tenant_' . strtolower(str_replace(['-', ' '], '_', $tenant->slug));
         
-//         config([
-//             "database.connections.{$tenantConnection}" => [
-//                 'driver' => 'sqlsrv',
-//                 'host' => config('database.connections.sqlsrv.host'),
-//                 'port' => config('database.connections.sqlsrv.port'),
-//                 'database' => $tenant->getDatabaseName(),
-//                 'username' => config('database.connections.sqlsrv.username'),
-//                 'password' => config('database.connections.sqlsrv.password'),
-//                 'charset' => config('database.connections.sqlsrv.charset'),
-//                 'prefix' => '',
-//                 'prefix_indexes' => true,
-//             ],
-//             'database.default' => $tenantConnection,
+        config([
+            "database.connections.{$tenantConnection}" => [
+                'driver' => 'sqlsrv',
+                'host' => config('database.connections.sqlsrv.host'),
+                'port' => config('database.connections.sqlsrv.port'),
+                'database' => $tenant->getDatabaseName(),
+                'username' => config('database.connections.sqlsrv.username'),
+                'password' => config('database.connections.sqlsrv.password'),
+                'charset' => config('database.connections.sqlsrv.charset'),
+                'prefix' => '',
+                'prefix_indexes' => true,
+            ],
+            'database.default' => $tenantConnection,
 
-//             'session.cookie' => env('SESSION_COOKIE', 'laravel_session') . '_' . $tenant->slug,
-//             'session.domain' => '.test-sqlinfo.io',
-//             'session.same_site' => 'lax',
-//         ]);
+            'session.cookie' => env('SESSION_COOKIE', 'laravel_session') . '_' . $tenant->slug,
+            'session.domain' => '.test-sqlinfo.io',
+            'session.same_site' => 'lax',
+        ]);
         
-//         tenancy()->initialize($tenant);
+        tenancy()->initialize($tenant);
         
-//         Log::info('Tenant initialized correctly', [
-//             'tenant_id' => $tenant->id,
-//             'tenant_slug' => $tenant->slug,
-//             'database_name' => $tenant->getDatabaseName(),
-//             'connection' => $tenantConnection,
-//             'new_default' => config('database.default')
-//         ]);
-//     }
+        Log::info('Tenant initialized correctly', [
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'database_name' => $tenant->getDatabaseName(),
+            'connection' => $tenantConnection,
+            'new_default' => config('database.default')
+        ]);
+    }
 
 //     Route::get('/csrf-debug', function () {
 //     return response()->json([
@@ -161,7 +161,7 @@ Route::get('/subscription', [SubscriptionController::class, 'index'])->name('ind
 //         'headers' => request()->headers->all(),
 //     ]);
 // });
-//}
+}
 
 // IMPORTANT: Appliquer tous les middlewares web à toutes les routes
 Route::middleware(['web'])->group(function () {
