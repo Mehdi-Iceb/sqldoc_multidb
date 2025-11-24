@@ -41,12 +41,7 @@ class ProjectController extends Controller
                     'updated_at' => $project->updated_at
                 ];
             });
-        
-            dd([
-        'test' => 'After ownedProjects',
-        'owned_count' => $ownedProjects->count(),
-        'owned_projects' => $ownedProjects,
-    ]);
+
         // Récupérer les projets partagés avec l'utilisateur
         $sharedProjects = collect();
         
