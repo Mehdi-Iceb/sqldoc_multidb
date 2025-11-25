@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Log;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -40,5 +41,26 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->shouldRenderJsonWhen(function ($request, \Throwable $e) {
+            // Si c'est une requête Inertia, ne PAS retourner de JSON
+            if ($request->header('X-Inertia')) {
+                return false;
+            }
+            
+            // Pour les autres requêtes, comportement par défaut
+            return $request->is('api/*') || $request->expectsJson();
+        });
+        
+        // ✅ Logger les exceptions des requêtes Inertia
+        $exceptions->render(function (\Throwable $e, $request) {
+            if ($request->header('X-Inertia')) {
+                Log::error('❌ EXCEPTION IN INERTIA REQUEST', [
+                    'url' => $request->url(),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace_preview' => array_slice(explode("\n", $e->getTraceAsString()), 0, 10),
+                ]);
+            }
+        });
     })->create();
