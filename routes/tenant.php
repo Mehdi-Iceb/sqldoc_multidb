@@ -163,7 +163,7 @@ if (!in_array($host, config('tenancy.central_domains', []))) {
 // });
 }
 
-// IMPORTANT: Appliquer tous les middlewares web à toutes les routes
+// Appliquer tous les middlewares web à toutes les routes
 Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class, \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,])->group(function () {
 
     // Debug routes
@@ -208,6 +208,7 @@ Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::
 
     // Routes accessibles uniquement aux invités (non authentifiés)
     Route::middleware('guest')->group(function () {
+        Log::debug('Middleware X → tenant', ['tenant' => tenant()?->id]);
         Route::get('register', [RegisteredUserController::class, 'create'])
             ->name('register');
 
@@ -242,6 +243,7 @@ Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::
 
 // Routes accessibles uniquement aux utilisateurs authentifiés
 Route::middleware('auth')->group(function () {
+    Log::debug('Middleware X → tenant', ['tenant' => tenant()?->id]);
     // Page d'accueil du tenant
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
@@ -281,6 +283,7 @@ Route::middleware('auth')->group(function () {
 
     // Project routes
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Log::info('GET /projects → tenant', ['tenant' => tenant()?->id]);
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}/connect', [ProjectController::class, 'connect'])->name('projects.connect');

@@ -21,8 +21,11 @@ class InitializeTenantForced
             return $next($request);
         }
         
+        Log::info('InitializeTenantForced: Start', ['host' => $request->getHost()]);
         // Chercher le domaine
         $domain = Domain::where('domain', $host)->first();
+
+        Log::info('InitializeTenantForced: Domain found?', ['domain' => $domain ? 'YES' : 'NO']);
         
         if (!$domain || !$domain->tenant) {
             Log::error('InitializeTenantForced: Domain or tenant not found', [
