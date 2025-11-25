@@ -13,7 +13,7 @@ class RouteServiceProvider extends ServiceProvider
     {
         parent::boot();
         
-        $this->mapTenantRoutes();
+       // $this->mapTenantRoutes();
     }
     
     protected function mapTenantRoutes(): void
