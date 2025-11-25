@@ -175,7 +175,7 @@ Route::get('/view-logs', function () {
     }
     
     $lines = file($logFile);
-    $last1000 = array_slice($lines, -1000);
+    $last100 = array_slice($lines, -100);
     
     $output = '<html><head><style>
         body { background: #000; color: #0f0; font-family: monospace; padding: 20px; font-size: 11px; }
@@ -185,7 +185,7 @@ Route::get('/view-logs', function () {
         .exception { background: #500; color: #fff; padding: 5px; margin: 10px 0; }
     </style></head><body><h1>Last 1000 log lines</h1><pre>';
     
-    foreach ($last1000 as $line) {
+    foreach ($last100 as $line) {
         $class = '';
         if (stripos($line, 'ERROR') !== false || stripos($line, 'exception') !== false) {
             $class = 'error';
