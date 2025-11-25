@@ -21,19 +21,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'project.permissions' => \App\Http\Middleware\CheckProjectPermission::class,
-            'tenancy' => \App\Http\Middleware\InitializeTenantForced::class,
+            //'tenancy' => \App\Http\Middleware\InitializeTenantForced::class,
         ]);
         
-        // $middleware->web(append: [
-        //     InitializeTenancyByDomain::class,
-        //     PreventAccessFromCentralDomains::class,
-        // ]);
+        $middleware->web(append: [
+            InitializeTenancyByDomain::class,
+            PreventAccessFromCentralDomains::class,
+        ]);
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,  
-            \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
-            \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+            // \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
+            // \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
             \App\Http\Middleware\MeasureLoadTime::class,
             
         ]);

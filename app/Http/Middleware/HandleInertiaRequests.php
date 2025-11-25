@@ -37,11 +37,11 @@ class HandleInertiaRequests extends Middleware
         try{
             $tenant = tenant();
 
-            Log::warning('INERTIA SHARE → tenant = ' . ($tenant?->id ?? 'NULL'), [
-                'host' => $request->getHost(),
-                'url' => $request->path(),
-                'user_id' => auth()->id(),
-            ]);
+            // Log::warning('INERTIA SHARE → tenant = ' . ($tenant?->id ?? 'NULL'), [
+            //     'host' => $request->getHost(),
+            //     'url' => $request->path(),
+            //     'user_id' => auth()->id(),
+            // ]);
             
             return array_merge(parent::share($request), [
                 'auth' => [
