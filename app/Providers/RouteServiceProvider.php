@@ -23,7 +23,7 @@ class RouteServiceProvider extends ServiceProvider
             PreventAccessFromCentralDomains::class,
             //\Illuminate\Cookie\Middleware\EncryptCookies::class,
             //\Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-           // \App\Http\Middleware\InitializeTenantForced::class,
+            \App\Http\Middleware\InitializeTenantForced::class,
             \Illuminate\Session\Middleware\StartSession::class,
         ])
         ->group(base_path('routes/tenant.php'));
