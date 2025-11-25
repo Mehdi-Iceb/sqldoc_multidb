@@ -7,7 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useDriver } from '@/Composables/useDriver.js';
 
 defineProps({
