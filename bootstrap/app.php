@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'project.permissions' => \App\Http\Middleware\CheckProjectPermission::class,
-            //'tenancy' => \App\Http\Middleware\InitializeTenantForced::class,
+            'tenancy' => \App\Http\Middleware\InitializeTenantForced::class,
         ]);
         
         // $middleware->web(append: [
