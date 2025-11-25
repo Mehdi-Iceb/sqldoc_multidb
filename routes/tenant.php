@@ -164,7 +164,7 @@ if (!in_array($host, config('tenancy.central_domains', []))) {
 }
 
 // IMPORTANT: Appliquer tous les middlewares web à toutes les routes
-Route::middleware(['web'])->group(function () {
+Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class, \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,])->group(function () {
 
     // Debug routes
     // Route::get('/debug-advanced', function () {
