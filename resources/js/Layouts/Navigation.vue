@@ -35,7 +35,7 @@
       </div>
 
       <ul class="mt-6">
-        <li v-if="$page.props.auth.user.role === 'Admin'" class="relative px-6 py-3">
+        <li v-if="$page.props.auth.user?.role === 'Admin'" class="relative px-6 py-3">
           <NavLink :href="route('admin')" :active="route().current('admin')">
             <template #icon>
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
