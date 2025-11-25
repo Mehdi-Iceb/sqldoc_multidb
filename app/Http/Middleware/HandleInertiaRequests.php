@@ -74,6 +74,49 @@ class HandleInertiaRequests extends Middleware
             'showingMobileMenu' => false,
             
             'domain' => config('app.domain'),
+
+            'appName' => config('app.name', 'Laravel'),
+            'appVersion' => config('app.version', null),
+            
+            'currentProject' => fn() => session('current_project'),
+            
+            'navigationData' => function () {
+                // ✅ Retourner des données vides si pas de projet sélectionné
+                $currentProject = session('current_project');
+                
+                if (!$currentProject) {
+                    return [
+                        'tables' => [],
+                        'views' => [],
+                        'functions' => [],
+                        'procedures' => [],
+                        'triggers' => [],
+                        'metadata' => [
+                            'generated_at' => now()->toIso8601String(),
+                            'execution_time_ms' => 0,
+                            'total_objects' => 0,
+                            'message' => 'Aucune base de données sélectionnée'
+                        ]
+                    ];
+                }
+                
+                // ✅ Charger les données de navigation depuis le cache/session
+                return session('navigation_data', [
+                    'tables' => [],
+                    'views' => [],
+                    'functions' => [],
+                    'procedures' => [],
+                    'triggers' => [],
+                    'metadata' => [
+                        'generated_at' => now()->toIso8601String(),
+                        'execution_time_ms' => 0,
+                        'total_objects' => 0,
+                        'message' => 'No data'
+                    ]
+                ]);
+            },
+            
+            'permissions' => fn() => [], // Ajoutez vos permissions si nécessaire
         ]);
     }
 }
