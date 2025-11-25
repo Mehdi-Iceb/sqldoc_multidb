@@ -163,27 +163,50 @@ if (!in_array($host, config('tenancy.central_domains', []))) {
 // });
 }
 
-Route::get('/debug-logs', function () {
+Route::get('/view-logs', function () {
     if (!config('app.debug')) {
-        abort(403);
+        return 'Debug mode is OFF';
     }
     
     $logFile = storage_path('logs/laravel.log');
     
     if (!file_exists($logFile)) {
-        return '<h1>No log file</h1>';
+        return '<h1>No log file found</h1>';
     }
     
     $lines = file($logFile);
-    $last500 = array_slice($lines, -500);
+    $last1000 = array_slice($lines, -1000);
     
-    return response()
-        ->view('debug-logs', ['logs' => implode('', $last500)])
-        ->header('Content-Type', 'text/html');
-})->middleware('auth');
+    $output = '<html><head><style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; font-size: 11px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        .error { background: #300; color: #f00; padding: 2px; }
+        .warning { background: #330; color: #fa0; padding: 2px; }
+        .exception { background: #500; color: #fff; padding: 5px; margin: 10px 0; }
+    </style></head><body><h1>Last 1000 log lines</h1><pre>';
+    
+    foreach ($last1000 as $line) {
+        $class = '';
+        if (stripos($line, 'ERROR') !== false || stripos($line, 'exception') !== false) {
+            $class = 'error';
+        } elseif (stripos($line, 'WARNING') !== false) {
+            $class = 'warning';
+        }
+        
+        if ($class) {
+            $output .= '<span class="' . $class . '">' . htmlspecialchars($line) . '</span>';
+        } else {
+            $output .= htmlspecialchars($line);
+        }
+    }
+    
+    $output .= '</pre></body></html>';
+    
+    return response($output);
+});
 
 // Appliquer tous les middlewares web à toutes les routes
-Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class, \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,])->group(function () {
+Route::middleware(['web'])->group(function () {
 
     // Debug routes
     // Route::get('/debug-advanced', function () {
