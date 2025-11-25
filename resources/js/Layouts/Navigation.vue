@@ -49,7 +49,7 @@
         </li>
 
         <li
-          v-if="$page.props.auth.user.role === 'Admin' && $page.props.currentProject"
+          v-if="$page.props.auth.user?.role === 'Admin' && $page.props.currentProject"
           class="relative px-6 py-3"
         >
           <NavLink :href="route('releases.index')" :active="route().current('releases.index')">
