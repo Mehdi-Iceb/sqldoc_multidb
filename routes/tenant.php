@@ -163,6 +163,25 @@ if (!in_array($host, config('tenancy.central_domains', []))) {
 // });
 }
 
+Route::get('/debug-logs', function () {
+    if (!config('app.debug')) {
+        abort(403);
+    }
+    
+    $logFile = storage_path('logs/laravel.log');
+    
+    if (!file_exists($logFile)) {
+        return '<h1>No log file</h1>';
+    }
+    
+    $lines = file($logFile);
+    $last500 = array_slice($lines, -500);
+    
+    return response()
+        ->view('debug-logs', ['logs' => implode('', $last500)])
+        ->header('Content-Type', 'text/html');
+})->middleware('auth');
+
 // Appliquer tous les middlewares web à toutes les routes
 Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class, \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,])->group(function () {
 
