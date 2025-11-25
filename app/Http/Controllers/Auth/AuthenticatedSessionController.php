@@ -33,16 +33,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $request->session()->regenerate();
 
-        Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id]);
-
-        if ($request->header('X-Inertia')) {
-        return Inertia::render('Projects/Index', [
-            'projects' => auth()->user()->projects,
-            'tenant' => tenant(),
-            'auth' => ['user' => auth()->user()],
-            'flash' => ['success' => session('success')],
-        ]);
-    }
+        Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id, 'tenant_slug' => tenant()?->slug,]);
 
         return redirect()->intended(route('projects.index'));
     }
