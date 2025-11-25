@@ -33,25 +33,15 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $request->session()->regenerate();
 
-        // Récupération du tenant courant
-        $tenant = tenant();
-        if (!$tenant) {
-            Log::warning('Login → tenant is null!', ['host' => $request->getHost()]);
-        } else {
-            Log::info('Login → tenant detected', ['tenant_id' => $tenant->id, 'tenant_slug' => $tenant->slug]);
-        }
+        Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id]);
 
         $redirectUrl = route('projects.index');
 
-        // Si la requête vient d’Inertia (XHR SPA)
         if ($request->header('X-Inertia')) {
-            Log::info('Login → Inertia request, using Inertia::location', ['redirect_url' => $redirectUrl]);
-            return Inertia::location($redirectUrl);
+            return Inertia::location($redirectUrl); // → renvoie un Inertia\Response
         }
 
-        // Requête classique (non-XHR)
-        Log::info('Login → classic redirect', ['redirect_url' => $redirectUrl]);
-        return redirect()->intended($redirectUrl);
+        return redirect()->intended(route('projects.index'));
     }
 
     /**
