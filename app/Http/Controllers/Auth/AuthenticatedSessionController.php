@@ -35,11 +35,16 @@ class AuthenticatedSessionController extends Controller
 
         Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id]);
 
-        if ($request->wantsInertia()) {
-            return inertia('Projects/Index');
+        $redirectUrl = route('projects.index');
+
+        
+        if ($request->header('X-Inertia')) {
+            
+            return Inertia::location($redirectUrl);
         }
 
-        return redirect()->intended(route('projects.index'));
+       
+        return redirect()->intended($redirectUrl);
     }
 
     /**
