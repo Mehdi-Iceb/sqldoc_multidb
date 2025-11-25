@@ -921,8 +921,8 @@ const restoreProject = async (project) => {
 };
 
 const isAdmin = computed(() => {
-    const userRole = page.props.auth?.user?.role;
-    return userRole && userRole.toLowerCase() === 'admin';
+    return window.Laravel?.user?.role === 'Admin' || 
+           page.props.auth?.user?.role === 'Admin';
 });
 
 const preloadDashboard = () => import('@/Pages/Dashboard.vue');
