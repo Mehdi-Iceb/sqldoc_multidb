@@ -31,10 +31,13 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
         Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id]);
+
+        if ($request->wantsInertia()) {
+            return inertia('Projects/Index');
+        }
 
         return redirect()->intended(route('projects.index'));
     }
