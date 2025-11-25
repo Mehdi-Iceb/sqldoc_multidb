@@ -35,7 +35,7 @@ class ProjectController extends Controller
                     'description' => $project->description,
                     'db_type' => $project->db_type,
                     'is_owner' => true,
-                    'access_level' => 'admin', // Le propriétaire a tous les droits
+                    'access_level' => 'admin',
                     'owner_name' => auth()->user()->name,
                     'created_at' => $project->created_at,
                     'updated_at' => $project->updated_at
@@ -85,7 +85,11 @@ class ProjectController extends Controller
                 'owned' => $ownedProjects->count(),
                 'shared' => $sharedProjects->count(),
                 'total' => $allProjects->count()
-            ]
+            ],
+            'tenant' => tenant(),
+            'auth' => [
+                'user' => auth()->user(),
+            ],
         ]);
     }
 
