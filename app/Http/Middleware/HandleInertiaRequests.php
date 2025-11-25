@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -33,6 +34,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request)
     {
+        $tenant = tenant();
+
+        Log::warning('INERTIA SHARE → tenant = ' . ($tenant?->id ?? 'NULL'), [
+            'host' => $request->getHost(),
+            'url' => $request->path(),
+            'user_id' => auth()->id(),
+        ]);
         
         return array_merge(parent::share($request), [
             'auth' => [
