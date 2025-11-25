@@ -183,7 +183,7 @@ Route::get('/view-logs', function () {
         .error { background: #300; color: #f00; padding: 2px; }
         .warning { background: #330; color: #fa0; padding: 2px; }
         .exception { background: #500; color: #fff; padding: 5px; margin: 10px 0; }
-    </style></head><body><h1>Last 1000 log lines</h1><pre>';
+    </style></head><body><h1>Last 100 log lines</h1><pre>';
     
     foreach ($last100 as $line) {
         $class = '';
