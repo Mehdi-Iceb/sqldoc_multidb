@@ -28,18 +28,21 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse|Response
     {
         $request->authenticate();
         $request->session()->regenerate();
 
         Log::info('POST Login → tenant before redirect', ['tenant' => tenant()?->id]);
 
-        $redirectUrl = route('projects.index');
-
         if ($request->header('X-Inertia')) {
-            return Inertia::location($redirectUrl); // → renvoie un Inertia\Response
-        }
+        return Inertia::render('Projects/Index', [
+            'projects' => auth()->user()->projects,
+            'tenant' => tenant(),
+            'auth' => ['user' => auth()->user()],
+            'flash' => ['success' => session('success')],
+        ]);
+    }
 
         return redirect()->intended(route('projects.index'));
     }
