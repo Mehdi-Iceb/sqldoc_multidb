@@ -190,9 +190,18 @@ class ProjectController extends Controller
                 'driver' => $driver,
                 'host' => $validated['server'],
                 'database' => $validated['database'],
+                'charset' => 'utf8',
+                'prefix' => '',
+                'prefix_indexes' => true,
             ];
 
+            // ✅ AJOUT: Options de timeout selon le driver
             if ($project->db_type === 'sqlserver') {
+                $config['options'] = [
+                    \PDO::ATTR_TIMEOUT => 30,
+                    \PDO::SQLSRV_ATTR_QUERY_TIMEOUT => 30,
+                ];
+                
                 if ($validated['authMode'] === 'windows') {
                     $config['trust_connection'] = true;
                     Log::info('Configuration SQL Server avec authentification Windows');
@@ -208,10 +217,12 @@ class ProjectController extends Controller
                 $config['username'] = $validated['username'];
                 $config['password'] = $validated['password'];
                 
+                // ✅ AJOUT: Timeout pour MySQL/PostgreSQL
+                $config['options'] = [
+                    \PDO::ATTR_TIMEOUT => 30,
+                ];
+                
                 if ($project->db_type === 'pgsql') {
-                    $config['charset'] = 'utf8';
-                    $config['prefix'] = '';
-                    $config['prefix_indexes'] = true;
                     $config['schema'] = 'public';
                     $config['sslmode'] = 'prefer';
                 }
@@ -236,23 +247,16 @@ class ProjectController extends Controller
                 $result = DB::connection($connectionName)->select($testQuery);
                 
                 if (empty($result)) {
-                    DB::disconnect($connectionName);
-                    config()->forget("database.connections.{$connectionName}");
+                    // ✅ CORRECTION: Utiliser DB::purge au lieu de config()->forget
+                    DB::purge($connectionName);
                     throw new \Exception("Database '{$validated['database']}' does not exist or is not accessible.");
                 }
                 
                 Log::info('Connexion réussie et base de données vérifiée');
 
             } catch (\PDOException $e) {
-                // Nettoyer la connexion
-                try {
-                    DB::disconnect($connectionName);
-                    config()->forget("database.connections.{$connectionName}");
-                } catch (\Exception $cleanupException) {
-                    Log::warning('Erreur lors du nettoyage de la connexion', [
-                        'cleanup_error' => $cleanupException->getMessage()
-                    ]);
-                }
+                // ✅ CORRECTION: Nettoyer proprement la connexion
+                $this->cleanupConnection($connectionName);
                 
                 $errorMessage = $this->analyzePDOException($e, $project->db_type, $validated);
                 
@@ -265,7 +269,6 @@ class ProjectController extends Controller
                 
                 Log::info('=== RETOUR AVEC ERREUR PDO ===');
                 
-                // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
                 return \Inertia\Inertia::render('Projects/Connect', [
                     'project' => $project,
                     'flash' => [
@@ -278,15 +281,8 @@ class ProjectController extends Controller
                 ]);
                     
             } catch (\Exception $e) {
-                // Nettoyer la connexion
-                try {
-                    DB::disconnect($connectionName);
-                    config()->forget("database.connections.{$connectionName}");
-                } catch (\Exception $cleanupException) {
-                    Log::warning('Erreur lors du nettoyage de la connexion', [
-                        'cleanup_error' => $cleanupException->getMessage()
-                    ]);
-                }
+                // ✅ CORRECTION: Nettoyer proprement la connexion
+                $this->cleanupConnection($connectionName);
                 
                 Log::error('Erreur générale de connexion dans handleConnect', [
                     'project_id' => $project->id,
@@ -297,7 +293,6 @@ class ProjectController extends Controller
                 
                 Log::info('=== RETOUR AVEC ERREUR GÉNÉRALE ===');
                 
-                // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
                 return \Inertia\Inertia::render('Projects/Connect', [
                     'project' => $project,
                     'flash' => [
@@ -345,9 +340,20 @@ class ProjectController extends Controller
                 ]);
             }
 
-            // Sauvegarde des infos de connexion
+            // Sauvegarde des infos de connexion (cryptées)
             try {
-                $project->update(['connection_info' => json_encode($config)]);
+                // ✅ AMÉLIORATION: Crypter les informations sensibles
+                $encryptedConfig = [
+                    'driver' => $config['driver'],
+                    'host' => encrypt($config['host']),
+                    'database' => encrypt($config['database']),
+                    'port' => isset($config['port']) ? encrypt($config['port']) : null,
+                    'username' => isset($config['username']) ? encrypt($config['username']) : null,
+                    'password' => isset($config['password']) ? encrypt($config['password']) : null,
+                    'trust_connection' => $config['trust_connection'] ?? false,
+                ];
+                
+                $project->update(['connection_info' => json_encode($encryptedConfig)]);
             } catch (\Exception $e) {
                 Log::warning('Erreur sauvegarde connection_info', [
                     'error' => $e->getMessage()
@@ -372,7 +378,6 @@ class ProjectController extends Controller
                 'errors' => $e->errors()
             ]);
             
-            // Pour les erreurs de validation, utiliser la méthode standard
             return redirect()->back()->withErrors($e->errors())->withInput();
             
         } catch (\Exception $e) {
@@ -386,7 +391,6 @@ class ProjectController extends Controller
             
             Log::info('=== RETOUR AVEC ERREUR EXCEPTION GÉNÉRALE ===');
             
-            // IMPORTANT: Pour Inertia, rester sur la même page avec l'erreur
             return \Inertia\Inertia::render('Projects/Connect', [
                 'project' => $project,
                 'flash' => [
@@ -396,6 +400,20 @@ class ProjectController extends Controller
                 'flash' => [
                     'error' => $errorMessage
                 ]
+            ]);
+        }
+    }
+
+    private function cleanupConnection(string $connectionName): void
+    {
+        try {
+            DB::disconnect($connectionName);
+            DB::purge($connectionName);
+            Log::info('Connexion nettoyée avec succès', ['connection' => $connectionName]);
+        } catch (\Exception $e) {
+            Log::warning('Erreur lors du nettoyage de la connexion', [
+                'connection' => $connectionName,
+                'cleanup_error' => $e->getMessage()
             ]);
         }
     }
@@ -482,6 +500,29 @@ class ProjectController extends Controller
      */
     private function analyzeSQLServerError($errorCode, $errorMessage, $validated)
     {
+        // AJOUT: Gestion spécifique du timeout (code HYT00)
+        if ($errorCode === 'HYT00' || 
+            strpos($errorMessage, 'Login timeout expired') !== false || 
+            strpos($errorMessage, 'timeout expired') !== false ||
+            strpos($errorMessage, 'Connection Timeout Expired') !== false) {
+            
+            return "⏱️ Connection timeout to SQL Server '{$validated['server']}'.\n\n" .
+                "The server is not responding within the allowed time (30 seconds).\n\n" .
+                "Possible causes:\n" .
+                "• SQL Server service is not running\n" .
+                "• Server address '{$validated['server']}' is incorrect or unreachable\n" .
+                "• Port 1433 is blocked by a firewall\n" .
+                "• Network connection is slow or unstable\n" .
+                "• Server is overloaded\n\n" .
+                "Solutions to try:\n" .
+                "1. Verify SQL Server service is running on the target machine\n" .
+                "2. Test network connectivity: ping {$validated['server']}\n" .
+                "3. Test port access: telnet {$validated['server']} 1433\n" .
+                "4. Check Windows Firewall allows port 1433\n" .
+                "5. Verify TCP/IP is enabled in SQL Server Configuration Manager\n" .
+                "6. If using a named instance, ensure SQL Server Browser service is running";
+        }
+        
         // Problème spécifique avec l'authentification Windows 
         if (strpos($errorMessage, 'Login failed for user') !== false && 
             (strpos($errorMessage, 'HEADOFFICE\\') !== false || strpos($errorMessage, '\\') !== false)) {
@@ -490,36 +531,87 @@ class ProjectController extends Controller
             preg_match('/Login failed for user \'(.+?)\'/', $errorMessage, $matches);
             $windowsUser = $matches[1] ?? 'Windows user';
             
-            return "Windows Authentication failed for '{$windowsUser}'. This Windows account does not have login permissions on SQL Server. Please either: 1) Switch to 'SQL Server Authentication' and use a valid SQL Server login, or 2) Contact your database administrator to grant SQL Server access to your Windows account.";
+            return "🔐 Windows Authentication failed for '{$windowsUser}'.\n\n" .
+                "This Windows account does not have login permissions on SQL Server.\n\n" .
+                "Solutions:\n" .
+                "Option 1: Use SQL Server Authentication instead\n" .
+                "• Switch authentication mode to 'SQL Server Authentication'\n" .
+                "• Use a valid SQL Server login (e.g., 'sa' or a dedicated user)\n\n" .
+                "Option 2: Grant SQL Server access to your Windows account\n" .
+                "• Contact your database administrator\n" .
+                "• They need to create a SQL Server login for '{$windowsUser}'\n" .
+                "• Grant appropriate database permissions";
         }
         
         if (strpos($errorMessage, 'Cannot open database') !== false) {
-            return "Database '{$validated['database']}' cannot be opened or does not exist on the SQL Server. Please check the database name.";
+            return "🗄️ Database '{$validated['database']}' cannot be opened or does not exist.\n\n" .
+                "Please verify:\n" .
+                "• Database name is spelled correctly (case-sensitive)\n" .
+                "• Database exists on server '{$validated['server']}'\n" .
+                "• Database is online (not in recovery/restoring mode)\n" .
+                "• Your account has permission to access this database";
         }
         
         if (strpos($errorMessage, 'Login failed') !== false) {
             // Pour l'authentification SQL Server
             $username = $validated['username'] ?? 'unknown user';
-            return "Login failed for SQL Server user '{$username}'. Please check your username and password, and ensure this account has access to SQL Server.";
+            return "🔐 SQL Server Authentication failed for user '{$username}'.\n\n" .
+                "Please verify:\n" .
+                "• Username is correct\n" .
+                "• Password is correct\n" .
+                "• SQL Server Authentication is enabled (not Windows-only mode)\n" .
+                "• User account is not locked or disabled\n" .
+                "• User has 'Connect SQL' permission on the server";
         }
         
-        if (strpos($errorMessage, 'server was not found') !== false || strpos($errorMessage, 'network path was not found') !== false) {
-            return "SQL Server '{$validated['server']}' was not found or is not accessible. Please check the server name and network connectivity.";
+        if (strpos($errorMessage, 'server was not found') !== false || 
+            strpos($errorMessage, 'network path was not found') !== false) {
+            return "🌐 SQL Server '{$validated['server']}' was not found or is not accessible.\n\n" .
+                "Please verify:\n" .
+                "• Server name/IP is correct (e.g., 'localhost', '192.168.1.100', or 'SERVER\\INSTANCE')\n" .
+                "• Server is powered on and accessible via network\n" .
+                "• SQL Server service is running\n" .
+                "• For named instances: SQL Server Browser service must be running\n" .
+                "• Firewall allows connections on port 1433\n\n" .
+                "Test connectivity: ping {$validated['server']}";
         }
         
+        // Garder aussi la gestion générique du timeout
         if (strpos($errorMessage, 'timeout') !== false) {
-            return "Connection timeout to SQL Server. The server may be overloaded or the network connection is slow.";
+            return "⏱️ Connection timeout to SQL Server '{$validated['server']}'.\n\n" .
+                "The server is taking too long to respond.\n\n" .
+                "Please verify:\n" .
+                "• SQL Server service is running\n" .
+                "• Network connection is stable\n" .
+                "• Server is not overloaded\n" .
+                "• Firewall is not blocking the connection";
         }
         
         if (strpos($errorMessage, 'The user is not associated with a trusted SQL Server connection') !== false) {
-            return "Windows Authentication failed. Please check that your Windows account has access to SQL Server or use SQL Server Authentication.";
+            return "🔐 Windows Authentication is not configured properly.\n\n" .
+                "Solutions:\n" .
+                "1. Switch to SQL Server Authentication\n" .
+                "2. Or enable 'SQL Server and Windows Authentication mode':\n" .
+                "   • Open SQL Server Management Studio\n" .
+                "   • Right-click server → Properties → Security\n" .
+                "   • Select 'SQL Server and Windows Authentication mode'\n" .
+                "   • Restart SQL Server service";
         }
         
         if (strpos($errorMessage, 'permission denied') !== false) {
-            return "Permission denied to access database '{$validated['database']}'. Please check user permissions.";
+            return "🔒 Permission denied to access database '{$validated['database']}'.\n\n" .
+                "Your user account does not have sufficient permissions.\n\n" .
+                "Required permissions:\n" .
+                "• CONNECT permission on the database\n" .
+                "• At minimum: db_datareader role for read access\n" .
+                "• Contact your database administrator to grant permissions";
         }
         
-        return "SQL Server connection failed: " . $errorMessage;
+        // Erreur générale
+        return "❌ SQL Server connection failed.\n\n" .
+            "Error details: {$errorMessage}\n" .
+            "Error code: {$errorCode}\n\n" .
+            "If the problem persists, please contact your database administrator.";
     }
 
     /**
