@@ -16,7 +16,9 @@
             <img 
               :src="tenant.logo" 
               :alt="`${tenant.name} logo`"
-              class="h-10 w-10 object-contain flex-shrink-0"
+              class="h-10 w-10 object-contain flex-shrink-0 bg-white rounded-lg p-1 transition-opacity duration-300"
+              :class="{ 'opacity-0': !imageLoaded }"
+              @load="imageLoaded = true"
               @error="imageError = true"
             />
           </template>
@@ -384,10 +386,12 @@ const tenant = computed(() => page.props.tenant);
 const navigationData = computed(() => page.props.navigationData)
 const appName = computed(() => page.props.appName)
 const appVersion = computed(() => page.props.appVersion)
+const imageLoaded = ref(false);
 const imageError = ref(false);
 
 watch(() => tenant.value?.logo, () => {
   imageError.value = false;
+  imageLoaded.value = false;
 });
 
 // États pour les sections dépliables
