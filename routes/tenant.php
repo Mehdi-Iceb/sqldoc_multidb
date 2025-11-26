@@ -50,8 +50,13 @@ use App\Models\Tenant;
 */
 
 Route::get('/', function () {
-    return redirect('/landing');
-});
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    
+    // Sinon → Landing page
+    return redirect()->route('landing');
+})->name('home');
 
 Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing');
 Route::get('/registerTenant', [TenantController::class, 'register'])->name('register');
@@ -288,9 +293,7 @@ Route::middleware('auth')->group(function () {
     Log::debug('Middleware X → tenant', ['tenant' => tenant()?->id]);
     // Page d'accueil du tenant
     Route::get('/dashboard', function () {
-        return auth()->check() 
-        ? redirect()->route('dashboard') 
-        : redirect()->route('login');
+        return Inertia::render('Dashboard');
     })->name('dashboard');
 
     // Email verification routes
