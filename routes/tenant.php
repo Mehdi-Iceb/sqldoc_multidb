@@ -62,7 +62,7 @@ Route::get('/', function () {
     
     // Si on est sur le domaine CENTRAL (test-sqlinfo.io)
     if (in_array($host, $centralDomains)) {
-        return redirect()->route('landing');
+        return redirect()->route('/landing');
     }
     
     // Si on est sur un SOUS-DOMAINE (iceb.test-sqlinfo.io, tenant1.test-sqlinfo.io, etc.)
@@ -74,7 +74,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing')->name('welcome');
+Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing');
 Route::get('/registerTenant', [TenantController::class, 'register'])->name('register');
 Route::post('/start', [TenantController::class, 'start'])->name('tenant.start');
 //Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
