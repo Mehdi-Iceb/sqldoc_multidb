@@ -49,13 +49,6 @@ use App\Models\Tenant;
 |
 */
 
-// function isCentralDomain(): bool
-// {
-//     $host = request()->getHost();
-//     $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
-//     return in_array($host, $centralDomains);
-// }
-
 Route::get('/', function () {
    $host = request()->getHost();
     $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
