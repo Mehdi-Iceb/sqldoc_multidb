@@ -11,24 +11,41 @@
       <!-- Logo compact -->
       <div class="px-6 mb-6 pb-4 border-b border-blue-600">
         <div class="flex items-center space-x-3">
-          <img 
-            v-if="tenant?.logo" 
-            :src="tenant.logo" 
-            :alt="`${tenant.name} logo`"
-            class="h-10 w-10 object-contain flex-shrink-0"
-          />
-          <div v-else class="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span class="text-white font-bold text-lg">
-              {{ tenant?.name?.charAt(0) || 'A' }}
-            </span>
-          </div>
+          <!-- Logo du tenant si disponible -->
+          <template v-if="tenant?.logo && !imageError">
+            <img 
+              :src="tenant.logo" 
+              :alt="`${tenant.name} logo`"
+              class="h-10 w-10 object-contain flex-shrink-0"
+              @error="imageError = true"
+            />
+          </template>
+          
+          <!-- Logo par défaut de votre app si pas de tenant -->
+          <template v-else-if="!tenant && !imageError">
+            <img 
+              src="/images/openart-image_GwOKeCKx_1750239441227_raw.jpg" 
+              alt="App logo"
+              class="h-10 w-10 object-contain flex-shrink-0"
+              @error="imageError = true"
+            />
+          </template>
+          
+          <!-- Fallback: Initiale dans un cercle coloré -->
+          <template v-else>
+            <div class="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span class="text-white font-bold text-lg">
+                {{ (tenant?.name || appName)?.charAt(0) || 'A' }}
+              </span>
+            </div>
+          </template>
           
           <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-bold text-gray-800 truncate">
-              {{ tenant?.name || 'Your App' }}
+            <h3 class="text-sm font-bold text-white truncate">
+              {{ tenant?.name || appName }}
             </h3>
-            <p class="text-xs text-gray-500 truncate">
-              {{ tenant?.subdomain }}
+            <p class="text-xs text-gray-300 truncate">
+              {{ tenant?.subdomain || 'Main Application' }}
             </p>
           </div>
         </div>
@@ -367,6 +384,11 @@ const tenant = computed(() => page.props.tenant);
 const navigationData = computed(() => page.props.navigationData)
 const appName = computed(() => page.props.appName)
 const appVersion = computed(() => page.props.appVersion)
+const imageError = ref(false);
+
+watch(() => tenant.value?.logo, () => {
+  imageError.value = false;
+});
 
 // États pour les sections dépliables
 const isOpen = ref({
