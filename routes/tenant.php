@@ -288,7 +288,9 @@ Route::middleware('auth')->group(function () {
     Log::debug('Middleware X → tenant', ['tenant' => tenant()?->id]);
     // Page d'accueil du tenant
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+        return auth()->check() 
+        ? redirect()->route('dashboard') 
+        : redirect()->route('login');
     })->name('dashboard');
 
     // Email verification routes
