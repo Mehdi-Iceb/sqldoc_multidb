@@ -21,7 +21,6 @@ class ProjectController extends Controller
 
     public function index()
     {
-        
         $userId = auth()->id();
         
         // Récupérer les projets appartenant à l'utilisateur
@@ -35,7 +34,7 @@ class ProjectController extends Controller
                     'description' => $project->description,
                     'db_type' => $project->db_type,
                     'is_owner' => true,
-                    'access_level' => 'admin',
+                    'access_level' => 'Admin',
                     'owner_name' => auth()->user()->name,
                     'created_at' => $project->created_at,
                     'updated_at' => $project->updated_at
@@ -52,7 +51,7 @@ class ProjectController extends Controller
             ->get();
         
         foreach ($userProjectAccesses as $access) {
-            if ($access->project) { // Vérifier que le projet existe encore
+            if ($access->project) {
                 $sharedProjects->push([
                     'id' => $access->project->id,
                     'name' => $access->project->name,
@@ -78,18 +77,15 @@ class ProjectController extends Controller
             'total_count' => $allProjects->count()
         ]);
         
-        
+        // CORRECTION: Ne pas surcharger auth et tenant
         return Inertia::render('Projects/Index', [
-            'projects' => $allProjects->values(), // Réindexer la collection
+            'projects' => $allProjects->values(),
             'stats' => [
                 'owned' => $ownedProjects->count(),
                 'shared' => $sharedProjects->count(),
                 'total' => $allProjects->count()
             ],
-            'tenant' => tenant(),
-            'auth' => [
-                'user' => auth()->user(),
-            ],
+            
         ]);
     }
 
