@@ -49,13 +49,22 @@ use App\Models\Tenant;
 |
 */
 
+function isCentralDomain(): bool
+{
+    $host = request()->getHost();
+    $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
+    return in_array($host, $centralDomains);
+}
+
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
+    if (isCentralDomain()) {
+        return redirect()->route('landing');
     }
     
-    // Sinon → Landing page
-    return redirect()->route('landing');
+    // Sous-domaine → Login (ou Dashboard si déjà connecté)
+    return Auth::check() 
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 })->name('home');
 
 Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing');
