@@ -67,7 +67,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing');
+Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing')->name('welcome');
 Route::get('/registerTenant', [TenantController::class, 'register'])->name('register');
 Route::post('/start', [TenantController::class, 'start'])->name('tenant.start');
 //Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
