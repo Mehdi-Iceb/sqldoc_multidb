@@ -526,7 +526,7 @@ const deleting = ref(false);
 const openingProject = ref(null);
 const flashMessage = ref(null);
 
-// ✅ NOUVEAUX ÉTATS pour la suppression forcée
+// NOUVEAUX ÉTATS pour la suppression forcée
 const showDependenciesModal = ref(false);
 const projectDependencies = ref({});
 const loadingDependencies = ref(false);
@@ -859,7 +859,7 @@ const deleteProject = async () => {
     deleting.value = true;
     
     try {
-        // ✅ Utiliser router Inertia pour la suppression soft
+        // router Inertia pour la suppression soft
         router.delete(`/projects/${selectedProject.value.id}/soft`, {
             preserveState: false,
             onSuccess: () => {
@@ -893,7 +893,7 @@ const deleteProject = async () => {
 
 const restoreProject = async (project) => {
     try {
-        // Utilise router Inertia pour la restauration
+        // router Inertia pour la restauration
         router.post(`/projects/${project.id}/restore`, {}, {
             preserveState: false,
             onSuccess: () => {
