@@ -62,7 +62,7 @@ Route::get('/', function () {
     
     // Si on est sur le domaine CENTRAL (test-sqlinfo.io)
     if (in_array($host, $centralDomains)) {
-        return redirect()->route('/landing');
+        return redirect()->route('landing');
     }
     
     // Si on est sur un SOUS-DOMAINE (iceb.test-sqlinfo.io, tenant1.test-sqlinfo.io, etc.)
