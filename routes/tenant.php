@@ -49,22 +49,29 @@ use App\Models\Tenant;
 |
 */
 
-function isCentralDomain(): bool
-{
-    $host = request()->getHost();
-    $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
-    return in_array($host, $centralDomains);
-}
+// function isCentralDomain(): bool
+// {
+//     $host = request()->getHost();
+//     $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
+//     return in_array($host, $centralDomains);
+// }
 
 Route::get('/', function () {
-    if (isCentralDomain()) {
+   $host = request()->getHost();
+    $centralDomains = config('tenancy.central_domains', ['test-sqlinfo.io']);
+    
+    // Si on est sur le domaine CENTRAL (test-sqlinfo.io)
+    if (in_array($host, $centralDomains)) {
         return redirect()->route('landing');
     }
     
-    // Sous-domaine → Login (ou Dashboard si déjà connecté)
-    return Auth::check() 
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    // Si on est sur un SOUS-DOMAINE (iceb.test-sqlinfo.io, tenant1.test-sqlinfo.io, etc.)
+    // Rediriger vers login si non connecté, dashboard si connecté
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    
+    return redirect()->route('login');
 })->name('home');
 
 Route::get('/landing', [LandingTenantController::class, 'create'])->name('landing')->name('welcome');
